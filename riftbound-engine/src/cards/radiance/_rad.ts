@@ -13,7 +13,11 @@ export function banishTopPlayable(c: Ctx): Obj | undefined {
   if (!s.mainDeck.length) return undefined;
   const o = g.objs[s.mainDeck[0]];
   g.banishObj(o);
-  o.data = { ...(o.data || {}), playBy: p, playUntil: g.active === p ? g.turn : g.turn + 1 };
+  // playUntil = turno cujo Ending Phase encerra a permissão: no seu turno antes do Ending Phase, este; no do oponente, o
+  // seu próximo (turn + 1); já no seu Ending Phase, o "próximo" é o do seu turno seguinte (turn + 2). playVer: só este
+  // objeto (se a carta sair e voltar à zona de banidas, é outro objeto, 124.1).
+  const until = g.active === p ? (g.phase === 'ending' ? g.turn + 2 : g.turn) : g.turn + 1;
+  o.data = { ...(o.data || {}), playBy: p, playUntil: until, playVer: o.zoneVersion };
   return o;
 }
 

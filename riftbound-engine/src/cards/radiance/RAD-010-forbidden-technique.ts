@@ -1,7 +1,8 @@
 import { registerCard } from '../../engine/script';
 import { E, T } from '../helpers';
 
-// Prepare uma unidade. Quando você joga uma carta com custo de Energia 7+, pode jogar isto do descarte por [1][Fury][Fury]; bana isto.
+// Prepare uma unidade. Quando você joga uma carta com custo de Energia 7+, pode jogar isto do descarte por [1][Fury][Fury].
+// Then banish this. (errata Radiance 09/10/2026: o mesmo "Then banish it" do Flow, Core Rules — banida ao resolver)
 registerCard({
   code: 'RAD-010',
   spell: {

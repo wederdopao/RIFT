@@ -60,7 +60,8 @@ registerCard({
   auras: [{ allowMove: (g, src, _u, _from, to) => to.t === 'bf' && to.i === g.bfOf(src) }],
 });
 
-// ── novo (Radiance): Bomb — "[Deploy] When I die, deal 2 to an enemy there and kill your other Bombs there." ──
+// ── novo (Radiance): Bomb — "[Deploy] [Deathknell] — Deal 2 to an enemy unit here and kill all other Bombs you control
+// here." (Core Rules, definição da ficha Bomb: o Deathknell é palavra-chave — Detonation Amplifier o dobra) ──
 registerCard({
   code: 'TOK-BOMB',
   keywords: { deploy: true },

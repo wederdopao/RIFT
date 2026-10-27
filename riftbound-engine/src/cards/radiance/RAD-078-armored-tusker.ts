@@ -15,7 +15,8 @@ registerCard({
       targets: [T.unitAtBf('Armored Tusker: dano em qual unidade num campo?')],
       resolve: function* (c) {
         const u = c.targets[0][0];
-        const n = c.g.kw(c.self).shield || 0;
+        // meu [Shield] é lido na resolução; fora do tabuleiro a informação é nula e o dano não acontece (359.3.e.12)
+        const n = c.self.zone === 'board' ? c.g.kw(c.self).shield || 0 : 0;
         if (u && n > 0) c.g.dealDamage(u, n, c.self);
       },
     },

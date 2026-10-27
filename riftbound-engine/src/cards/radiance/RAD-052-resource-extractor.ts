@@ -13,6 +13,10 @@ registerCard({
         return ev.player === c.p && i >= 0 && c.g.bfs[i].controller === c.p;
       },
       resolve: function* (c) {
+        // "this battlefield" é olhado na execução (359.3.f.2): se eu saí do tabuleiro ou o campo deixou de ser seu, nada
+        // (a condição também é checada de novo na resolução, como OGN-073)
+        const i = c.self.zone === 'board' ? c.g.bfIndex(c.self) : -1;
+        if (i < 0 || c.g.bfs[i].controller !== c.p) return;
         c.g.createToken('TOK-GOLD', c.p, { t: 'base', p: c.p }, false);
       },
     },

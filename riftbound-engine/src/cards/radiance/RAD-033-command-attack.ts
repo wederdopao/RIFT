@@ -39,6 +39,12 @@ registerCard({
         const gear = c.targets[0]?.[0];
         const to = c.data.dest as number | undefined;
         if (!gear || gear.zone !== 'board' || to === undefined || g.bfIndex(gear) === to) return;
+        // unit gear (Lady of Clockwork num gear com Deploy) é unidade: move como unidade (evento 'move', contestar,
+        // custos aplicados 204.4, "não pode se mover")
+        if (g.isUnit(gear)) {
+          yield* g.moveUnitsG([gear], { t: 'bf', i: to }, c.p);
+          return;
+        }
         gear.loc = { t: 'bf', i: to };
         g.say(`${g.name(gear)} vai para ${g.locName(gear.loc)}.`, c.p);
         return;

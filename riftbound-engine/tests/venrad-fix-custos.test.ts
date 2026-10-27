@@ -233,9 +233,8 @@ test('Orianna, Mechanical Marvel: uma vez por turno, gear custa [1][Rune] a meno
   const g2 = s.put(0, 'VEN-018', 'hand');
   s.runes(0, rs(RUNE.fury, 3));
   s.go();
-  const c = s.e.minCostFor(0, g1, 'hand');
-  assert.deepEqual([c.energy, c.power.length], [3, 0]);
   s.pick('Jogar Rage Amplifier');
+  s.pick('Sim'); // "you may pay [1][Rune] less": opcional (revisão RAD-a4)
   s.passAll();
   assert.equal(g1.zone, 'board', s.log());
   const c2 = s.e.minCostFor(0, g2, 'hand');

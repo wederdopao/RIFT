@@ -128,7 +128,7 @@ export function* playBomb(c: Ctx, prompt = 'Jogar a ficha Bomb em qual campo?', 
   return g.createToken('TOK-BOMB', p, { t: 'bf', i: Number(id) });
 }
 
-export interface ShowOffInfo { code: string; might: number; energy: number; power: number; fromHand: boolean }
+export interface ShowOffInfo { code: string; might: number; energy: number; power: number; fromHand: boolean; id?: string; ver?: number } // id/ver (revisão RAD): o objeto mostrado, para ler o Might atual na resolução
 /**
  * "[Show Off] X (As you play me, you may reveal X from hand or pick another friendly X.)" — escolha feita enquanto a
  * carta é jogada (gancho `asPlayed`). Use: `asPlayed: showOff((g, o) => g.hasTag(o, 'Mech'))`; depois leia
@@ -147,7 +147,7 @@ export function showOff(filter: (g: Ctx['g'], o: Obj) => boolean = () => true, l
       if (o) {
         const d = g.data(o);
         const fromHand = o.zone !== 'board';
-        info = { code: o.code, might: fromHand ? d.might : g.might(o), energy: d.energy, power: d.power, fromHand };
+        info = { code: o.code, might: fromHand ? d.might : g.might(o), energy: d.energy, power: d.power, fromHand, id: o.id, ver: o.zoneVersion };
         g.say(`${g.pname(c.p)} faz Show Off com ${g.name(o)}.`, c.p);
       }
     }
