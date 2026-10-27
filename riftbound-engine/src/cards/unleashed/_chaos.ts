@@ -1,0 +1,31 @@
+// Lote chaos do Unleashed (UNL): importe aqui um arquivo por carta.
+// (UNL-150 Vex, Apathetic continua importada em index.ts.)
+import './UNL-121-bewitching-spirit';
+import './UNL-122-crescent-guardian';
+import './UNL-123-evershade-stalker';
+import './UNL-124-isolate';
+import './UNL-125-lunar-boon';
+import './UNL-126-megatusk';
+import './UNL-127-mister-root';
+import './UNL-128-star-crossed';
+import './UNL-129-vicious-snapjaws';
+import './UNL-130-walking-roost';
+import './UNL-131-abandon';
+import './UNL-132-angler-beast';
+import './UNL-133-blast-cone';
+import './UNL-134-existential-dread';
+import './UNL-135-insightful-investigator';
+import './UNL-136-scryers-bloom';
+import './UNL-137-sinister-poro';
+import './UNL-138-the-list';
+import './UNL-139-bone-skewer';
+import './UNL-140-conscription';
+import './UNL-141-evelynn-entrancing';
+import './UNL-142-heedless-resurrection';
+import './UNL-143-khazix-mutating-horror';
+import './UNL-144-maduli-the-gatekeeper';
+import './UNL-145-pyke-returned';
+import './UNL-146-syndra-transcendent';
+import './UNL-147-baron-nashor';
+import './UNL-148-cursed-sarcophagus';
+import './UNL-149-diana-no-longer-human';

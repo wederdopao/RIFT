@@ -1,0 +1,31 @@
+{
+  "name": "riftbound-engine",
+  "version": "1.0.0",
+  "description": "Motor de regras de Riftbound para jogar entre amigos",
+  "main": "index.js",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "sim": "tsx tests/sim.ts 100",
+    "fuzz": "tsx tests/fuzz.ts",
+    "typecheck": "tsc -p .",
+    "ai": "tsx tests/ai-bench.ts 10 random",
+    "ai:vs": "tsx tests/ai-vs.ts 96"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "aedes": "^0.51.3",
+    "esbuild": "^0.24.0",
+    "playwright-core": "^1.48.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3",
+    "websocket-stream": "^5.5.2"
+  },
+  "dependencies": {
+    "@piltoverarchive/riftbound-deck-codes": "^1.5.0",
+    "mqtt": "^5.10.1"
+  }
+}

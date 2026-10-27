@@ -1,0 +1,121 @@
+{
+  "game": {
+    "name": "Riftbound",
+    "slug": "riftbound",
+    "description": "Riftbound is a trading card game."
+  },
+  "vocabulary": [
+    {
+      "use": "card text",
+      "insteadOf": [
+        "oracle text"
+      ],
+      "means": "It names the text printed in a card's own text box."
+    }
+  ],
+  "cards": {
+    "enabled": true,
+    "linkScheme": "card",
+    "maxInlineImages": 3,
+    "textFields": [
+      {
+        "field": "card_text",
+        "describes": "the card's own text box"
+      },
+      {
+        "field": "effect_text",
+        "describes": "the effect box on a gear card, holding the text the equipped unit gains"
+      }
+    ],
+    "statFields": [
+      {
+        "field": "might_bonus",
+        "describes": "The Might a gear card grants to the unit that holds it. Only a gear card carries this value."
+      },
+      {
+        "field": "energy",
+        "describes": "The Energy cost to play the card."
+      },
+      {
+        "field": "power",
+        "describes": "The Power cost to play the card, which is paid alongside Energy."
+      }
+    ]
+  },
+  "tokens": {
+    "syntax": "[Fury] or [Shield 2]",
+    "groups": [
+      {
+        "label": "Energy",
+        "examples": [
+          "[0]",
+          "[1]",
+          "[2]",
+          "[3]",
+          "[9]"
+        ]
+      },
+      {
+        "label": "Runes and domains",
+        "examples": [
+          "[Rune]",
+          "[Body]",
+          "[Calm]",
+          "[Chaos]",
+          "[Fury]",
+          "[Mind]",
+          "[Order]"
+        ]
+      },
+      {
+        "label": "Stats",
+        "examples": [
+          "[Might]",
+          "[Power]"
+        ]
+      },
+      {
+        "label": "Card types",
+        "examples": [
+          "[Unit]",
+          "[Spell]",
+          "[Gear]",
+          "[Battlefield]",
+          "[Legend]",
+          "[Tap]"
+        ]
+      },
+      {
+        "label": "Keyword abilities",
+        "examples": [
+          "[Shield]",
+          "[Shield 2]",
+          "[Reaction]",
+          "[Hidden]",
+          "[Accelerate]",
+          "[Deflect]"
+        ]
+      }
+    ]
+  },
+  "scope": {
+    "answer": [
+      "Rule text and rule numbers.",
+      "A card's text, stats, cost, and how named cards interact.",
+      "Whether a card is banned or restricted, and any change to its printed text.",
+      "Defined terms, keywords, and ability definitions.",
+      "Rule structure: parent rules, sub-rules, related rules, and rulebook sections.",
+      "Update notes and recent rules changes that the tools return."
+    ],
+    "refuse": []
+  },
+  "extraGuidance": [
+    "A gear card's `card_text` often holds only its EQUIP line. What the equipped unit gains is in `effect_text`, and the Might it grants is in `might_bonus`. Read all three before you say what a gear card does, and never conclude from `card_text` alone that a card has no such text.",
+    "A banned-and-restricted entry and a card-change entry each carry the card's image path, so you can link the card from them without a separate card lookup."
+  ],
+  "attribution": {
+    "text": "Riot Games, Inc. owns the Riftbound rules data. This is an unofficial community project, and Riot Games does not endorse it.",
+    "url": "https://www.riotgames.com/en/legal",
+    "official": false
+  }
+}

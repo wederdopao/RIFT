@@ -1,0 +1,36 @@
+{
+ "_comentario": "Correções de dados aplicadas por scripts/build_carddata.py por cima do corpus (conferidas pela arte e pelo catálogo oficial da Riot).",
+ "UNL-068": {
+  "might": 5,
+  "tags": [
+   "Shadow Isles",
+   "Spirit"
+  ],
+  "text": "When another friendly unit dies, give me +2 [Might] this turn."
+ },
+ "UNL-090": {
+  "text": "[Backline] (I must be assigned combat damage last.)\nYour [Temporary] effects at my battlefield don't trigger."
+ },
+ "VEN-044": {
+  "text": "When you play your first card each turn, if I'm at a battlefield, your next card costs [2][Rune][Rune] less."
+ },
+ "VEN-086": {
+  "text": "[Empower] [Body][Body] ([Body][Body]: Empower me. Use only if not Empowered.)\n[Empowered] If a spell or ability that chooses me would stun me, give me -[Might], or return me to hand, give me +3 [Might] instead."
+ },
+ "VEN-053": {
+  "text": "If a player would score 1 point from conquering or holding during their first or second turn, they draw 1 instead."
+ },
+ "VEN-092": {
+  "text": "[1]: Give me +1 [Might] this turn.\nWhen my Might becomes 10 or more, empower me.\n[Empowered] I have [Deflect] and [Ganking]."
+ },
+ "RAD-071": {
+  "text": "[Equip] [1] ([1]: Attach this to a unit you control.)",
+  "effectText": "[Shield 2] (+2 [Might] while I'm a defender.)"
+ },
+ "RAD-123": {
+  "effectText": "[Tank] (I must be assigned combat damage first.)"
+ },
+ "RAD-150": {
+  "effectText": "[Ganking] (I can move from battlefield to battlefield.)"
+ }
+}

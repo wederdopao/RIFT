@@ -1,0 +1,378 @@
+From 443ece43a1806cb97280b67b9f038a35abec626f Mon Sep 17 00:00:00 2001
+From: Weder <wederfilho80@gmail.com>
+Date: Fri, 23 Oct 2026 15:34:38 -0300
+Subject: [PATCH] =?UTF-8?q?revis=C3=A3o=20UNL=20mind:=20trabalho=20parcial?=
+ =?UTF-8?q?=20salvo=20(interrompida=20a=20pedido)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ src/cards/unleashed/UNL-063-eclipse.ts        |   4 +-
+ .../unleashed/UNL-072-crescent-strike.ts      |   7 +-
+ .../UNL-080-hwei-brooding-painter.ts          |  45 +++--
+ .../unleashed/UNL-081-keeper-of-masks.ts      |  32 +++-
+ .../unleashed/UNL-083-smoke-and-mirrors.ts    |   3 +-
+ tests/unl-mind.test.ts                        |   2 +
+ tests/unl-revisao-mind.test.ts                | 158 ++++++++++++++++++
+ 7 files changed, 230 insertions(+), 21 deletions(-)
+ create mode 100644 tests/unl-revisao-mind.test.ts
+
+diff --git a/src/cards/unleashed/UNL-063-eclipse.ts b/src/cards/unleashed/UNL-063-eclipse.ts
+index 664347d..d7e3eee 100644
+--- a/src/cards/unleashed/UNL-063-eclipse.ts
++++ b/src/cards/unleashed/UNL-063-eclipse.ts
+@@ -1,12 +1,14 @@
+ import { registerCard } from '../../engine/script';
+ 
+ // [Reaction]. Dê -4 de Might a uma unidade neste turno. [Predict].
+-// Se o alvo ficar inválido, o spell não resolve e não há Predict (359.3.e.5: sem nenhum alvo válido, nada acontece).
++// Se o alvo ficar inválido, só o -4 é ignorado: o spell resolve e o [Predict] acontece (359.3.e.1 e 359.3.e.5, exemplo
++// do Void Seeker: "Void Seeker's controller still draws 1").
+ registerCard({
+   code: 'UNL-063',
+   keywords: { reaction: true },
+   spell: {
+     label: 'Eclipse',
++    alwaysResolve: true,
+     targets: [{ prompt: 'Eclipse: dar -4 de Might a qual unidade?' }],
+     resolve: function* (c) {
+       const u = c.targets[0][0];
+diff --git a/src/cards/unleashed/UNL-072-crescent-strike.ts b/src/cards/unleashed/UNL-072-crescent-strike.ts
+index 2478b11..bb6b7b9 100644
+--- a/src/cards/unleashed/UNL-072-crescent-strike.ts
++++ b/src/cards/unleashed/UNL-072-crescent-strike.ts
+@@ -10,7 +10,12 @@ registerCard({
+   spell: {
+     label: 'Crescent Strike',
+     targets: [
+-      { prompt: 'Crescent Strike: escolha um campo de batalha', kind: 'battlefield' },
++      // só campos com unidade inimiga: outro campo tornaria ilegal a escolha seguinte (355.16)
++      {
++        prompt: 'Crescent Strike: escolha um campo de batalha',
++        kind: 'battlefield',
++        bfFilter: (c, i) => c.g.unitsAtBf(i).some((u) => u.controller !== c.p),
++      },
+       {
+         prompt: 'Crescent Strike: 4 de dano em qual unidade inimiga nesse campo?',
+         filter: (c, o) => {
+diff --git a/src/cards/unleashed/UNL-080-hwei-brooding-painter.ts b/src/cards/unleashed/UNL-080-hwei-brooding-painter.ts
+index 90b237d..2eabd98 100644
+--- a/src/cards/unleashed/UNL-080-hwei-brooding-painter.ts
++++ b/src/cards/unleashed/UNL-080-hwei-brooding-painter.ts
+@@ -1,10 +1,35 @@
+-import { registerCard } from '../../engine/script';
++import { registerCard, type AbilityDef, type Ctx } from '../../engine/script';
+ 
+ // Quando eu me movo, compre 1 e depois descarte 1. Então, conforme o tipo da carta descartada:
+ // * Spell: compre 1  * Gear: prepare até 2 runas  * Unidade: eu ganho +3 de Might neste turno.
+-// Carta com vários tipos (Patched Porobot, "Unit Gear") faz todos os efeitos dos tipos dela, sem escolher (RiftJudge
+-// #11695; regras 178.1 e 178.3). As runas (de qualquer jogador: o texto não restringe; só as exauridas mudam algo,
+-// 415.1.c) são escolhidas na resolução, porque o ramo só é conhecido depois do descarte.
++// "Do the following based on the discarded card's type" é gatilho reflexivo (387.1.b): para cada tipo que a carta
++// descartada tem, o efeito correspondente vai para a pilha depois do descarte, na ordem que o jogador escolher; carta com
++// vários tipos (Patched Porobot, "Unit Gear") põe um reflexivo por tipo (FAQ oficial do Vendetta, Hwei; RiftJudge #11695).
++// - "Prepare até 2 runas": as runas são alvos (355.10, 355.13: até 2, inclusive nenhuma), escolhidas ao finalizar o
++//   reflexivo (355.5.b); qualquer runa no tabuleiro, de qualquer jogador e pronta ou não (o texto não restringe).
++// - "Me" é conferido na resolução (359.3.f.2): se eu saí do tabuleiro, o +3 é ignorado.
++const DRAW: AbilityDef = {
++  label: 'Spell descartado: comprar 1',
++  resolve: function* (c) {
++    yield* c.g.draw(c.p, 1);
++  },
++};
++const READY: AbilityDef = {
++  label: 'Gear descartado: preparar até 2 runas',
++  targets: [{ prompt: 'Hwei: quais runas preparar? (até 2)', kind: 'rune', min: 0, max: 2 }],
++  resolve: function* (c) {
++    for (const r of c.targets[0]) c.g.ready(r, c.p);
++  },
++};
++const MIGHT: AbilityDef = {
++  label: 'Unidade descartada: +3 de Might neste turno',
++  resolve: function* (c) {
++    if (c.self.zone === 'board') c.g.giveMight(c.self, 3);
++  },
++};
++function reflexive(c: Ctx, a: AbilityDef) {
++  c.g.pending.push({ controller: c.p, sourceId: c.self.id, ability: a, ev: c.ev ?? { type: 'move' }, label: a.label });
++}
+ registerCard({
+   code: 'UNL-080',
+   triggers: [
+@@ -18,15 +43,9 @@ registerCard({
+         const [d] = yield* g.discard(c.p, 1, 'Hwei: descarte 1');
+         if (!d) return;
+         const t = g.data(d).type.toLowerCase();
+-        if (t.includes('spell')) yield* g.draw(c.p, 1);
+-        if (t.includes('gear')) {
+-          const runes = g.board().filter((o) => g.kind(o) === 'rune' && o.exhausted);
+-          if (runes.length) {
+-            const picks = yield* g.chooseObj(c.p, 'Hwei: quais runas preparar? (até 2)', runes, 0, 2);
+-            for (const r of picks) g.ready(r, c.p);
+-          }
+-        }
+-        if (t.includes('unit') && c.self.zone === 'board') g.giveMight(c.self, 3);
++        if (t.includes('spell')) reflexive(c, DRAW);
++        if (t.includes('gear')) reflexive(c, READY);
++        if (t.includes('unit')) reflexive(c, MIGHT);
+       },
+     },
+   ],
+diff --git a/src/cards/unleashed/UNL-081-keeper-of-masks.ts b/src/cards/unleashed/UNL-081-keeper-of-masks.ts
+index 9f6f154..a064533 100644
+--- a/src/cards/unleashed/UNL-081-keeper-of-masks.ts
++++ b/src/cards/unleashed/UNL-081-keeper-of-masks.ts
+@@ -1,11 +1,15 @@
+-import { registerCard } from '../../engine/script';
++import { registerCard, type AbilityDef } from '../../engine/script';
+ import type { Obj } from '../../engine/types';
+ 
+ // [Hidden]. [Temporary]. Quando você me joga, jogue duas fichas de unidade Reflection aqui. Então faça isto: elas se
+ // tornam cópias de mim. (Errata de 03/04/2026: "Then do this".)
+ // - "Aqui" = o meu local na resolução (jogada a partir de Hidden: aquele campo). Se saí do tabuleiro, não tenho local, a
+-//   instrução de jogar é ignorada (359.3.e.12) e a instrução ligada ("elas") também (instruções ligadas, patch notes do
+-//   Unleashed).
++//   instrução de jogar é ignorada (359.3.e.12) e o "então faça isto" ligado a ela também (359.3.e.14.a).
++// - "Então faça isto:" é gatilho reflexivo (387.1, 388): vai para a pilha depois que as fichas entraram, e dá para
++//   responder a ele com elas ainda Reflection (FAQ oficial do Unleashed, Zilean + Deceiver: "the copy effect resolves
++//   after the Reflection tokens have already resolved"). Guarda só ids (Delayed/cópia da IA).
++// - "Me" é conferido quando o reflexivo resolve (359.3.f.2): se eu saí do tabuleiro, a informação é nula e a cópia é
++//   ignorada (359.3.e.12; mesmo critério de Mirror Image, RiftJudge #10872) — as fichas ficam Reflection 0.
+ // - São duas jogadas de ficha: com Zilean, Time Mage (uma vez por turno) sai uma a mais, e as três viram cópias (a ficha
+ //   a mais herda as modificações seguintes, regra 375; RiftJudge #12467). Por isso playTokensG devolve todas.
+ // - Cópia (477.1.b): copia os traços copiáveis impressos (nome, tipo, tags, custo, domínio, texto de regras) e o Might
+@@ -19,14 +23,32 @@ registerCard({
+   keywords: { hidden: true, temporary: true },
+   onPlay: [
+     {
+-      label: 'Jogar duas Reflection aqui; elas viram cópias de mim',
++      label: 'Jogar duas Reflection aqui; então elas viram cópias de mim',
+       resolve: function* (c) {
+         const g = c.g;
+         if (c.self.zone !== 'board' || !c.self.loc) return g.say('Keeper of Masks não está mais em jogo: as Reflection não são jogadas.', c.p);
+         const loc = c.self.loc;
+         const toks: Obj[] = [];
+         for (let k = 0; k < 2; k++) toks.push(...(yield* g.playTokensG('TOK-REFLECTION', c.p, loc)));
+-        for (const t of toks) if (t.zone === 'board') g.becomeCopy(t, c.self);
++        const made = toks.filter((t) => t.zone === 'board').map((t) => ({ id: t.id, v: t.zoneVersion }));
++        if (!made.length) return;
++        const me = { id: c.self.id, v: c.self.zoneVersion };
++        const reflex: AbilityDef = {
++          label: 'as Reflection se tornam cópias de mim',
++          resolve: function* (cc) {
++            const gg = cc.g;
++            const k = gg.objs[me.id];
++            if (!k || k.zone !== 'board' || k.zoneVersion !== me.v) {
++              gg.say('Keeper of Masks não está mais no tabuleiro: as Reflection não copiam nada.', cc.p);
++              return;
++            }
++            for (const x of made) {
++              const t = gg.objs[x.id];
++              if (t && t.zone === 'board' && t.zoneVersion === x.v) gg.becomeCopy(t, k);
++            }
++          },
++        };
++        g.pending.push({ controller: c.p, sourceId: c.self.id, ability: reflex, ev: { type: 'play' }, label: reflex.label });
+       },
+     },
+   ],
+diff --git a/src/cards/unleashed/UNL-083-smoke-and-mirrors.ts b/src/cards/unleashed/UNL-083-smoke-and-mirrors.ts
+index ac7ff16..0b2cc85 100644
+--- a/src/cards/unleashed/UNL-083-smoke-and-mirrors.ts
++++ b/src/cards/unleashed/UNL-083-smoke-and-mirrors.ts
+@@ -5,12 +5,13 @@ import { registerCard } from '../../engine/script';
+ // - Jogado a partir de Hidden: a primeira tem de estar naquele campo; a segunda, pela própria restrição do texto, pode
+ //   estar em qualquer outro local (exemplo da regra 811.1.d.2.a; RiftJudge #10085, #11449).
+ // - O Temporary é checado na resolução; os dois locais são lidos antes de mover (troca simultânea).
+-// - Se só uma continua válida, não há troca, mas a compra acontece (359.3.e.5).
++// - Se uma ou as duas ficaram ilegais, não há troca, mas a compra acontece (359.3.e.1 e 359.3.e.5).
+ registerCard({
+   code: 'UNL-083',
+   keywords: { hidden: true, action: true },
+   spell: {
+     label: 'Smoke and Mirrors',
++    alwaysResolve: true,
+     targets: [
+       { prompt: 'Smoke and Mirrors: escolha uma unidade sua', filter: (c, o) => o.controller === c.p },
+       {
+diff --git a/tests/unl-mind.test.ts b/tests/unl-mind.test.ts
+index 14f9781..332c608 100644
+--- a/tests/unl-mind.test.ts
++++ b/tests/unl-mind.test.ts
+@@ -311,6 +311,8 @@ test('Hwei: carta Unit Gear (Patched Porobot) faz os dois ramos (#11695)', () =>
+   move(s, [h], e.name(e.bfs[0].objId));
+   drain(s);
+   s.pickObj(pb);
++  // dois reflexivos (FAQ do Vendetta): o jogador escolhe a ordem
++  if (/Vários efeitos/.test(s.d.prompt)) s.pick('runas');
+   assert.match(s.d.prompt, /runas/);
+   s.ok([r.id]);
+   drain(s);
+diff --git a/tests/unl-revisao-mind.test.ts b/tests/unl-revisao-mind.test.ts
+new file mode 100644
+index 0000000..27c7e90
+--- /dev/null
++++ b/tests/unl-revisao-mind.test.ts
+@@ -0,0 +1,158 @@
++// Revisão independente do lote mind do Unleashed (UNL-061..UNL-090): um teste por erro achado.
++import { test } from 'node:test';
++import assert from 'node:assert/strict';
++import { Scenario } from './harness';
++import type { Obj, P } from '../src/engine/types';
++
++const MIND = 'OGN-089';
++const BF0 = { t: 'bf', i: 0 } as const;
++const base = (p: P) => ({ t: 'base', p }) as const;
++const mind = (n: number) => Array.from({ length: n }, () => MIND);
++/** Passa a prioridade e ordena gatilhos simultâneos até chegar noutra decisão. */
++function drain(s: Scenario) {
++  for (let i = 0; i < 60 && s.g.current && s.d.kind !== 'action'; i++) {
++    if (s.d.kind === 'priority' || s.d.kind === 'focus') s.pick('Passar');
++    else if (s.d.prompt.startsWith('Vários efeitos')) s.ok([s.d.options[0].id]);
++    else break;
++  }
++}
++/** O oponente tem uma [Reaction] e runas: recebe a prioridade (o motor não passa sozinho por ele). */
++function canReact(s: Scenario) {
++  s.put(1, 'UNL-061', 'hand');
++  s.runes(1, mind(2));
++}
++/** Esvazia o deck de p e põe cartas conhecidas (a primeira da lista fica no topo). */
++function deck(s: Scenario, p: P, codes: string[]): Obj[] {
++  const e = s.e;
++  for (const id of [...e.pl[p].mainDeck]) e.toZone(e.objs[id], 'trash');
++  e.pl[p].trash = [];
++  const out: Obj[] = [];
++  for (const c of [...codes].reverse()) out.unshift(s.put(p, c, 'deckTop'));
++  return out;
++}
++/** Movimento padrão (a unidade tem de estar pronta). */
++function move(s: Scenario, us: Obj[], dest: string) {
++  for (const u of us) u.exhausted = false;
++  s.go();
++  s.pick('Mover unidades');
++  if (s.d.prompt.startsWith('Quais unidades')) s.ok(us.map((u) => u.id));
++  if (s.d.prompt.startsWith('Para onde')) s.pick(dest);
++}
++
++// ───────────────────────────── Eclipse ─────────────────────────────
++// Erro: com o alvo ilegal o spell não resolvia e o [Predict] se perdia. Regra 359.3.e.1/359.3.e.5 (exemplo do Void Seeker:
++// "Void Seeker's controller still draws 1").
++test('Eclipse: alvo ilegal na resolução — o Predict acontece mesmo assim (359.3.e.5)', () => {
++  const s = new Scenario();
++  const e = s.e;
++  const v = s.put(1, 'OGN-001', BF0);
++  deck(s, 0, ['OGN-001', 'OGN-001']);
++  s.put(0, 'UNL-063', 'hand');
++  s.runes(0, mind(3));
++  canReact(s);
++  s.go();
++  s.pick('Jogar Eclipse');
++  s.maybeObj(v);
++  e.toZone(v, 'hand'); // em resposta, a unidade sai do tabuleiro
++  s.go();
++  s.passAll();
++  assert.match(s.d.prompt, /Predict/, s.log());
++});
++
++// ───────────────────────────── Smoke and Mirrors ─────────────────────────────
++// Erro: com os dois alvos ilegais o spell não resolvia e o "Compre 1" se perdia (359.3.e.5).
++test('Smoke and Mirrors: as duas unidades saem do tabuleiro — ainda compra 1 (359.3.e.5)', () => {
++  const s = new Scenario();
++  const e = s.e;
++  const a = s.put(0, 'OGN-001', base(0));
++  const sp = e.createToken('TOK-SPRITE', 0, BF0, true);
++  e.bfs[0].controller = 0;
++  deck(s, 0, ['OGN-001', 'OGN-001']);
++  s.put(0, 'UNL-083', 'hand');
++  s.runes(0, mind(2));
++  canReact(s);
++  s.go();
++  s.pick('Jogar Smoke and Mirrors');
++  s.pickObj(a);
++  s.maybeObj(sp);
++  e.toZone(a, 'hand');
++  e.toZone(sp, 'trash');
++  s.go();
++  const before = e.pl[0].hand.length;
++  s.passAll();
++  assert.equal(e.pl[0].hand.length, before + 1, s.log());
++});
++
++// ───────────────────────────── Crescent Strike ─────────────────────────────
++// Erro: oferecia campos sem unidade inimiga, escolha que torna a escolha seguinte ilegal (355.16).
++test('Crescent Strike: só oferece campos com unidade inimiga (355.16)', () => {
++  const s = new Scenario();
++  const e = s.e;
++  s.put(1, 'OGN-001', BF0);
++  s.put(1, 'OGN-001', BF0);
++  s.put(0, 'OGN-001', { t: 'bf', i: 1 });
++  s.put(0, 'UNL-072', 'hand');
++  s.runes(0, mind(4));
++  s.go();
++  s.pick('Jogar Crescent Strike');
++  // com um só campo válido a escolha é automática; se perguntar, o campo sem inimigos não pode estar entre as opções
++  if (/campo de batalha/.test(s.d.prompt)) assert.ok(!s.d.options.some((o) => o.label.includes(e.name(e.bfs[1].objId))), s.d.options.map((o) => o.label).join('|'));
++  assert.match(s.d.prompt, /4 de dano/);
++});
++
++// ───────────────────────────── Keeper of Masks ─────────────────────────────
++// Erro: "Then do this: They become copies of me" (errata de 03/04/2026) é um gatilho reflexivo (387.1) que vai para a
++// pilha depois de as fichas entrarem; o script copiava na mesma resolução (FAQ oficial do Unleashed, Zilean/Deceiver:
++// "the copy effect resolves after the Reflection tokens have already resolved").
++test('Keeper of Masks: "Então faça isto" vai para a pilha; se o Keeper sai antes, as Reflection não copiam', () => {
++  const s = new Scenario();
++  const e = s.e;
++  s.put(0, 'OGN-001', BF0);
++  const k = s.put(0, 'UNL-081', 'hand');
++  s.runes(0, mind(2));
++  canReact(s);
++  s.go();
++  s.pick('Jogar Keeper of Masks');
++  if (s.g.current && /onde/.test(s.d.prompt)) s.pick(e.name(e.bfs[0].objId));
++  for (let i = 0; i < 10 && !e.chain.some((x) => /se tornam cópias/.test(x.label)); i++) {
++    if (s.d.kind === 'priority') s.pick('Passar');
++    else break;
++  }
++  const refl = e.units().filter((u) => u.code === 'TOK-REFLECTION');
++  assert.equal(refl.length, 2, s.log() + ' | ' + s.d.kind + ' ' + s.d.prompt);
++  assert.ok(e.chain.some((x) => /se tornam cópias/.test(x.label)), 'o reflexivo está na pilha');
++  assert.ok(refl.every((t) => e.name(t) === 'Reflection'), 'antes do reflexivo, ainda são Reflection');
++  e.toZone(k, 'hand'); // em resposta, o Keeper sai do tabuleiro
++  s.go();
++  drain(s);
++  assert.ok(refl.every((t) => t.zone === 'board' && e.name(t) === 'Reflection' && e.might(t) === 0), s.log());
++});
++
++// ───────────────────────────── Hwei, Brooding Painter ─────────────────────────────
++// Erro: "do the following based on the discarded card's type" são gatilhos reflexivos (387.1.b), um por tipo, que vão
++// para a pilha na ordem que o jogador escolher; as runas são escolhidas (alvos) ao finalizar o reflexivo, e qualquer
++// runa pode ser escolhida (FAQ oficial do Vendetta, Hwei + Patched Porobot).
++test('Hwei: descartar Unit Gear põe dois reflexivos na pilha, na ordem escolhida; runa pronta pode ser alvo', () => {
++  const s = new Scenario();
++  const e = s.e;
++  const h = s.put(0, 'UNL-080', base(0));
++  deck(s, 0, ['OGN-001', 'OGN-001']);
++  const pb = s.put(0, 'VEN-058', 'hand');
++  const ex = s.put(0, MIND, base(0), { ready: false });
++  const rd = s.put(0, MIND, base(0), { ready: true });
++  canReact(s);
++  move(s, [h], e.name(e.bfs[0].objId));
++  drain(s);
++  s.pickObj(pb);
++  assert.match(s.d.prompt, /Vários efeitos/, 'dois reflexivos: o jogador escolhe a ordem');
++  const ready = s.d.options.find((o) => /runas/.test(o.label));
++  assert.ok(ready);
++  s.ok([s.d.options.find((o) => o !== ready)!.id]); // +3 primeiro (resolve por último)
++  assert.match(s.d.prompt, /runas/);
++  assert.ok(s.d.options.some((o) => o.obj === rd.id), 'runa pronta também é alvo válido');
++  s.ok([ex.id, rd.id]);
++  assert.equal(e.chain.length >= 2, true, 'os dois reflexivos estão na pilha');
++  drain(s);
++  assert.equal(ex.exhausted, false);
++  assert.equal(e.might(h), 8);
++});
+-- 
+2.43.0
+

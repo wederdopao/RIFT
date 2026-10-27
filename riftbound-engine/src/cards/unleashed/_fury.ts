@@ -1,0 +1,31 @@
+// Lote fury do Unleashed (UNL): importe aqui um arquivo por carta.
+// (UNL-002 Inferna continua importada em index.ts; revisada: Ambush + Assault 2, correta.)
+import './UNL-001-arena-kingpin';
+import './UNL-003-mischievous-marai';
+import './UNL-004-prepared-neophyte';
+import './UNL-005-revna-the-lorekeeper';
+import './UNL-006-sharkling';
+import './UNL-007-smite';
+import './UNL-008-towering-pairofant';
+import './UNL-009-upstage-comedy';
+import './UNL-010-vault-breaker';
+import './UNL-011-fresh-beans';
+import './UNL-012-lord-broadmane';
+import './UNL-013-lotus-trap';
+import './UNL-014-monster-harpoon';
+import './UNL-015-right-of-conquest';
+import './UNL-016-scorchclaw';
+import './UNL-017-square-up';
+import './UNL-018-yeti-brawler';
+import './UNL-019-blighted-battleaxe';
+import './UNL-020-dancing-grenade';
+import './UNL-021-grim-apothecary';
+import './UNL-022-jhin-murderous-artist';
+import './UNL-023-katarina-reckless';
+import './UNL-024-rengar-unseen';
+import './UNL-025-undying-legion';
+import './UNL-026-xerath-freed';
+import './UNL-027-inviolus-vox';
+import './UNL-028-pyke-dockside-butcher';
+import './UNL-029-red-brambleback';
+import './UNL-030-vi-hotheaded';

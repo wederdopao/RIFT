@@ -1,0 +1,30 @@
+// Lote calm do Unleashed (UNL): importe aqui um arquivo por carta.
+// UNL-036 (Mutated Mouser) e UNL-042 (Back Off) já são importadas em index.ts.
+import './UNL-031-combat-experience';
+import './UNL-032-double-trouble';
+import './UNL-033-frisky-hunter';
+import './UNL-034-herald-of-spring';
+import './UNL-035-monch';
+import './UNL-037-shadow-watcher';
+import './UNL-038-skyward-strike';
+import './UNL-039-soul-sword';
+import './UNL-040-wuju-apprentice';
+import './UNL-041-allay-eager-admirer';
+import './UNL-043-enthusiastic-promoter';
+import './UNL-044-flurry-of-feathers';
+import './UNL-045-forgotten-signpost';
+import './UNL-046-friendship';
+import './UNL-047-mosstomper';
+import './UNL-048-trevor-snoozebottom';
+import './UNL-049-honeyfruit';
+import './UNL-050-iascylla';
+import './UNL-051-ivern-nurturer';
+import './UNL-052-nami-headstrong';
+import './UNL-053-scuttle-crab';
+import './UNL-054-tricksy-tentacles';
+import './UNL-055-vex-mocking';
+import './UNL-056-yuumi-magical-cat';
+import './UNL-057-alpha-wildclaw';
+import './UNL-058-lillia-protector-of-dreams';
+import './UNL-059-master-yi-unstoppable';
+import './UNL-060-vilemaw';
