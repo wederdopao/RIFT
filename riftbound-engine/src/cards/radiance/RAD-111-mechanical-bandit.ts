@@ -14,7 +14,8 @@ registerCard({
         const g = c.g;
         const opp = (1 - c.p) as any;
         const [mine] = yield* g.revealTop(c.p, 1, c.p);
-        const [theirs] = yield* g.revealTop(opp, 1, c.p);
+        // "each player reveals": o oponente revela o próprio deck (é ele quem revela: Void Hatchling dele vale)
+        const [theirs] = yield* g.revealTop(opp, 1, opp);
         const lowest = mine && (!theirs || g.data(mine).energy <= g.data(theirs).energy);
         if (lowest && mine.zone === 'mainDeck' && g.pl[c.p].mainDeck[0] === mine.id) yield* g.draw(c.p, 1);
         const rest = [mine, theirs].filter((o) => o && o.zone === 'mainDeck');
