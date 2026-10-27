@@ -2186,7 +2186,7 @@ export class Engine {
     opts: { viaEquip?: boolean } = {},
   ): boolean {
     if (gear.zone !== 'board' || unit.zone !== 'board' || !this.isUnit(unit) || gear.id === unit.id || unit.attachedTo) return false;
-    if (this.isUnit(gear)) return false; // novo: unit gear é unidade, não se anexa (decisão sem ruling; ver makeUnitGear)
+    if (this.isUnit(gear)) return false; // novo: unit gear é unidade, não se anexa (patch notes das Core Rules do Radiance: "Units can't be attached to other game objects")
     if (gear.attachedTo === unit.id) return false; // 434.1.g: nada acontece
     const prev = this.topMost(gear);
     if (prev) {
