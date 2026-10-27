@@ -3236,11 +3236,14 @@ export class Engine {
   }
   deflectCost(ids: string[][], p: P): Cost {
     if (this.ignoreDeflectNow) return { energy: 0, power: [] };
+    // revisão VEN: escolher algo no Heisho ignora TODO o Deflect desse spell/habilidade, também de alvos em outro lugar
+    // (FAQ oficial do Vendetta; RiftJudge #11769)
+    if (ids.some((grp) => grp.some((id) => this.objs[id]?.zone === 'board' && this.ignoresDeflect(this.objs[id])))) return { energy: 0, power: [] };
     let n = 0;
     for (const grp of ids)
       for (const id of grp) {
         const o = this.objs[id];
-        if (o && o.zone === 'board' && o.controller !== p && !this.ignoresDeflect(o)) n += this.activeKw(o).deflect || 0;
+        if (o && o.zone === 'board' && o.controller !== p) n += this.activeKw(o).deflect || 0;
       }
     return { energy: 0, power: Array.from({ length: n }, () => [...DOMAINS]) };
   }
@@ -5149,6 +5152,7 @@ export class Engine {
     if (k === 'spell') this.noteSpellSpend(p, cost); // novo (UNL mind): Jhin, Meticulous Killer
     if (k === 'spell') this.noteSpellEnergy(o, cost.energy); // novo (UNL fury): Revna
     // 5-6. finalizar
+    o.playedFrom = o.zone; // novo (revisão VEN): zona de onde a carta é jogada (Kennen, Heart of the Tempest)
     this.removeFromArrays(o);
     o.controller = p;
     o.zone = 'chain';
@@ -5213,7 +5217,7 @@ export class Engine {
   emitCardPlayed(o: Obj, p: P, via?: string) {
     const s = this.pl[p];
     s.completed = (s.completed || 0) + 1;
-    this.emit({ type: 'cardPlayed', obj: o, player: p, via, nth: s.completed });
+    this.emit({ type: 'cardPlayed', obj: o, player: p, via, nth: s.completed, from: o.playedFrom }); // from (novo, revisão VEN): zona de origem
   }
   /**
    * Jogar uma carta por efeito (ex.: Flame Chompers do descarte). `cost` é o custo base que o efeito dá ("ignorando o
@@ -5280,6 +5284,7 @@ export class Engine {
     yield* this.asPayForG(use, this.payG(p, total));
     this.notePaid(p, o); // novo (Vendetta): Aura.onPaid
     this.playingLoc = undefined;
+    o.playedFrom = o.zone; // novo (revisão VEN): zona de onde a carta é jogada (Kennen, Heart of the Tempest)
     this.removeFromArrays(o);
     o.controller = p;
     o.zone = 'chain';
@@ -5335,6 +5340,7 @@ export class Engine {
     this.notePaid(p, o); // novo (Vendetta): Aura.onPaid
     this.noteSpellSpend(p, total); // novo (UNL mind): Jhin, Meticulous Killer
     this.noteSpellEnergy(o, total.energy); // novo (UNL fury): Revna
+    o.playedFrom = o.zone; // novo (revisão VEN): zona de onde a carta é jogada (Kennen, Heart of the Tempest)
     this.removeFromArrays(o);
     o.controller = p;
     o.zone = 'chain';
