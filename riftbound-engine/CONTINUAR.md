@@ -416,3 +416,6 @@ depois uma revisão independente por quem não escreveu. Verificação ao final:
   Tentativa: avaliar o fim da conferência da resposta do oponente como começo do meu turno (`turnEnding: false` no
   `evaluate` de `oppTurnValue` — hoje ele avalia como fim do meu turno, o que soa errado). Mediu 69 × 59 (54%), dentro
   do ruído mas não melhor: revertido. Se for tentar de novo, medir com ≥256 partidas.
+- **Níveis contra a antiga** (64 partidas cada): Fácil 20 × 44 (31%, decisão média ~35 ms) — mais fraco, como deve;
+  Difícil 39 × 25 (61%, média ~250 ms, pior ~1,9 s) — **igual ao Normal**, o tempo a mais não está virando força.
+  Próximo: achar onde o Difícil gasta o tempo sem ganho (turnK/depth/verifyK via `--level hard --tune hard.depth=2,...`).
