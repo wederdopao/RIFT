@@ -11,7 +11,8 @@ registerCard({
     {
       on: 'combatEnd',
       label: 'Empower em mim',
-      cond: (c, ev) => (ev.units || []).includes(c.self.id),
+      // "a combat that I was in": também se fui chamada de volta no empate (ev.was; 466, combate em que estive)
+      cond: (c, ev) => (ev.was || ev.units || []).includes(c.self.id),
       resolve: function* (c) {
         c.g.empowerObj(c.self, c.p);
       },

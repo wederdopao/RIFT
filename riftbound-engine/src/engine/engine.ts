@@ -987,6 +987,7 @@ export class Engine {
       // novo (124.1): o objeto novo também não herda "não pode se mover neste turno" (Vex, Apathetic)
       o.noMoveTurn = undefined;
       o.noMoveBy = undefined; // novo (UNL chaos)
+      o.damagedTurn = undefined; // novo (revisão VEN): objeto novo não "recebeu dano neste turno" (124; Affectionate Poro)
       o.controller = o.owner;
       this.effects = this.effects.filter((e) => e.target !== o.id);
       this.endControlUntilLeaves(o); // novo: controle "até eu sair do tabuleiro" acaba na hora (Akshan, Mischievous)
@@ -1652,7 +1653,10 @@ export class Engine {
       const attached = o.attached ? [...o.attached] : undefined; // novo: texto de efeito que a unidade tinha (olhar para trás)
       const might = this.isUnit(o) ? this.might(o) : undefined; // novo: Might ao morrer (808.1.d.3; "se eu era Mighty", Unsung Hero)
       const alone = this.isUnit(o) && this.isAlone(o); // novo (SFD calm): "se eu morri sozinha", com as que morrem junto (FAQ #10890)
-      return { o, loc, snap, ctrl: o.controller, wasBuffed: o.buffs > 0, killer, killedBy, dkExtra, priorDeaths, attached, alone, might };
+      // novo (revisão VEN): substituição de ir para o descarte (Aura.trashReplace, Endless Riches) vista antes de qualquer
+      // uma sair: vale também para as que morrem junto com a fonte e para a própria fonte (370.4)
+      const banished = !o.token && this.kind(o) !== 'rune' && this.trashReplaced(o);
+      return { o, loc, snap, ctrl: o.controller, wasBuffed: o.buffs > 0, killer, killedBy, dkExtra, priorDeaths, attached, alone, might, banished };
     });
     const prevBuf = this.leaveBuf;
     const leaves: GameEvent[] = [];
@@ -1660,8 +1664,15 @@ export class Engine {
     const evs: GameEvent[] = [];
     // novo (SFD): mortes desta ação, para gatilhos "quando uma ou mais ... morrem" (Sivir): batch + lista
     const batch = ++this.dieBatch;
-    const dyingList = infos.map((x) => ({ id: x.o.id, controller: x.ctrl, unit: this.isUnit(x.o) }));
+    const dyingList = infos.filter((x) => !x.banished).map((x) => ({ id: x.o.id, controller: x.ctrl, unit: this.isUnit(x.o) }));
     for (const x of infos) {
+      // novo (revisão VEN): banida em vez de ir para o descarte = não foi morta (428.1: matar é ir do tabuleiro para o
+      // descarte); sem gatilhos de morte nem Deathknell (808.1.d.1; RiftJudge #11055; riftboundfaq, Mordekaiser × Endless Riches)
+      if (x.banished) {
+        this.toZone(x.o, 'banish');
+        this.say(`${this.name(x.o)} é banida em vez de ir para o descarte.`);
+        continue;
+      }
       if (this.isUnit(x.o)) this.pl[x.ctrl].unitDeaths = (this.pl[x.ctrl].unitDeaths || 0) + 1; // Spoils of War
       if (this.isGear(x.o)) this.pl[x.ctrl].gearDeaths = (this.pl[x.ctrl].gearDeaths || 0) + 1; // novo (RAD); unit gear conta como unidade e como gear
       if (this.isUnit(x.o) && this.phase === 'beginning') this.pl[x.ctrl].beginDeathTurn = this.turn; // novo (UNL calm): Shadow Watcher
@@ -4267,13 +4278,16 @@ export class Engine {
     yield* this.drain();
     if (this.winner !== null) return;
     this.showdown = null;
+    // novo (revisão VEN): unidades que estiveram neste combate (atacante/defensora em algum momento) e continuam no
+    // tabuleiro, mesmo se chamadas de volta no empate: "When a combat that I was in ends" (Affectionate Poro, Mournful Witness)
+    const was = this.units().filter((u) => u.attackedThisCombat || u.defendedThisCombat).map((u) => u.id);
     for (const u of this.units()) {
       u.role = undefined;
       u.attackedThisCombat = false;
       u.defendedThisCombat = false;
     }
     this.effects = this.effects.filter((e) => e.until !== 'combat');
-    this.emit({ type: 'combatEnd', bf: i, units: remaining });
+    this.emit({ type: 'combatEnd', bf: i, units: remaining, was });
   }
 
   // ───────────────────────────── opções de ação ─────────────────────────────

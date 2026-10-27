@@ -10,7 +10,8 @@ registerCard({
     {
       on: 'combatEnd',
       label: 'Comprar 1 (não recebi dano neste turno)',
-      cond: (c, ev) => (ev.units || []).includes(c.self.id) && c.self.damagedTurn !== c.g.turn,
+      // "a combat that I was in": também se fui chamada de volta no empate (ev.was; 466, combate em que estive)
+      cond: (c, ev) => (ev.was || ev.units || []).includes(c.self.id) && c.self.damagedTurn !== c.g.turn,
       resolve: function* (c) {
         yield* c.g.draw(c.p, 1);
       },
