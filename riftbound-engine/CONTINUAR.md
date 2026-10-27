@@ -418,4 +418,11 @@ depois uma revisão independente por quem não escreveu. Verificação ao final:
   do ruído mas não melhor: revertido. Se for tentar de novo, medir com ≥256 partidas.
 - **Níveis contra a antiga** (64 partidas cada): Fácil 20 × 44 (31%, decisão média ~35 ms) — mais fraco, como deve;
   Difícil 39 × 25 (61%, média ~250 ms, pior ~1,9 s) — **igual ao Normal**, o tempo a mais não está virando força.
-  Próximo: achar onde o Difícil gasta o tempo sem ganho (turnK/depth/verifyK via `--level hard --tune hard.depth=2,...`).
+- **Experimentos de 27/10** (128 partidas cada, `--mirror`; "× Normal" = `--old new --level hard --tune` com o hard
+  igualado ao normal mudando só o item): sem a conferência da resposta do oponente 57 × 71 (**ela vale ~5 pontos
+  percentuais**, é a parte que mais rende); sem o planejamento do turno 61 × 67; Difícil × Normal 64 × 64 (empate);
+  conferência mais larga (verifyK 6, 500 ms) 66 × 62; Difícil com verifyK 8 / 900 ms 64 × 64; oponente simulado que
+  também divide as unidades entre dois campos 60 × 68 (pior: o mínimo sobre mais linhas fica pessimista demais);
+  peso de campo contestado ×1,5 65 × 63, ×0,6 60 × 68. Conclusão: mais tempo/largura de busca não vira força — o limite
+  está na avaliação e no modelo do oponente. Por estilo (256 partidas × antiga): a nova vence em todos os confrontos;
+  os decks aggro do gerador é que são fracos (aggro × ramp: 22% com a nova pilotando o aggro, 16% com a antiga).
