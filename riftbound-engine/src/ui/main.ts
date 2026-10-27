@@ -1379,8 +1379,8 @@ function zoomHtml(eng: Engine): string {
   const btns = opts.map((x) => `<button class="opt" data-opt="${esc(x.id)}"><span>${esc(x.label)}</span></button>`).join('');
   return `<div class="modal zoom" data-act="closezoom"><div class="mbox" role="dialog" aria-label="${esc(cardData(o.code).name)}">
     ${cardDetail(eng, o)}
-    ${btns ? `<div class="opts">${btns}</div>` : ''}
-    <div class="btns"><button data-act="closezoom">Fechar</button></div></div></div>`;
+    <div class="zfoot">${btns ? `<div class="opts">${btns}</div>` : ''}
+    <div class="btns"><button data-act="closezoom">Fechar</button></div></div></div></div>`;
 }
 
 function netChip(): string {
@@ -1814,7 +1814,7 @@ function peekHtml(eng: Engine, id: string | null): string {
     if (gear.length) live.push(`⚙ ${gear.join(', ')}`);
   }
   const why = whyNot(eng, o);
-  const text = `<div class="tt-peektext"><b>${esc(d.name)}</b>${live.length ? `<p class="live">${live.join(' · ')}</p>` : ''}${why ? `<p class="tt-why">${why}</p>` : ''}${d.errata || !url ? `<p>${rulesHtml(d.text)}</p>` : ''}${d.effectText && (d.errata || !url) ? `<p><b>Quando equipado:</b> ${rulesHtml(d.effectText)}</p>` : ''}${d.errata ? '<p class="note">Texto com errata.</p>' : ''}${keywordHelpHtml(eng, o)}</div>`;
+  const text = `<div class="tt-peektext"><b>${esc(d.name)}</b>${live.length ? `<p class="live">${live.join(' · ')}</p>` : ''}${why ? `<p class="tt-why">${why}</p>` : ''}${d.text ? `<p class="tt-ptx">${rulesHtml(d.text)}</p>` : ''}${d.effectText ? `<p><b>Quando equipado:</b> ${rulesHtml(d.effectText)}</p>` : ''}${d.errata ? '<p class="note">Texto com errata.</p>' : ''}${keywordHelpHtml(eng, o)}</div>`;
   return `<div class="tt-peekin${k === 'battlefield' ? ' land' : ''}">${url ? `<img src="${url}" alt="" draggable="false">` : ''}${text}</div>`;
 }
 
@@ -3002,8 +3002,9 @@ function scheduleRender() {
     render();
   });
 }
-/** Tela de toque ou estreita: tocar numa carta abre o zoom em vez de agir direto. */
-const touchUi = () => matchMedia('(max-width: 980px), (hover: none)').matches;
+/** Tela de toque: tocar numa carta abre o zoom em vez de agir direto. Vai pelo tipo de ponteiro, não pela largura:
+ * notebook com zoom do sistema (125%/150%) ou janela estreita continua com mouse e precisa do clique normal. */
+const touchUi = () => matchMedia('(hover: none), (pointer: coarse)').matches;
 
 function render() {
   const app = $app();
@@ -3345,7 +3346,8 @@ function onClick(ev: MouseEvent) {
     }
     if (a === 'closemodal') return;
     if (a === 'closezoom') {
-      if (t === act || t.tagName === 'BUTTON') {
+      // tocar de novo na carta grande também fecha
+      if (t === act || t.tagName === 'BUTTON' || t.matches('img.big')) {
         zoom = null;
         render();
       }

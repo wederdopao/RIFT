@@ -327,7 +327,10 @@ kbd { margin-left: auto; font: 600 10px/1 var(--f-display); letter-spacing: 0.06
 .modal { position: fixed; inset: 0; background: rgba(4, 8, 18, 0.78); z-index: 40; display: grid; place-items: center; padding: 16px; padding-top: calc(16px + env(safe-area-inset-top, 0px)); padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
 .mbox { background: var(--panel); border: 1px solid var(--gold); border-radius: 12px; padding: 14px; max-width: min(900px, 100%); max-height: 88vh; overflow: auto; display: grid; gap: 10px; }
 .zoom .mbox { width: min(420px, 100%); }
-.zoom .detail .big { max-height: 56vh; width: auto; margin-inline: auto; }
+.zoom .detail .big { max-height: 56vh; width: auto; margin-inline: auto; cursor: zoom-out; }
+.zoom .mbox { max-height: calc(100dvh - 32px); }
+/* ações e Fechar sempre à vista, mesmo com o texto longo */
+.zoom .zfoot { position: sticky; bottom: -14px; margin: 0 -14px -14px; padding: 8px 14px 14px; display: grid; gap: 8px; background: var(--panel); border-top: 1px solid var(--line-mid); }
 .zoom .detail.wide .big { width: 100%; max-height: none; }
 
 /* ── online ── */
@@ -1147,24 +1150,26 @@ body:has(.tt)::before { display: none; }
 .tt-peek { position: absolute; left: calc(var(--rail) + 8px); top: 8px; z-index: 30; pointer-events: none; }
 .tt-peek.right { left: auto; right: calc(var(--rail) + 8px); }
 .tt-peek:empty { display: none; }
+@media (hover: none) { .tt-peek { display: none; } }
 .tt-peekin { width: clamp(220px, calc(var(--u) * 3.1), 330px); display: grid; gap: 6px; animation: tt-peek 0.12s ease-out; }
 .tt-peekin.land { width: clamp(300px, calc(var(--u) * 4.4), 460px); }
 @keyframes tt-peek { from { opacity: 0; transform: scale(0.97); } }
-.tt-peekin img { width: 100%; border-radius: 14px; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.7), 0 18px 40px rgba(0, 0, 0, 0.7); display: block; }
+.tt-peekin img { max-height: 62dvh; object-fit: contain; width: 100%; border-radius: 14px; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.7), 0 18px 40px rgba(0, 0, 0, 0.7); display: block; }
 .tt-peektext { background: rgba(8, 16, 36, 0.95); border: 1px solid var(--line-mid); border-radius: 10px; padding: 8px 10px; font-size: 0.86em; }
 .tt-peektext p { margin: 4px 0 0; }
+.tt-peektext .tt-ptx { font-size: 1.08em; line-height: 1.35; }
 .tt-peektext .live { color: var(--gold-hi); }
 .tt-peektext .bad { color: var(--danger); }
 
 /* ── sobreposição no centro da mesa ── */
 .tt-overlay { position: absolute; inset: 0; z-index: 20; display: grid; place-items: center; padding: 16px; background: rgba(4, 9, 22, 0.72); backdrop-filter: blur(2px); }
-.tt-obox { max-width: min(860px, 100%); max-height: 100%; overflow: auto; display: grid; gap: 10px; justify-items: center; text-align: center; padding: 18px 20px; background: rgba(12, 24, 52, 0.96); border: 1px solid var(--line-mid); border-radius: 6px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6); }
+.tt-obox { max-width: min(1100px, 100%); max-height: 100%; overflow: auto; display: grid; gap: 10px; justify-items: center; text-align: center; padding: 18px 20px; background: rgba(12, 24, 52, 0.96); border: 1px solid var(--line-mid); border-radius: 6px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6); }
 .tt-obox.wide { max-width: min(1100px, 100%); }
 .tt-obox h2 { margin: 0; font: 700 clamp(20px, 2.6vw, 30px)/1.1 var(--f-display); letter-spacing: 0.1em; text-transform: uppercase; color: #eaf1ff; }
 .tt-obox p { margin: 0; }
 .tt-kicker { font: 600 12px var(--f-display); letter-spacing: 0.18em; text-transform: uppercase; color: var(--gold); }
 .tt-picks { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
-.tt-pick { position: relative; padding: 0; width: clamp(110px, calc(var(--u) * 1.9), 190px); aspect-ratio: 744 / 1040; border-radius: 10px; overflow: hidden; background: var(--card); border: 2px solid transparent; transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s; }
+.tt-pick { position: relative; padding: 0; width: clamp(110px, min(28dvh, calc((100vw - var(--side) - 120px) / 4.6)), 230px); aspect-ratio: 744 / 1040; border-radius: 10px; overflow: hidden; background: var(--card); border: 2px solid transparent; transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s; }
 .tt-pick.land { width: clamp(220px, calc(var(--u) * 3.4), 330px); aspect-ratio: 1040 / 744; }
 .tt-pick.text { aspect-ratio: auto; width: auto; padding: 10px 14px; }
 .tt-pick img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -1238,7 +1243,6 @@ body:has(.tt)::before { display: none; }
   .tt-bfmid { grid-template-columns: 1fr auto 1fr; padding: 2px 0; }
   .tt-banner { font-size: 11px; padding: 5px 12px; letter-spacing: 0.1em; }
   .tt-banner::before, .tt-banner::after { width: 10px; margin: 0 6px; }
-  .tt-peek { display: none; }
   .tt-overlay { position: fixed; z-index: 40; padding: 10px; }
   .tt-obox { padding: 12px; gap: 8px; }
   .tt-picks { gap: 8px; }
@@ -1287,7 +1291,7 @@ body:has(.tt)::before { display: none; }
   .tt-onturn { display: none; }
   .tt-plate { padding: 2px 6px; }
   .tt-optscroll { max-height: 40dvh; }
-  .tt-pick { width: clamp(80px, 22vh, 130px); }
+  .tt-pick { width: clamp(80px, 26vh, 160px); }
   .tt-pick.land { width: clamp(160px, 40vh, 260px); }
 }
 /* ═════════════════════════════ mesa v2: barra de decisão, mover/arrastar, pilha com setas, previsão ═════════════════════════════ */
