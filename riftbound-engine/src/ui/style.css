@@ -1130,6 +1130,9 @@ body:has(.tt)::before { display: none; }
 .tt .card.attacker { box-shadow: 0 0 0 2px var(--danger), 0 0 14px rgba(239, 93, 78, 0.6); }
 .tt .card.defender { box-shadow: 0 0 0 2px var(--mind), 0 0 14px rgba(69, 147, 227, 0.6); }
 .tt .card .sts .st, .tt .card .sts .chip { font-size: 9px; }
+/* palavras-chave na mesa: contraste alto para ler sem apontar a carta */
+.tt .card .sts .chip { background: rgba(4, 9, 22, 0.92); color: #f1f4fb; border-color: rgba(240, 212, 138, 0.45); font-weight: 700; }
+.tt .card .sts .chip.gain { color: var(--gold-hi); border-color: var(--gold); }
 .tt .might { min-width: calc(var(--cw) * 0.3); height: calc(var(--cw) * 0.3); font-size: calc(var(--cw) * 0.2); right: -4px; bottom: -4px; padding: 0 4px; }
 .tt .card.hand .might { min-width: 24px; height: 24px; font-size: 15px; }
 .tt .dmg { width: calc(var(--cw) * 0.28); height: calc(var(--cw) * 0.28); font-size: calc(var(--cw) * 0.17); }
