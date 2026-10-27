@@ -401,6 +401,12 @@ export interface CardScript {
   code: string;
   keywords?: Keywords;
   kwMod?: (g: Engine, self: Obj) => Keywords | undefined;
+  /**
+   * Novo (RAD-147): palavras-chave de uma habilidade que esta carta DÁ a outra unidade por efeito ("give a friendly unit
+   * 'I have [Assault] equal to my [Shield]' this turn"): `g.addEffect({ target, kwFrom: code, until })`. `soFar` = as
+   * palavras-chave da unidade já somadas (sem esta), para calcular sem recursão.
+   */
+  grantedKw?: (g: Engine, unit: Obj, soFar: Keywords) => Keywords | undefined;
   mightMod?: (g: Engine, self: Obj) => number;
   /** Equip [custo] (818): custo de recursos. "Equip — [C], Recycle 2..." usa também `equipExtra`. */
   equipCost?: Cost;
@@ -408,7 +414,9 @@ export interface CardScript {
   equipFor?: (g: Engine, gear: Obj, unit: Obj, p: P) => Cost;
   /** Novo: parte não de recursos do custo de Equip (Last Rites: reciclar 2; Blade of the Ruined King: matar uma unidade
    *  aliada). Weaponmaster não reduz esta parte (RiftJudge #10704). `pay` recebe c.self = gear, c.data.equipUnit = unidade. */
-  equipExtra?: { label: string; canPay: (g: Engine, gear: Obj, p: P) => boolean; pay: (c: Ctx) => Gen<boolean> };
+  /** Novo (RAD-150): `canPay` recebe `wm` = true e `pay` recebe c.data.weaponmaster quando o custo é pago pelo Weaponmaster
+   *  (821.1.c: [A] a menos), para custos com alternativa em power ("[Rune] or exhaust a friendly unit", Blade of the Exile). */
+  equipExtra?: { label: string; canPay: (g: Engine, gear: Obj, p: P, wm?: boolean) => boolean; pay: (c: Ctx) => Gen<boolean> };
   /** Novo: texto que muda o timing do Equip (818.1.c.5). Padrão: fase principal do seu turno, estado neutro aberto. */
   equipTiming?: 'action' | 'reaction';
   /**

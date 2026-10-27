@@ -21492,8 +21492,8 @@
 "Neeko",
 "Ixtal"
 ],
-"text": "(Neutral cards can go in decks of any Domain.)\nIf Neeko is in your deck, choose 3 different legends in addition to your starting legend. (Different means none match names.)\nWhen you play me, choose one of those legends and add it to your Legend Zone while I'm on the board.",
+"text": "(Neutral cards can go in decks of any Domain.)\nIf Neeko is in your deck, choose up to 3 different legends in addition to your starting legend. (Different means none match names.)\nWhen you play me, choose one of those legends and add it to your Legend Zone while I'm on the board.",
 "effectText": "",
-"errata": false
+"errata": true
 }
 }

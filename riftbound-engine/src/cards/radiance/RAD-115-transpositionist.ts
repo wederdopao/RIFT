@@ -20,7 +20,8 @@ registerCard({
         const cands = g.pl[c.p].hand.map((id) => g.objs[id]).filter((o) => o && g.isUnit(o) && g.data(o).might < m);
         if (!cands.length || !(yield* g.yesNo(c.p, 'Jogar uma unidade com menos Might, ignorando o custo?'))) return;
         const [card] = yield* g.chooseObj(c.p, 'Transpositionist: jogar qual unidade?', cands);
-        if (card) yield* g.playFromEffect(c.p, card, NO_COST, undefined, { allFree: true });
+        // "ignoring its cost": só o custo base vira zero; custos adicionais continuam (356.1.b.1)
+        if (card) yield* g.playFromEffect(c.p, card, NO_COST);
       },
     },
   ],

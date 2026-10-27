@@ -1,9 +1,8 @@
 import { registerCard } from '../../engine/script';
-import { E, T, playBomb, showOff, showedOff, chooseDestination, chooseTokenLoc } from '../helpers';
-import { NO_COST } from '../../engine/types';
-import type { Obj } from '../../engine/types';
 
+// "If you would channel runes, channel that many runes plus 1 exhausted rune instead." — só quando o controlador do
+// Wyvern canaliza ("you").
 registerCard({
   code: 'RAD-092',
-  auras: [{ channelExtra: () => 1 }],
+  auras: [{ channelExtra: (g, src, p) => (p === src.controller ? 1 : 0) }],
 });

@@ -136,7 +136,7 @@ test('Profiteer: desempoderar Kayle (3 status) tira só um; e pode empoderá-la 
   drain(s);
   s.maybeObj(kayle); // empoderar (na resolução): Kayle com 2 pode ganhar o 3º
   drain(s);
-  assert.match(s.log(), /perde um status Empowered \(fica com 2\)/);
+  assert.match(s.log(), /perde um status de Empowered \(fica com 2\)/);
   assert.equal(g.empowerCount(kayle), 3, s.log());
 });
 

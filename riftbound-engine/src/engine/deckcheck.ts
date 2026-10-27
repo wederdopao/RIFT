@@ -44,7 +44,7 @@ export function checkDeck(d: DeckList): DeckReport {
   return { errors, banned: [...new Set(banned)] };
 }
 
-// ── Novo (RAD-167 Neeko, Blending In): "If Neeko is in your deck, choose 3 different legends in addition to your starting
+// ── Novo (RAD-167 Neeko, Blending In): "If Neeko is in your deck, choose up to 3 different legends in addition to your starting
 // legend. (Different means none match names.)" ──
 /** Cartas que pedem lendas extras na montagem do deck, e quantas. */
 export const EXTRA_LEGEND_CARDS: Record<string, number> = { 'RAD-167': 3 };
@@ -59,7 +59,8 @@ function extraLegendErrors(d: DeckList, codes: string[]): string[] {
   const ex = d.extraLegends || [];
   if (!need) return ex.length ? ['Lendas extras só valem com Neeko, Blending In no deck.'] : [];
   const errs: string[] = [];
-  if (ex.length !== need) errs.push(`Neeko, Blending In: escolha ${need} lendas além da inicial (há ${ex.length}).`);
+  // errata de 09/10/2026: "choose up to 3 different legends" (Radiance Errata Updates): de 0 a 3
+  if (ex.length > need) errs.push(`Neeko, Blending In: escolha até ${need} lendas além da inicial (há ${ex.length}).`);
   if (ex.some((c) => kindOf(c) !== 'legend')) errs.push('Neeko, Blending In: as escolhas precisam ser lendas.');
   const names = [cardData(d.legend).name, ...ex.map((c) => cardData(c).name)];
   if (new Set(names).size !== names.length) errs.push('Neeko, Blending In: as lendas precisam ter nomes diferentes (entre si e da lenda inicial).');

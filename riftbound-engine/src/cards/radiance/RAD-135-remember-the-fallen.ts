@@ -14,7 +14,8 @@ registerCard({
         if (!cands.length) return;
         const [o] = yield* g.chooseObj(c.p, `Remember the Fallen: jogar qual carta do descarte? (${k + 1}/3, opcional)`, cands, 0, 1);
         if (!o) return;
-        yield* g.playFromEffect(c.p, o, NO_COST, undefined, { allFree: true });
+        // "ignoring their costs": custo base [0]; custos adicionais continuam (356.1.b.1; ≠ "any and all costs", 356.5.a)
+        yield* g.playFromEffect(c.p, o, NO_COST);
       }
     },
   },
