@@ -4518,6 +4518,9 @@ export class Engine {
   }
   /** Novo (UNL mind): custo alternativo da própria carta (CardScript.altCost) ao jogá-la da mão ou da zona de campeão. */
   altCostFor(p: P, o: Obj, via: string): Cost | undefined {
+    // revisão VEN-113: spell com [Flow] impresso que ganhou outro [Flow] por efeito (Kennen) tem as duas instâncias; o
+    // jogador escolhe por qual joga (a impressa é o custo base, a dada é a alternativa)
+    if (via === 'flow') return this.script(o).flow ? this.grantedFlow(o) : undefined;
     if (via !== 'hand' && via !== 'champion') return undefined;
     return this.script(o).altCost?.(this, o, p);
   }

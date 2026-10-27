@@ -25,7 +25,7 @@ registerCard({
       const u = c.targets[0][0];
       const dest = c.data.dest;
       if (!u || u.zone !== 'board' || !dest || c.g.locEq(u.loc, dest)) return;
-      c.g.moveUnits([u], dest, c.p);
+      yield* c.g.moveUnitsG([u], dest, c.p); // custo aplicado ao movimento: quem move escolhe pagar (204.4)
     },
   },
 });
