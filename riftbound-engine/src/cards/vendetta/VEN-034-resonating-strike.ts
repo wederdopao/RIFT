@@ -34,10 +34,14 @@ registerCard({
       const g = c.g;
       const bf = c.targets[0]?.[0];
       const u = c.targets[1]?.[0];
-      if (!bf || !u || u.zone !== 'board') return;
-      const i = g.bfOf(bf);
-      if (i < 0 || g.bfs[i].controller !== c.p || (u.loc?.t === 'bf' && u.loc.i === i)) return;
-      yield* g.moveUnitsG([u], { t: 'bf', i }, c.p);
+      if (!u || u.zone !== 'board') return;
+      // a unidade continua "em outro local" em relação ao campo escolhido (mesmo que o campo tenha ficado ilegal)?
+      const chosenBf = c.item?.targetIds?.[0]?.[0];
+      const i0 = chosenBf ? g.bfOf(g.objs[chosenBf]) : -1;
+      if (u.loc?.t === 'bf' && u.loc.i === i0) return;
+      // campo ilegal (deixou de ser seu): o movimento é ignorado, o +2 na unidade ainda vale (359.3.e.5/e.6)
+      const i = bf ? g.bfOf(bf) : -1;
+      if (i >= 0 && g.bfs[i].controller === c.p) yield* g.moveUnitsG([u], { t: 'bf', i }, c.p);
       g.giveMight(u, 2);
     },
   },
