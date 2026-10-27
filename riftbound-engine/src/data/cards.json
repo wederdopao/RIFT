@@ -8671,9 +8671,7 @@
 "power": 0,
 "might": 0,
 "mightBonus": 0,
-"tags": [
-"Gear"
-],
+"tags": [],
 "text": "[empower][2] ([2]: Empower this. Use only if not Empowered.)\n[tap]: Give a unit +2[might] this turn. If this is [empowered], give that unit +4[might] this turn instead.",
 "effectText": "",
 "errata": false

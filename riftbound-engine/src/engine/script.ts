@@ -166,6 +166,9 @@ export interface ActivatedDef extends AbilityDef {
   // energia para adicionar esse tanto de [A]" (Ancient Henge: energyToPower) ou o contrário (Hextech Anomaly:
   // powerToEnergy): o pagamento automático escolhe a quantidade e paga a conversão junto; a ativação manual continua
   // pela própria habilidade (prepare/cost/resolve da carta).
+  /** Novo (revisão VEN-075): `adds` que depende do estado da fonte ("[Add] [1]. If this is Empowered, [Add] [2] instead",
+   *  Platewyrm Egg); vale no pagamento automático e na ativação manual (tem prioridade sobre `adds`). */
+  addsFor?: (g: Engine, self: Obj) => NonNullable<ActivatedDef['adds']>;
   condition?: (g: Engine, self: Obj) => boolean;
   /** Resolve na hora, sem passar pela pilha (habilidades de Add, ex.: Lux, Crownguard). */
   immediate?: boolean;
