@@ -238,6 +238,14 @@ depois uma revisão independente por quem não escreveu. Verificação ao final:
   - Last Caress: ficha de unidade jogada conta como "a próxima unidade".
   - RAD-007/084 "occupied enemy battlefield" = controlado pelo oponente e com unidades (como OGN-161/SFD-093).
 
+## Revisão independente VEN-084..166 (27/10/2026, branch claude/revisao-ven-b)
+Testes em `tests/venrad-revisao-ven-b-{1,2,3,4}.test.ts`. Motor: `Obj.playedFrom` + `from` no `cardPlayed` (Kennen);
+`deflectCost` ignora todo o Deflect se um alvo está no Heisho; Flow dado por efeito vira custo alternativo de spell
+que já tem Flow (`altCostFor`); spell jogado por Flow é banido em qualquer saída da pilha (`data.flowBy`); evento
+`banish` com `by`; `empowerObj` usa `EmpowerSpec.max` e `disempower` tira um status (Kayle); ficha TOK-SHADOWCLONE
+com script. Casos sem ruling confirmados: Gangplank (+3 permanente), Nasus (Equip impresso), Piltovan Forge (Gold conta).
+RiftJudge/playriftbound não acessíveis no contêiner: rulings vieram de resumos de busca.
+
 ## Menu inicial e deckbuilder novos (26/10/2026)
 - Pedido do Weder: estética melhor e mais intuitivo no menu, em "Meus decks" e no deckbuilder (sem mexer na mesa).
 - Identidade: o mesmo feltro azul com grade fina e as cantoneiras douradas do tapete (classe `.mz`); capas de deck com a
