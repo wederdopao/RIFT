@@ -21,7 +21,8 @@ registerCard({
         ]);
         const [top] = yield* g.revealTop(c.p, 1, c.p);
         if (!top || top.zone !== 'mainDeck') return;
-        if (g.kind(top) === guess) g.recycleCard(top, { by: c.p });
+        // "If it has that type": unit gear tem os dois tipos (149.3; Patched Porobot) — isKind, não kind
+        if (g.isKind(top, guess as any)) g.recycleCard(top, { by: c.p });
         else yield* g.draw(c.p, 1);
       },
     },

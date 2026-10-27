@@ -1248,6 +1248,7 @@ export class Engine {
   // ───────────────────────────── ações de jogo ─────────────────────────────
   *draw(p: P, n = 1): Gen {
     let burns = 0; // novo: Burn Outs desta sequência (431.3.b)
+    const batch = {}; // novo (revisão RAD): mesma ação de comprar ("when you draw 1 or more cards", Zero Point Inflection)
     for (let i = 0; i < n; i++) {
       const s = this.pl[p];
       if (s.mainDeck.length === 0) {
@@ -1260,7 +1261,7 @@ export class Engine {
       o.zone = 'hand';
       o.zoneVersion++;
       s.hand.push(id);
-      this.emit({ type: 'draw', player: p, obj: o });
+      this.emit({ type: 'draw', player: p, obj: o, batch });
     }
     if (n > 0) this.say(`${this.pname(p)} compra ${n}.`, p);
   }
@@ -4333,7 +4334,9 @@ export class Engine {
     // novo (RAD): cartas banidas que podem ser jogadas "até o seu próximo Ending Phase" (Akali, Brash; Runeblade Anvil)
     for (const id of s.banish) {
       const d = this.objs[id]?.data;
-      if (d && d.playBy === p && d.playUntil !== undefined && this.turn <= d.playUntil) playable.push({ o: this.objs[id], via: 'banished' });
+      // revisão RAD: "until your next Ending Phase" acaba quando esse Ending Phase começa; playVer = o mesmo objeto (124.1)
+      const live = d && d.playUntil !== undefined && (this.turn < d.playUntil || (this.turn === d.playUntil && this.phase !== 'ending'));
+      if (d && d.playBy === p && live && (d.playVer === undefined || d.playVer === this.objs[id].zoneVersion)) playable.push({ o: this.objs[id], via: 'banished' });
     }
     for (const { o, via } of playable) {
       if (this.canPlayCard(p, o, via, timing))

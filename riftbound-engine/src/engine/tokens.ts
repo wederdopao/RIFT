@@ -29,7 +29,7 @@ export const TOKENS: Record<string, CardData> = {
   ),
   'TOK-BARONPIT': tok('TOK-BARONPIT', 'Baron Pit', 'Token Battlefield', 0, [], 'Units can move here from anywhere.'),
   // novo (Radiance): Bomb (gear ficha com Deploy); script em src/cards/tokens.ts
-  'TOK-BOMB': tok('TOK-BOMB', 'Bomb', 'Token Gear', 0, [], '[Deploy] When I die, deal 2 to an enemy unit here and kill your other Bombs here.'),
+  'TOK-BOMB': tok('TOK-BOMB', 'Bomb', 'Token Gear', 0, [], '[Deploy] [Deathknell] — Deal 2 to an enemy unit here and kill all other Bombs you control here.'),
   'TOK-SHADOWCLONE': tok(
     'TOK-SHADOWCLONE', 'Shadow Clone', 'Token Unit', 0, [],
     'When I attack, you may banish a unit from your trash. If you do, give me [Assault 4] this turn.',
