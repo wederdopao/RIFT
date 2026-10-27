@@ -3,7 +3,7 @@
 import { cardData, kindOf, isChampionCard, allCards } from './db';
 import { TOKENS } from './tokens'; // novo (UNL): nomear tags (763)
 import { Rng } from './rng';
-import { getScript } from './script';
+import { getScript, empowerSpecs } from './script';
 import type { AbilityDef, ActivatedDef, Aura, CardScript, CostMod, Ctx, EffectText, EventType, OptionalCost, PayUse, TargetSpec, TriggerDef } from './script';
 import {
   DOMAINS,
@@ -951,7 +951,20 @@ export class Engine {
   toZone(o: Obj, zone: Zone, opts: { bottom?: boolean; player?: P } = {}) {
     // novo (Vendetta): substituição de ir para o descarte (Aura.trashReplace: Endless Riches, "If a card would go to your
     // trash from anywhere other than your Main Deck, banish it instead")
-    if (zone === 'trash' && !o.token && this.kind(o) !== 'rune' && this.trashReplaced(o)) zone = 'banish';
+    // revisão VEN-126..145: quem bane (evento 'banish', Zed: "when you banish"): o controlador do item que resolve; a
+    // substituição de descarte e o Flow são do dono / de quem jogou
+    let banishBy: P | undefined;
+    if (zone === 'trash' && !o.token && this.kind(o) !== 'rune' && this.trashReplaced(o)) {
+      zone = 'banish';
+      banishBy = o.owner;
+    }
+    // revisão VEN-126..145: spell jogado por Flow é banido sempre que sai da pilha, anulado inclusive (829.1.b; FAQ
+    // oficial do Vendetta: substituição atrasada, vale até contra "devolva à mão")
+    if (o.zone === 'chain' && zone !== 'chain' && o.data?.flowBy !== undefined) {
+      banishBy = o.data.flowBy;
+      delete o.data.flowBy;
+      zone = 'banish';
+    }
     const wasBoard = o.zone === 'board';
     const lastLoc = this.locOf(o);
     // novo: evento genérico de saída do tabuleiro (morrer, voltar à mão, banir, reciclar...); attached = o que estava
@@ -1017,7 +1030,7 @@ export class Engine {
     else if (zone === 'runeDeck') opts.bottom ? s.runeDeck.push(o.id) : s.runeDeck.unshift(o.id);
     if (leaveEv) this.emitLeave(leaveEv);
     for (const ev of detachEvs) this.emitLeave(ev);
-    if (zone === 'banish' && this.kind(o) !== 'rune') this.emit({ type: 'banish', obj: o, player: o.owner }); // novo (Vendetta): Zed, Master of Shadows
+    if (zone === 'banish' && this.kind(o) !== 'rune') this.emit({ type: 'banish', obj: o, player: o.owner, by: banishBy ?? (this.resolving > 0 && this.resolvingBy !== null ? this.resolvingBy : o.owner) }); // novo (Vendetta): Zed, Master of Shadows
   }
   /** Novo (Vendetta): o item da pilha escolheu `o` (alvo da jogada ou de uma execução do Repeat)? */
   itemChose(item: ChainItem | undefined, o: Obj): boolean {
@@ -4696,8 +4709,11 @@ export class Engine {
     this.addEffect({ target: o.id, grantAct: { code, index }, until });
   }
   /** Novo (Vendetta): "empower it" (fica Empowered se não estiver; com `max`, conta até N vezes — Kayle, Justified). */
-  empowerObj(o: Obj, p: P, max = 1): boolean {
-    const n = (o as any).empowerCount ?? (o.empowered ? 1 : 0);
+  empowerObj(o: Obj, p: P, max?: number): boolean {
+    // revisão VEN-126..145: a permissão "posso ficar Empowered até N vezes" (Kayle, Justified: EmpowerSpec.max) vale para
+    // qualquer instrução de Empower, não só a da própria habilidade (441.1.c.1)
+    max ??= Math.max(1, ...empowerSpecs(this.script(o)).map((s) => s.max ?? 1));
+    const n = o.empowered ? Math.max(1, (o as any).empowerCount ?? 1) : 0;
     if (n >= max) return false;
     (o as any).empowerCount = n + 1;
     o.empowered = true;
@@ -4708,9 +4724,12 @@ export class Engine {
   /** Novo (Vendetta): "disempower it". */
   disempower(o: Obj): boolean {
     if (!o.empowered) return false;
-    o.empowered = false;
-    (o as any).empowerCount = 0;
-    this.say(`${this.name(o)} deixa de estar Empowered.`);
+    // revisão VEN-126..145: quem pode ficar Empowered várias vezes perde só um status por Disempower (FAQ oficial do
+    // Vendetta, Kayle, Justified; RiftJudge #11752); nos outros o status é binário (441.1.a)
+    const left = Math.max(1, (o as any).empowerCount ?? 1) - 1;
+    o.empowered = left > 0;
+    (o as any).empowerCount = left;
+    this.say(left > 0 ? `${this.name(o)} perde um status de Empowered (fica com ${left}).` : `${this.name(o)} deixa de estar Empowered.`);
     return true;
   }
   /** Vezes que está Empowered (Kayle, Justified). */
@@ -5196,6 +5215,7 @@ export class Engine {
         spentE: cost.energy, // novo (revisão UNL fury)
       };
       c.item = item;
+      if (via === 'flow') (o.data ||= {}).flowBy = p; // revisão VEN-126..145: banir ao sair da pilha (toZone)
       this.pushChain(item);
     }
     // gatilhos de "jogar" (Darius, Trifarian): unidade/gear agora; spell ao terminar de resolver (419.4.a)
