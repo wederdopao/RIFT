@@ -29,7 +29,8 @@ registerCard({
       },
       resolve: function* (c) {
         const g = c.g;
-        const dst = [...g.board().filter((o) => g.isUnit(o) || g.isGear(o)), ...([0, 1] as P[]).flatMap((pp) => g.legendsOf(pp))].filter((o) => !o.empowered);
+        // Kayle, Justified ("up to three times") ganha mais um status (FAQ oficial do Vendetta: Profiteer + Kayle)
+        const dst = [...g.board().filter((o) => g.isUnit(o) || g.isGear(o)), ...([0, 1] as P[]).flatMap((pp) => g.legendsOf(pp))].filter((o) => g.empowerCount(o) < g.empowerMax(o));
         if (!dst.length) return;
         const [e] = yield* g.chooseObj(c.p, 'Profiteer: empower qual (lenda, unidade ou gear)?', dst);
         if (e) g.empowerObj(e, c.p);

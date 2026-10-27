@@ -3,7 +3,7 @@
 import { cardData, kindOf, isChampionCard, allCards } from './db';
 import { TOKENS } from './tokens'; // novo (UNL): nomear tags (763)
 import { Rng } from './rng';
-import { getScript } from './script';
+import { getScript, empowerSpecs } from './script';
 import type { AbilityDef, ActivatedDef, Aura, CardScript, CostMod, Ctx, EffectText, EventType, OptionalCost, PayUse, TargetSpec, TriggerDef } from './script';
 import {
   DOMAINS,
@@ -2345,7 +2345,7 @@ export class Engine {
     owners.push(...this.legendsOf(p)); // novo (Neeko): lendas acrescentadas
     for (const o of owners) {
       for (const a of this.script(o).activated || []) {
-        const adds = this.addsOf(a);
+        const adds = this.addsOf(a, o);
         if (!adds || a.notAutoPay) continue; // novo: Gold entra pelo caminho próprio do pagamento
         // restrição de uso ("Use only to play spells", Ornn "only to play gear or use gear abilities", Renekton, Butcher...)
         if (!this.usesAllow(this.addUses(adds), forSpell)) continue;
@@ -2443,8 +2443,9 @@ export class Engine {
     return { energy, power };
   }
   /** O que uma habilidade de [Add] adiciona (adds, ou addPower dos Seals); undefined se não for [Add]. */
-  addsOf(a: ActivatedDef): NonNullable<ActivatedDef['adds']> | undefined {
+  addsOf(a: ActivatedDef, src?: Obj): NonNullable<ActivatedDef['adds']> | undefined {
     if (!a.isAdd) return undefined;
+    if (a.addsFor && src) return a.addsFor(this, src); // novo (revisão VEN-075): o que adiciona depende do estado da fonte
     if (a.adds) return a.adds;
     if (a.addPower) return { power: [Array.isArray(a.addPower) ? a.addPower : [a.addPower]] };
     return undefined;
@@ -4690,7 +4691,7 @@ export class Engine {
     this.addEffect({ target: o.id, grantAct: { code, index }, until });
   }
   /** Novo (Vendetta): "empower it" (fica Empowered se não estiver; com `max`, conta até N vezes — Kayle, Justified). */
-  empowerObj(o: Obj, p: P, max = 1): boolean {
+  empowerObj(o: Obj, p: P, max = this.empowerMax(o)): boolean {
     const n = (o as any).empowerCount ?? (o.empowered ? 1 : 0);
     if (n >= max) return false;
     (o as any).empowerCount = n + 1;
@@ -4702,10 +4703,21 @@ export class Engine {
   /** Novo (Vendetta): "disempower it". */
   disempower(o: Obj): boolean {
     if (!o.empowered) return false;
+    // revisão VEN-082: quem pode ficar Empowered várias vezes (Kayle, Justified) perde só um status (FAQ oficial do Vendetta)
+    const n = this.empowerCount(o);
+    if (n > 1) {
+      (o as any).empowerCount = n - 1;
+      this.say(`${this.name(o)} perde um status Empowered (fica com ${n - 1}).`);
+      return true;
+    }
     o.empowered = false;
     (o as any).empowerCount = 0;
     this.say(`${this.name(o)} deixa de estar Empowered.`);
     return true;
+  }
+  /** Novo (revisão VEN-082): quantas vezes `o` pode ficar Empowered ("up to three times", Kayle: EmpowerSpec.max; padrão 1). */
+  empowerMax(o: Obj): number {
+    return Math.max(1, ...empowerSpecs(this.script(o)).map((s) => s.max ?? 1));
   }
   /** Vezes que está Empowered (Kayle, Justified). */
   empowerCount(o: Obj): number {
@@ -4813,9 +4825,10 @@ export class Engine {
     if (a.extraCost && !(yield* a.extraCost(c))) throw new IllegalAction('Custo não pago.');
     this.say(`${this.name(o)}: ${a.label}.`, p);
     // novo: [Add] declarado em `adds` (Energy Conduit, Kai'Sa, Lux...): o motor põe no pool (com a marca "só para spells")
-    if (a.adds) {
+    const ad = a.addsFor ? a.addsFor(this, o) : a.adds; // novo (revisão VEN-075): addsFor
+    if (ad) {
       const pw: (Domain | 'any')[] = [];
-      for (const pip of a.adds.power || []) {
+      for (const pip of ad.power || []) {
         if (pip.length >= DOMAINS.length) pw.push('any');
         else if (pip.length === 1) pw.push(pip[0]);
         else {
@@ -4823,7 +4836,7 @@ export class Engine {
           pw.push(d as Domain);
         }
       }
-      this.addResources(p, a.adds.energy || 0, pw, !!a.adds.onlySpells, !!a.adds.onlyGear, !!a.adds.onlyShowdown, a.adds.only);
+      this.addResources(p, ad.energy || 0, pw, !!ad.onlySpells, !!ad.onlyGear, !!ad.onlyShowdown, ad.only);
     }
     yield* a.resolve(c);
     if (this.showdown && !this.chain.length) this.showdown.flipAfterChain = false;
