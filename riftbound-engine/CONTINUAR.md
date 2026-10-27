@@ -403,5 +403,16 @@ depois uma revisão independente por quem não escreveu. Verificação ao final:
   a cada um a visão filtrada; Prévia (👁) desligada para o convidado; replay completo chega ao convidado no fim.
   Estava terminando quando pausou: `npm test`, uiplay e onlinetest (room e MQTT) passaram depois do merge. O anfitrião
   continua com tudo na memória (limitação aceita).
-- O `scripts/onlinetest.mjs` às vezes falha num clique do pedido de desfazer (elemento redesenhado na hora): instável,
-  passa ao rodar de novo — vale deixar o clique mais robusto.
+- ~~`scripts/onlinetest.mjs` instável no clique do pedido de desfazer~~ — resolvido (27/10): o clique usa localizador
+  em vez de ElementHandle; 3 rodadas seguidas passaram.
+
+## Retomada (27/10/2026)
+- **Mesa**: `touchUi()` agora vai pelo ponteiro (`(hover: none), (pointer: coarse)`), não pela largura — em notebook
+  com zoom do Windows (125%/150%) o clique na carta abria o zoom gigante e travava. Zoom no toque: tocar na carta fecha,
+  ações e Fechar fixos embaixo (`.zfoot`). Prévia ao apontar também no layout compacto com mouse, sempre com o texto
+  da carta legível; cartas das escolhas do centro (mulligan...) maiores.
+- **Repositório**: `npm run publicar` atualiza `../riftbound-mesa-site/site` (Netlify) e `../riftbound-mesa.html`.
+- **IA, medição** (`npx tsx tests/ai-vs.ts 128 --shard k/4`, Normal nova × antiga): **77 × 51 (60%)**.
+  Tentativa: avaliar o fim da conferência da resposta do oponente como começo do meu turno (`turnEnding: false` no
+  `evaluate` de `oppTurnValue` — hoje ele avalia como fim do meu turno, o que soa errado). Mediu 69 × 59 (54%), dentro
+  do ruído mas não melhor: revertido. Se for tentar de novo, medir com ≥256 partidas.

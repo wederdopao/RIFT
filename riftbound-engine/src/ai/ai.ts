@@ -303,11 +303,6 @@ export interface EvalOpts {
   myopic?: boolean;
   /** Arquétipo do oponente (lido da lenda e do que ele já jogou). */
   arch?: Archetype;
-  /**
-   * A mesa é do fim do meu turno (o oponente joga em seguida)? Padrão: é o meu turno. A conferência da resposta do
-   * oponente avalia no começo do meu turno seguinte (eu ajo antes de ele pontuar de novo): passa false.
-   */
-  turnEnding?: boolean;
 }
 
 /** Quanto a mesa vale para `me` (positivo = bom). */
@@ -318,7 +313,7 @@ export function evaluate(e: Engine, me: P, opts: EvalOpts = {}): number {
   const arch = W.arch ? opts.arch ?? 'mid' : 'mid';
   const myopic = !!opts.myopic;
   // a avaliação é feita no fim do meu turno (planAction) ou numa resposta no meu turno: o oponente joga em seguida
-  const myTurnEnding = opts.turnEnding ?? e.active === me;
+  const myTurnEnding = e.active === me;
   // contra aggro, campo mal defendido custa mais caro; contra control, a corrida por pontos vale mais
   const contested = arch === 'aggro' ? W.contestAggro : arch === 'control' ? W.contestControl : W.contestMid;
   const side = (p: P) => {
@@ -845,8 +840,7 @@ function oppTurnValue(start: (path: Step[]) => Stepper | null, path: Step[], me:
       }
     }
     if (!ok) continue;
-    // parou na minha primeira decisão de ação do turno seguinte: não é fim do meu turno (eu ajo antes de ele pontuar)
-    const v = evaluate(sim.e, me, { ...opts, turnEnding: sim.e.active === me ? false : undefined });
+    const v = evaluate(sim.e, me, opts);
     if (worst === null || v < worst) worst = v;
   }
   return worst;
