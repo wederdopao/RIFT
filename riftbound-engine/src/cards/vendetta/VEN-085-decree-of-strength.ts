@@ -16,7 +16,11 @@ registerCard({
       const cands = hand.filter((o) => hasDomain(g, o, 'Mind'));
       if (!cands.length) return;
       const [pick] = yield* g.chooseObj(c.p, 'Decree of Strength: qual carta Mind reciclar?', cands);
-      if (pick) g.recycleCard(pick, { by: c.p });
+      // "They recycle that card": quem recicla é o oponente (Karma, Channeler dele dispara; 416.1.c)
+      if (pick) {
+        g.recycleCard(pick, { by: opp });
+        g.say(`${g.name(pick)} é reciclada (vai para o fundo do deck de ${g.pname(opp)}).`);
+      }
     },
   },
 });

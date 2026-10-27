@@ -1,9 +1,9 @@
 import { registerCard } from '../../engine/script';
-import { E, T, atBf, chooseDestination, chooseTokenLoc } from '../helpers';
-import { NO_COST } from '../../engine/types';
-import type { Obj, P } from '../../engine/types';
-import { empowerAct, hasDomain } from './_bh';
 
+// VEN-099 Tornado Warrior: "[Hidden]. When you play me from face down, you may empower something here. Disempower it at
+// end of turn."
+// "something here" é alvo (355.10) sem outra restrição: pode ser algo já Empowered (empower não muda nada, 827) e o
+// "Disempower it at end of turn" vale do mesmo jeito (leitura literal; sem ruling).
 registerCard({
   code: 'VEN-099',
   keywords: { hidden: true },
@@ -17,12 +17,13 @@ registerCard({
         {
           prompt: 'Tornado Warrior: empower o quê (aqui)?',
           kind: 'permanent',
-          filter: (c, o) => c.g.bfIndex(o) >= 0 && c.g.bfIndex(o) === c.g.bfIndex(c.self) && !o.empowered,
+          filter: (c, o) => c.g.bfIndex(o) >= 0 && c.g.bfIndex(o) === c.g.bfIndex(c.self),
         },
       ],
       resolve: function* (c) {
         const t = c.targets[0][0];
-        if (!t || !c.g.empowerObj(t, c.p)) return;
+        if (!t || t.zone !== 'board') return;
+        c.g.empowerObj(t, c.p);
         const tid = t.id;
         const ver = t.zoneVersion;
         c.g.addDelayed({
