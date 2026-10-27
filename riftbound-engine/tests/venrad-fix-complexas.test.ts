@@ -114,10 +114,12 @@ test('The Ball: Deploy fica no campo; como unit gear, ao mover dispara o "escolh
 
 // ───────────── Neeko ─────────────
 
-test('Neeko: deck exige 3 lendas extras de nomes diferentes; código de deck guarda as extras à parte', () => {
+test('Neeko: deck aceita até 3 lendas extras de nomes diferentes; código de deck guarda as extras à parte', () => {
   const main: [string, number][] = [...JINX_PRECON.main, ['RAD-167', 1]];
   const d0 = { ...JINX_PRECON, main };
-  assert.ok(checkDeck(d0).errors.some((e) => /Neeko/.test(e)), 'sem as extras: erro');
+  // errata de 09/10/2026: "choose up to 3" — sem extras vale; mais de 3, não
+  assert.ok(!checkDeck(d0).errors.some((e) => /Neeko/.test(e)), 'sem as extras: ok (até 3)');
+  assert.ok(checkDeck({ ...d0, extraLegends: ['OGN-265', 'OGN-257', 'OGN-267', 'OGN-253'] }).errors.some((e) => /até 3/.test(e)), '4 extras: erro');
   assert.ok(checkDeck({ ...d0, extraLegends: ['OGN-265', 'OGN-257', 'OGN-251'] }).errors.some((e) => /nomes diferentes/.test(e)), 'Jinx repetida');
   const ok = { ...d0, extraLegends: ['OGN-265', 'OGN-257', 'OGN-267'] };
   assert.deepEqual(checkDeck(ok).errors, []);

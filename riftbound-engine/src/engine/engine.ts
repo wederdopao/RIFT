@@ -179,6 +179,8 @@ export interface TempEffect {
   grantAct?: { code: string; index: number };
   /** Novo (VEN): [Flow] concedido a uma carta no descarte enquanto durar (Kennen, Storm of Shuriken): custo de Flow. */
   grantFlow?: Cost;
+  /** Novo (RAD-147): o alvo tem, enquanto durar, as palavras-chave calculadas por CardScript.grantedKw do código dado. */
+  kwFrom?: string;
 }
 
 /**
@@ -474,8 +476,14 @@ export class Engine {
   isUnitGear(o: Obj): boolean {
     if (this.kind(o) !== 'gear') return false;
     if (/unit gear/i.test(this.data(o).type)) return true;
+    if (this.lookbackUnit === o.id) return true; // novo (revisão RAD): gatilhos de morte olham para trás (ver emit)
     return o.zone === 'board' && this.effects.some((e) => e.target === o.id && e.flag === 'unitGear');
   }
+  /**
+   * Novo (revisão RAD): id do gear que era unidade por efeito (Lady of Clockwork) enquanto os gatilhos da morte dele são
+   * conferidos: o gatilho vê a permanente como ela era ao morrer (323.4, 428.1.a.1.b: localização e atributos anotados).
+   */
+  lookbackUnit?: string;
   /** Novo: o objeto é do tipo `k`? 'unit' conta o unit gear (isUnit); os outros pelo tipo da carta. */
   isKind(o: Obj, k: Kind): boolean {
     return k === 'unit' ? this.isUnit(o) : this.kind(o) === k;
@@ -492,6 +500,22 @@ export class Engine {
    * combate; num campo, a próxima limpeza o chama de volta (149.3) se não tiver Deploy.
    */
   makeUnitGear(gear: Obj, src: Obj, might = this.data(gear).energy) {
+    this.endUnitGear(src);
+    if (gear.zone !== 'board' || !this.isGear(gear)) return;
+    if (gear.attachedTo) this.detach(gear, src.controller);
+    this.addEffect({ target: gear.id, flag: 'unitGear', baseMight: might, until: 'perm', source: src.id });
+    this.say(`${this.name(gear)} vira um unit gear com ${might} de Might.`);
+    // novo (revisão RAD): virou unidade num campo que o controlador não controla: o campo fica disputado (patch notes
+    // das Core Rules do Radiance, Lady of Clockwork)
+    const l = this.locOf(gear);
+    if (l?.t === 'bf') this.applyContested(l.i, gear.controller);
+  }
+  /**
+   * Novo (revisão RAD): acaba o "vira unit gear" dado por `src` (o gear anterior deixa de ser unidade). A Lady of Clockwork
+   * chama ao finalizar o gatilho, quando escolhe o gear novo (patch notes do Radiance: entre finalizar e resolver,
+   * nenhum dos dois é unidade).
+   */
+  endUnitGear(src: Obj) {
     const old = this.effects.filter((e) => e.flag === 'unitGear' && e.source === src.id);
     this.effects = this.effects.filter((e) => !old.includes(e));
     for (const e of old) {
@@ -502,10 +526,6 @@ export class Engine {
         this.say(`${this.name(o)} deixa de ser unidade.`);
       }
     }
-    if (gear.zone !== 'board' || !this.isGear(gear)) return;
-    if (gear.attachedTo) this.detach(gear, src.controller);
-    this.addEffect({ target: gear.id, flag: 'unitGear', baseMight: might, until: 'perm', source: src.id });
-    this.say(`${this.name(gear)} vira um unit gear com ${might} de Might.`);
   }
   newObj(code: string, owner: P, zone: Zone, token = false): Obj {
     const o: Obj = {
@@ -680,7 +700,7 @@ export class Engine {
   /** p consegue pagar o Equip (recursos + parte não de recursos) de `gear` em `unit`? `cost` = custo já calculado. */
   canPayEquip(p: P, gear: Obj, unit: Obj, cost = this.equipCostFor(gear, unit, p), gearAbility = true): boolean {
     const ex = this.baseScript(gear).equipExtra;
-    if (ex && !ex.canPay(this, gear, p)) return false;
+    if (ex && !ex.canPay(this, gear, p, !gearAbility)) return false; // novo (RAD-150): 4º arg = pago pelo Weaponmaster
     return this.asPayFor(gearAbility ? 'gearAbility' : undefined, () => this.canPay(p, cost));
   }
   /** Unidades em que p pode ativar o Equip de `gear` agora (alvo: unidade que p controla, 818.1.c.2). */
@@ -795,6 +815,9 @@ export class Engine {
         if (onBoard && a.keywords) this.mergeKw(k, a.keywords(this, src, o));
         if (a.keywordsAnywhere) this.mergeKw(k, a.keywordsAnywhere(this, src, o)); // novo: em qualquer zona (Jax, Unmatched)
       }
+    // novo (RAD-147): habilidade dada por efeito que calcula palavras-chave ("I have [Assault] equal to my [Shield]" neste
+    // turno): TempEffect.kwFrom = código cujo CardScript.grantedKw recebe as palavras-chave já somadas (sem recursão)
+    if (onBoard) for (const e of this.effects) if (e.target === o.id && e.kwFrom) this.mergeKw(k, getScript(e.kwFrom)?.grantedKw?.(this, o, { ...k }));
     return k;
   }
   /**
@@ -1315,13 +1338,14 @@ export class Engine {
     // novo (RAD): Aura.channelExtra (Seraphic Wyvern): canalizar N runas = N + extra runas exauridas
     let extra = 0;
     if (n > 0) for (const src of this.auraSources()) for (const a of this.script(src).auras || []) extra += a.channelExtra?.(this, src, p) || 0;
-    for (let i = 0; i < extra && s.runeDeck.length; i++) {
-      this.putOnBoard(this.objs[s.runeDeck.shift()!], { t: 'base', p }, false);
-      c++;
-    }
     for (let i = 0; i < n && s.runeDeck.length; i++) {
       const o = this.objs[s.runeDeck.shift()!];
       this.putOnBoard(o, { t: 'base', p }, !exhausted);
+      c++;
+    }
+    // "that many runes plus 1 exhausted rune": as runas a mais vêm depois das N (com o deck de runas curto, 430.3)
+    for (let i = 0; i < extra && s.runeDeck.length; i++) {
+      this.putOnBoard(this.objs[s.runeDeck.shift()!], { t: 'base', p }, false);
       c++;
     }
     if (c) this.say(`${this.pname(p)} canaliza ${c} runa(s)${exhausted ? ' exauridas' : ''}.`, p);
@@ -1650,9 +1674,10 @@ export class Engine {
       // mortes simultâneas contam como uma só "vez" (383.1.b): priorDeaths = mortes do controlador antes do lote
       const priorDeaths = this.pl[o.controller].unitDeaths || 0;
       const attached = o.attached ? [...o.attached] : undefined; // novo: texto de efeito que a unidade tinha (olhar para trás)
+      const wasUnit = this.isUnit(o); // novo (revisão RAD): era unidade ao morrer (unit gear por efeito; ver emit)
       const might = this.isUnit(o) ? this.might(o) : undefined; // novo: Might ao morrer (808.1.d.3; "se eu era Mighty", Unsung Hero)
       const alone = this.isUnit(o) && this.isAlone(o); // novo (SFD calm): "se eu morri sozinha", com as que morrem junto (FAQ #10890)
-      return { o, loc, snap, ctrl: o.controller, wasBuffed: o.buffs > 0, killer, killedBy, dkExtra, priorDeaths, attached, alone, might };
+      return { o, loc, snap, ctrl: o.controller, wasBuffed: o.buffs > 0, killer, killedBy, dkExtra, priorDeaths, attached, alone, might, wasUnit };
     });
     const prevBuf = this.leaveBuf;
     const leaves: GameEvent[] = [];
@@ -1667,7 +1692,7 @@ export class Engine {
       if (this.isUnit(x.o) && this.phase === 'beginning') this.pl[x.ctrl].beginDeathTurn = this.turn; // novo (UNL calm): Shadow Watcher
       this.toZone(x.o, 'trash');
       this.say(`${this.name(x.o)} ${reason}.`);
-      evs.push({ type: 'die', obj: x.o, snap: x.snap, loc: x.loc, controller: x.ctrl, wasBuffed: x.wasBuffed, killer: x.killer, killedBy: x.killedBy, dkExtra: x.dkExtra, priorDeaths: x.priorDeaths, attached: x.attached, batch, dying: dyingList, alone: x.alone, might: x.might });
+      evs.push({ type: 'die', obj: x.o, snap: x.snap, loc: x.loc, controller: x.ctrl, wasBuffed: x.wasBuffed, killer: x.killer, killedBy: x.killedBy, dkExtra: x.dkExtra, priorDeaths: x.priorDeaths, attached: x.attached, batch, dying: dyingList, alone: x.alone, might: x.might, wasUnit: x.wasUnit });
     }
     this.leaveBuf = prevBuf;
     for (const ev of [...evs, ...leaves]) {
@@ -3267,6 +3292,17 @@ export class Engine {
 
   // ───────────────────────────── gatilhos ─────────────────────────────
   emit(ev: GameEvent) {
+    // novo (revisão RAD): gear que era unidade por efeito e morreu é visto como unidade pelos gatilhos dessa morte
+    // ("quando uma unidade morre"): 323.4 e 428.1.a.1.b anotam os atributos do momento da morte
+    if (ev.type === 'die' && ev.wasUnit && ev.obj && this.lookbackUnit !== ev.obj.id && !this.isUnit(ev.obj)) {
+      const prev = this.lookbackUnit;
+      this.lookbackUnit = ev.obj.id;
+      try {
+        return this.emit(ev);
+      } finally {
+        this.lookbackUnit = prev;
+      }
+    }
     // novo (RAD): "jogou uma unidade ou gear para um campo de batalha neste turno" (Hold 'Em): vale mesmo que a carta já tenha saído
     if (ev.type === 'play' && !ev.spell && ev.player !== undefined && ev.loc?.t === 'bf' && ev.obj && (this.isUnit(ev.obj) || this.isGear(ev.obj))) {
       const s = this.pl[ev.player as P];
@@ -3803,6 +3839,18 @@ export class Engine {
           }
         }
       });
+      // novo (RAD, 107.3.b.2): a lotação da zona de cartas escondidas diminuiu (saiu o Bushwhack Trap, Aura.hideExtra):
+      // o controlador do campo põe o excesso no descarte, à escolha dele
+      for (let i = 0; i < this.bfs.length; i++) {
+        const b = this.bfs[i];
+        if (b.controller === null) continue;
+        const over = b.facedown.length - (b.capacity + this.hideExtra(i, b.controller));
+        if (over <= 0) continue;
+        const ids = yield* this.ask(b.controller, 'choose', `Só cabem ${b.facedown.length - over} carta(s) escondida(s) em ${this.name(b.objId)}: quais vão para o descarte?`, b.facedown.map((id) => ({ id, label: this.name(id), obj: id })), over, over);
+        for (const id of ids) this.toZone(this.objs[id], 'trash');
+        this.say(`${this.pname(b.controller)} põe ${over} carta(s) escondida(s) de ${this.name(b.objId)} no descarte.`);
+        changed = true;
+      }
       // 8. status de disputa
       this.bfs.forEach((b, i) => {
         const inSd = this.showdown && this.showdown.bf === i;
@@ -5686,7 +5734,7 @@ const WEAPONMASTER: AbilityDef = {
     const ex = g.baseScript(eq).equipExtra;
     if (ex) {
       g.payingFor = { src: eq, p: c.p };
-      const ok = yield* ex.pay(g.ctx(eq, c.p, { data: { equipUnit: u.id } }));
+      const ok = yield* ex.pay(g.ctx(eq, c.p, { data: { equipUnit: u.id, weaponmaster: true } })); // novo (RAD-150): parte em [Rune] com [A] a menos
       g.payingFor = undefined;
       if (!ok) return;
     }

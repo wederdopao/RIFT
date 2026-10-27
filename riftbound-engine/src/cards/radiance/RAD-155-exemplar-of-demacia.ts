@@ -1,7 +1,9 @@
 import { registerCard } from '../../engine/script';
 import { E } from '../helpers';
-import { exhaustMe, disempowerMe, moveFriendlyUnit, chooseBf } from '../vendetta/leg-helpers';
-// RAD-155 Exemplar of Demacia
+import { exhaustMe } from '../vendetta/leg-helpers';
+// RAD-155 Exemplar of Demacia — "When you play a gear with [Deploy], you may exhaust me and pay [Rune] to move a friendly
+// unit to that battlefield." Exaurir e pagar são o custo do gatilho (383.3.b); o movimento passa por moveUnitsG (custo
+// aplicado ao movimento à escolha do jogador, 204.4).
 registerCard({
   code: 'RAD-155',
   triggers: [
@@ -22,7 +24,7 @@ registerCard({
       resolve: function* (c) {
         const u = c.targets[0][0];
         const loc = c.ev?.loc;
-        if (u && loc?.t === 'bf') c.g.moveUnits([u], { t: 'bf', i: loc.i }, c.p);
+        if (u && loc?.t === 'bf') yield* c.g.moveUnitsG([u], { t: 'bf', i: loc.i }, c.p);
       },
     },
   ],

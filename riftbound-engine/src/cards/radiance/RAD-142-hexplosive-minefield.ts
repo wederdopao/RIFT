@@ -12,8 +12,9 @@ registerCard({
       const bombs = g.board().filter((o) => o.code === 'TOK-BOMB' && o.controller === c.p);
       const picks = bombs.length ? yield* g.chooseObj(c.p, 'Hexplosive Minefield: matar quantas Bombs suas?', bombs, 0, bombs.length) : [];
       if (!picks.length) return;
-      const n = picks.length;
-      yield* g.killG(picks);
+      // "that many" = as que de fato morreram por esta instrução (as que as Bombs mortas matam depois não contam)
+      const n = (yield* g.killG(picks)).length;
+      if (!n) return;
       g.addDelayed({
         controller: c.p,
         sourceId: c.self.id,
