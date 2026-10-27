@@ -116,7 +116,7 @@ export type EventType =
   | 'gainXp' // jogador ganhou XP (730.1): { player, amount, source? } — "se você ganhou XP neste turno": g.gainedXpThisTurn(p)
   | 'spendXp' // jogador gastou XP (730.2), como custo ou não: { player, amount, source? }
   | 'replace' // objeto substituído por uma ficha ou trocado de volta (438): { obj (mesmo id), from, to = códigos, player, swapBack? }
-  | 'banish' // novo (Vendetta): carta banida: { obj, player = dono } (Zed, Master of Shadows)
+  | 'banish' // novo (Vendetta): carta banida: { obj, player = dono, by = quem baniu } (Zed, Master of Shadows)
   | 'mightReduce' // novo (RAD): Might de uma unidade reduzido por efeito: { unit, amount (<0), by = controlador do efeito }
   | 'exhaust' // novo (RAD): permanente ficou exaurido: { obj, player = controlador, units = os que exauriram juntos }
   | 'hide'; // novo (UNL fury): carta escondida (Hidden): { obj, player = quem escondeu, bf } (Katarina, Reckless)
@@ -204,7 +204,7 @@ export interface EmpowerSpec {
   exhaustSelf?: boolean;
   /** Custo não de recursos (Discard 1, matar uma unidade aliada, descartar um spell). */
   extra?: { label: string; canPay: (c: Ctx) => boolean; pay: (c: Ctx) => Gen<boolean> };
-  /** "I can be Empowered up to three times" (Kayle, Justified): pode ativar enquanto empowerCount < max. */
+  /** "I can be Empowered up to three times" (Kayle, Justified): vale para toda instrução de Empower (Engine.empowerObj). */
   max?: number;
   /** Timing alterado pelo texto (827.1.c.4). */
   timing?: 'main' | 'action' | 'reaction';
@@ -607,7 +607,9 @@ export function empowerAbilityOf(spec: EmpowerSpec): ActivatedDef {
     baseCost: base,
     canPayExtra: spec.extra ? (c) => spec.extra!.canPay(c) : undefined,
     extraCost: spec.extra ? (c) => spec.extra!.pay(c) : undefined,
-    condition: (g, self) => g.empowerCount(self) < max,
+    // revisão VEN-126..145: com a permissão de várias vezes o "Use only if not Empowered" não existe: ativa sempre e, já no
+    // máximo, resolve sem efeito (FAQ oficial do Vendetta, Kayle, Justified)
+    condition: max > 1 ? undefined : (g, self) => g.empowerCount(self) < max,
     resolve: function* (c) {
       if (c.self.zone === 'board' || c.self.zone === 'legend') c.g.empowerObj(c.self, c.p, max);
     },

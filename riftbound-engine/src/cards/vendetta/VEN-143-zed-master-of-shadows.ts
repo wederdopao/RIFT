@@ -1,14 +1,16 @@
 import { registerCard } from '../../engine/script';
-import { E } from '../helpers';
-import { exhaustMe, disempowerMe, moveFriendlyUnit, chooseBf } from '../vendetta/leg-helpers';
+import { disempowerMe } from '../vendetta/leg-helpers';
 // VEN-143 Zed, Master of Shadows
+// "When you banish a card you own, empower me." — só quando VOCÊ bane (ev.by; carta sua banida por spell/habilidade do
+// oponente não conta) e a carta é sua. Dispara mesmo já Empowered (o lembrete "if I'm not already" é da resolução: na
+// resolução, se ainda Empowered, nada acontece, 441.1.c), então responder desempoderando-o não perde o gatilho.
 registerCard({
   code: 'VEN-143',
   triggers: [
     {
       on: 'banish',
       label: 'Empower em mim',
-      cond: (c, ev) => ev.player === c.p && !c.self.empowered,
+      cond: (c, ev) => ev.player === c.p && (ev.by ?? ev.player) === c.p,
       resolve: function* (c) {
         c.g.empowerObj(c.self, c.p);
       },

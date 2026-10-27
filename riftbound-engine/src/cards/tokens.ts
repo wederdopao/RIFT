@@ -85,3 +85,28 @@ registerCard({
     },
   ],
 });
+
+// ── revisão VEN-105..125: Shadow Clone (Zed, Without a Sound; Zed, From the Shadows; Death Mark) ──
+// "When I attack, you may banish a unit from your trash. If you do, give me [Assault 4] this turn." A ficha tinha só o
+// texto (texto de ficha não vira gatilho): o gatilho de ataque nunca disparava.
+registerCard({
+  code: 'TOK-SHADOWCLONE',
+  triggers: [
+    {
+      on: 'attack',
+      label: 'Shadow Clone: banir uma unidade do seu descarte para ganhar [Assault 4]',
+      optional: 'Shadow Clone: banir uma unidade do seu descarte para ganhar [Assault 4] neste turno?',
+      cond: (c, ev) => ev.unit?.id === c.self.id,
+      possible: (c) => c.g.pl[c.p].trash.some((id) => c.g.isUnit(c.g.objs[id])),
+      resolve: function* (c) {
+        const g = c.g;
+        const us = g.pl[c.p].trash.map((id) => g.objs[id]).filter((o) => g.isUnit(o));
+        if (!us.length) return;
+        const [b] = yield* g.chooseObj(c.p, 'Shadow Clone: banir qual unidade do seu descarte?', us);
+        if (!b || b.zone !== 'trash') return;
+        g.banishObj(b);
+        if ((b.zone as string) === 'banish' && c.self.zone === 'board') g.giveKw(c.self, { assault: 4 });
+      },
+    },
+  ],
+});

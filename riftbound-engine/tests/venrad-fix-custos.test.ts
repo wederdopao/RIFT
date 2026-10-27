@@ -79,7 +79,7 @@ test('Kayle, Justified: Empower até 3 vezes', () => {
   }
   assert.equal(s.e.empowerCount(k), 3);
   assert.equal(s.e.might(k), m0 + 6);
-  assert.ok(!has(s, 'Kayle, Justified: Empower'));
+  assert.ok(!empAbility(s, k).condition, 'com 3 ainda ativa, sem efeito (FAQ do Vendetta; revisão VEN-126..145)');
 });
 
 test('Frostcoat Mother: o texto que altera o custo de Empower conta (12 menos 1 por runa)', () => {

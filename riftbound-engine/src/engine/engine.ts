@@ -951,7 +951,20 @@ export class Engine {
   toZone(o: Obj, zone: Zone, opts: { bottom?: boolean; player?: P } = {}) {
     // novo (Vendetta): substituição de ir para o descarte (Aura.trashReplace: Endless Riches, "If a card would go to your
     // trash from anywhere other than your Main Deck, banish it instead")
-    if (zone === 'trash' && !o.token && this.kind(o) !== 'rune' && this.trashReplaced(o)) zone = 'banish';
+    // revisão VEN-126..145: quem bane (evento 'banish', Zed: "when you banish"): o controlador do item que resolve; a
+    // substituição de descarte e o Flow são do dono / de quem jogou
+    let banishBy: P | undefined;
+    if (zone === 'trash' && !o.token && this.kind(o) !== 'rune' && this.trashReplaced(o)) {
+      zone = 'banish';
+      banishBy = o.owner;
+    }
+    // revisão VEN-126..145: spell jogado por Flow é banido sempre que sai da pilha, anulado inclusive (829.1.b; FAQ
+    // oficial do Vendetta: substituição atrasada, vale até contra "devolva à mão")
+    if (o.zone === 'chain' && zone !== 'chain' && o.data?.flowBy !== undefined) {
+      banishBy = o.data.flowBy;
+      delete o.data.flowBy;
+      zone = 'banish';
+    }
     const wasBoard = o.zone === 'board';
     const lastLoc = this.locOf(o);
     // novo: evento genérico de saída do tabuleiro (morrer, voltar à mão, banir, reciclar...); attached = o que estava
@@ -1018,7 +1031,7 @@ export class Engine {
     else if (zone === 'runeDeck') opts.bottom ? s.runeDeck.push(o.id) : s.runeDeck.unshift(o.id);
     if (leaveEv) this.emitLeave(leaveEv);
     for (const ev of detachEvs) this.emitLeave(ev);
-    if (zone === 'banish' && this.kind(o) !== 'rune') this.emit({ type: 'banish', obj: o, player: o.owner }); // novo (Vendetta): Zed, Master of Shadows
+    if (zone === 'banish' && this.kind(o) !== 'rune') this.emit({ type: 'banish', obj: o, player: o.owner, by: banishBy ?? (this.resolving > 0 && this.resolvingBy !== null ? this.resolvingBy : o.owner) }); // novo (Vendetta): Zed, Master of Shadows
   }
   /** Novo (Vendetta): o item da pilha escolheu `o` (alvo da jogada ou de uma execução do Repeat)? */
   itemChose(item: ChainItem | undefined, o: Obj): boolean {
@@ -3248,11 +3261,14 @@ export class Engine {
   }
   deflectCost(ids: string[][], p: P): Cost {
     if (this.ignoreDeflectNow) return { energy: 0, power: [] };
+    // revisão VEN: escolher algo no Heisho ignora TODO o Deflect desse spell/habilidade, também de alvos em outro lugar
+    // (FAQ oficial do Vendetta; RiftJudge #11769)
+    if (ids.some((grp) => grp.some((id) => this.objs[id]?.zone === 'board' && this.ignoresDeflect(this.objs[id])))) return { energy: 0, power: [] };
     let n = 0;
     for (const grp of ids)
       for (const id of grp) {
         const o = this.objs[id];
-        if (o && o.zone === 'board' && o.controller !== p && !this.ignoresDeflect(o)) n += this.activeKw(o).deflect || 0;
+        if (o && o.zone === 'board' && o.controller !== p) n += this.activeKw(o).deflect || 0;
       }
     return { energy: 0, power: Array.from({ length: n }, () => [...DOMAINS]) };
   }
@@ -4533,6 +4549,9 @@ export class Engine {
   }
   /** Novo (UNL mind): custo alternativo da própria carta (CardScript.altCost) ao jogá-la da mão ou da zona de campeão. */
   altCostFor(p: P, o: Obj, via: string): Cost | undefined {
+    // revisão VEN-113: spell com [Flow] impresso que ganhou outro [Flow] por efeito (Kennen) tem as duas instâncias; o
+    // jogador escolhe por qual joga (a impressa é o custo base, a dada é a alternativa)
+    if (via === 'flow') return this.script(o).flow ? this.grantedFlow(o) : undefined;
     if (via !== 'hand' && via !== 'champion') return undefined;
     return this.script(o).altCost?.(this, o, p);
   }
@@ -4706,7 +4725,9 @@ export class Engine {
   }
   /** Novo (Vendetta): "empower it" (fica Empowered se não estiver; com `max`, conta até N vezes — Kayle, Justified). */
   empowerObj(o: Obj, p: P, max = this.empowerMax(o)): boolean {
-    const n = (o as any).empowerCount ?? (o.empowered ? 1 : 0);
+    // revisão VEN-082/VEN-134: a permissão "até N vezes" (Kayle, Justified: EmpowerSpec.max) vale para qualquer
+    // instrução de Empower, não só a da própria habilidade (441.1.c.1)
+    const n = o.empowered ? Math.max(1, (o as any).empowerCount ?? 1) : 0;
     if (n >= max) return false;
     (o as any).empowerCount = n + 1;
     o.empowered = true;
@@ -4717,16 +4738,12 @@ export class Engine {
   /** Novo (Vendetta): "disempower it". */
   disempower(o: Obj): boolean {
     if (!o.empowered) return false;
-    // revisão VEN-082: quem pode ficar Empowered várias vezes (Kayle, Justified) perde só um status (FAQ oficial do Vendetta)
-    const n = this.empowerCount(o);
-    if (n > 1) {
-      (o as any).empowerCount = n - 1;
-      this.say(`${this.name(o)} perde um status Empowered (fica com ${n - 1}).`);
-      return true;
-    }
-    o.empowered = false;
-    (o as any).empowerCount = 0;
-    this.say(`${this.name(o)} deixa de estar Empowered.`);
+    // revisão VEN-082/VEN-134: quem pode ficar Empowered várias vezes perde só um status por Disempower (FAQ oficial do
+    // Vendetta, Kayle, Justified; RiftJudge #11752); nos outros o status é binário (441.1.a)
+    const left = Math.max(1, (o as any).empowerCount ?? 1) - 1;
+    o.empowered = left > 0;
+    (o as any).empowerCount = left;
+    this.say(left > 0 ? `${this.name(o)} perde um status de Empowered (fica com ${left}).` : `${this.name(o)} deixa de estar Empowered.`);
     return true;
   }
   /** Novo (revisão VEN-082): quantas vezes `o` pode ficar Empowered ("up to three times", Kayle: EmpowerSpec.max; padrão 1). */
@@ -5173,6 +5190,7 @@ export class Engine {
     if (k === 'spell') this.noteSpellSpend(p, cost); // novo (UNL mind): Jhin, Meticulous Killer
     if (k === 'spell') this.noteSpellEnergy(o, cost.energy); // novo (UNL fury): Revna
     // 5-6. finalizar
+    o.playedFrom = o.zone; // novo (revisão VEN): zona de onde a carta é jogada (Kennen, Heart of the Tempest)
     this.removeFromArrays(o);
     o.controller = p;
     o.zone = 'chain';
@@ -5216,6 +5234,7 @@ export class Engine {
         spentE: cost.energy, // novo (revisão UNL fury)
       };
       c.item = item;
+      if (via === 'flow') (o.data ||= {}).flowBy = p; // revisão VEN-126..145: banir ao sair da pilha (toZone)
       this.pushChain(item);
     }
     // gatilhos de "jogar" (Darius, Trifarian): unidade/gear agora; spell ao terminar de resolver (419.4.a)
@@ -5237,7 +5256,7 @@ export class Engine {
   emitCardPlayed(o: Obj, p: P, via?: string) {
     const s = this.pl[p];
     s.completed = (s.completed || 0) + 1;
-    this.emit({ type: 'cardPlayed', obj: o, player: p, via, nth: s.completed });
+    this.emit({ type: 'cardPlayed', obj: o, player: p, via, nth: s.completed, from: o.playedFrom }); // from (novo, revisão VEN): zona de origem
   }
   /**
    * Jogar uma carta por efeito (ex.: Flame Chompers do descarte). `cost` é o custo base que o efeito dá ("ignorando o
@@ -5304,6 +5323,7 @@ export class Engine {
     yield* this.asPayForG(use, this.payG(p, total));
     this.notePaid(p, o); // novo (Vendetta): Aura.onPaid
     this.playingLoc = undefined;
+    o.playedFrom = o.zone; // novo (revisão VEN): zona de onde a carta é jogada (Kennen, Heart of the Tempest)
     this.removeFromArrays(o);
     o.controller = p;
     o.zone = 'chain';
@@ -5359,6 +5379,7 @@ export class Engine {
     this.notePaid(p, o); // novo (Vendetta): Aura.onPaid
     this.noteSpellSpend(p, total); // novo (UNL mind): Jhin, Meticulous Killer
     this.noteSpellEnergy(o, total.energy); // novo (UNL fury): Revna
+    o.playedFrom = o.zone; // novo (revisão VEN): zona de onde a carta é jogada (Kennen, Heart of the Tempest)
     this.removeFromArrays(o);
     o.controller = p;
     o.zone = 'chain';

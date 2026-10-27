@@ -1,15 +1,13 @@
 import { registerCard } from '../../engine/script';
-import { E, T, atBf, chooseDestination, chooseTokenLoc } from '../helpers';
-import { NO_COST } from '../../engine/types';
-import type { Obj, P } from '../../engine/types';
-import { empowerAct, hasDomain } from './_bh';
 
+// VEN-098 Stagazer: "Spells with [Flow] you play from your trash cost [2] less, to a minimum of [1]."
+// Vale para spells com [Flow] impresso ou dado por efeito (Kennen, Storm of Shuriken: g.flowCostOf), jogados do descarte.
 registerCard({
   code: 'VEN-098',
   auras: [
     {
       costModMin: (g, src, card, p) =>
-        src.zone === 'board' && src.controller === p && card.zone === 'trash' && g.kind(card) === 'spell' && !!g.script(card).flow
+        src.zone === 'board' && src.controller === p && card.zone === 'trash' && g.kind(card) === 'spell' && !!g.flowCostOf(card)
           ? { amount: 2, min: 1 }
           : undefined,
     },

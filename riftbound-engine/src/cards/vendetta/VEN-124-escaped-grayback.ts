@@ -10,9 +10,10 @@ registerCard({
   empower: {
     extra: {
       label: 'Kill a friendly unit',
-      canPay: (c) => c.g.units().some((u) => u.controller === c.p && u.id !== c.self.id),
+      // "a friendly unit" inclui a própria Grayback (sem "another"; como Malzahar, Fanatic)
+      canPay: (c) => c.g.units().some((u) => u.controller === c.p),
       pay: function* (c) {
-        const us = c.g.units().filter((u) => u.controller === c.p && u.id !== c.self.id);
+        const us = c.g.units().filter((u) => u.controller === c.p);
         if (!us.length) return false;
         const [k] = yield* c.g.chooseObj(c.p, 'Escaped Grayback: matar qual unidade aliada?', us);
         if (!k) return false;

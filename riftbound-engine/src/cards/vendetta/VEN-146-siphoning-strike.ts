@@ -1,7 +1,6 @@
 import { registerCard } from '../../engine/script';
-import { E } from '../helpers';
-import { exhaustMe, disempowerMe, moveFriendlyUnit, chooseBf } from '../vendetta/leg-helpers';
-// VEN-146 Siphoning Strike
+// VEN-146 Siphoning Strike — "When it dies this turn" é gatilho atrasado só do mesmo objeto: se ela sair do tabuleiro e
+// voltar, é outro objeto (124) e não conta (versão de zona da foto da morte, como Deadly Flourish).
 registerCard({
   code: 'VEN-146',
   spell: {
@@ -21,7 +20,7 @@ registerCard({
         on: 'die',
         once: true,
         untilTurn: g.turn,
-        cond: (cc, ev) => ev.obj?.id === uid && cc.g.objs[uid].zoneVersion >= ver,
+        cond: (_cc, ev) => ev.obj?.id === uid && ev.snap?.zoneVersion === ver,
         ability: {
           label: 'Canalizar 1 runa exausta',
           resolve: function* (cc) {
