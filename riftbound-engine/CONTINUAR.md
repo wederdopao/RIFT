@@ -9,12 +9,18 @@ Cole este arquivo (ou peça para ler) junto com o zip do projeto. Ele resume tud
   mandam — nada simplificado**. Pode gastar o tempo que for. Nenhum campo `notes` / "Simplificação" nas cartas.
 - O jogo é privado, para jogar com amigos (projeto de fã, não comercial — política "Legal Jibber Jabber" da Riot).
 
+## Repositório (GitHub wederdopao/RIFT)
+- `riftbound-engine/`: o código (este arquivo, README, src, tests, scripts, docs). Prints de testes em `docs/prints/`.
+- `riftbound-mesa-site/site/`: o site pronto que o Weder arrasta no Netlify Drop para jogar online.
+- `riftbound-mesa.html`: a versão offline. As duas saem de `npm run publicar` — rode depois de mudar a interface
+  ou o motor, senão o site publicado fica na versão antiga.
+
 ## O que é
 Motor de regras de Riftbound (1x1) em TypeScript + interface de navegador: partida completa, IA adversária, online,
 deckbuilder com contas locais, registro clicável e artes oficiais. Detalhes de tudo no `README.md`.
 
-- **Sets**: Origins (OGN) e Proving Grounds (OGS) completos; Spiritforged (SFD-001..SFD-221) completo; 5 cartas de
-  Unleashed usadas em testes.
+- **Sets**: Origins (OGN), Proving Grounds (OGS), Spiritforged (SFD-001..SFD-221) e Unleashed (UNL-001..UNL-219)
+  completos; Vendetta (VEN-001..166) e Radiance (RAD-001..167) completos (seção "Vendetta e Radiance").
 - **Publicado**: artifact "Riftbound Mesa" no claude.ai — https://claude.ai/artifact/RYdL1cUq4zJLfVKp1Lo1q7
   (capability `room` com o tópico `mesa` aberto a "interact"; ao republicar, NÃO passe `capabilities`, para manter;
   as artes estão publicadas como arquivos `art/*.json` — só reenvie se mudarem). Também há o HTML offline
@@ -28,6 +34,7 @@ npm test                                  # ~930 testes de regra
 npx tsx tests/fuzz.ts --all --games 60    # decks aleatórios com todas as cartas (--codes SFD-001..SFD-030, --ai, --seed N)
 npm run sim                               # partidas aleatórias checando invariantes
 npm run build                             # dist/index.html (artifact) + dist/art/ + dist/riftbound-mesa.html + dist/site/
+npm run publicar                          # build + copia dist/site para ../riftbound-mesa-site/site e o offline para ../riftbound-mesa.html
 node scripts/uiplay.mjs <pasta> 3000      # joga uma partida clicando na interface (playwright; PW_EXE = chromium)
 node scripts/mqttbroker.cjs 8888 & node scripts/onlinetest.mjs   # teste online (MODE=room simula o app do Claude)
 ```

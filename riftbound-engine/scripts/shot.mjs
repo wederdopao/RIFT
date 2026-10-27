@@ -1,7 +1,7 @@
 // Abre a página, joga alguns passos pela interface e tira prints.
 import { chromium } from 'playwright-core';
 import { executablePath } from './browser.mjs';
-const OUT = process.argv[2];
+const OUT = process.argv[2] || '.';
 const browser = await chromium.launch({ executablePath });
 const errors = [];
 async function run(width, height, tag) {

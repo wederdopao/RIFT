@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "build": "node scripts/build.mjs",
+    "publicar": "npm run build && node scripts/publicar.mjs",
     "test": "node --import tsx --test tests/*.test.ts",
     "sim": "tsx tests/sim.ts 100",
     "fuzz": "tsx tests/fuzz.ts",
