@@ -6488,7 +6488,6 @@
 "might": 3,
 "mightBonus": 0,
 "tags": [
-"Unit",
 "Ionia"
 ],
 "text": "When I attack, ready another friendly unit.",
@@ -17119,9 +17118,7 @@
 "power": 1,
 "might": 0,
 "mightBonus": 0,
-"tags": [
-"Spell"
-],
+"tags": [],
 "text": "[action] (Play on your turn or in showdowns.)\nThis can't be countered.\nDeal 4 to an enemy Calm ([calm]) unit.",
 "effectText": "",
 "errata": false

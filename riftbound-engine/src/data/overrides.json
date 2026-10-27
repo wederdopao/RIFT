@@ -17,6 +17,14 @@
  "VEN-086": {
   "text": "[Empower] [Body][Body] ([Body][Body]: Empower me. Use only if not Empowered.)\n[Empowered] If a spell or ability that chooses me would stun me, give me -[Might], or return me to hand, give me +3 [Might] instead."
  },
+ "VEN-015": {
+  "tags": []
+ },
+ "VEN-020": {
+  "tags": [
+   "Ionia"
+  ]
+ },
  "VEN-053": {
   "text": "If a player would score 1 point from conquering or holding during their first or second turn, they draw 1 instead."
  },
