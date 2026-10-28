@@ -234,7 +234,9 @@ async function runGame(host, guest, label, watcher) {
 }
 /** Sai da sala do confronto de volta para o torneio (o botão visível: o do quadro do fim ou o da barra). */
 async function backToTour(p) {
-  const b = p.locator('[data-act=tourback]:visible').first();
+  // o do quadro do fim primeiro (o da barra fica atrás do quadro)
+  const ov = p.locator('.tt-overlay [data-act=tourback]');
+  const b = (await ov.count()) ? ov.first() : p.locator('[data-act=tourback]:visible').first();
   if (await b.count()) await b.click({ timeout: 5000 }).catch(() => {});
   else await p.locator('[data-act=leave]:visible').first().click({ timeout: 5000 }).catch(() => {});
   await p.waitForSelector('.setup.tour', { timeout: 10000 }).catch(() => {});
