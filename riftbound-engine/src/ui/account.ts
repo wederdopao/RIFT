@@ -6,6 +6,7 @@ import { cardData, isChampionCard, isSignature, kindOf } from '../engine/db';
 import { checkDeck, needsExtraLegends } from '../engine/deckcheck';
 import type { DeckList } from '../engine/engine';
 import { DECKS } from '../decks/origins';
+import type { TourEntry } from './tournamentsync';
 
 export interface SavedDeck {
   id: string;
@@ -64,6 +65,8 @@ export interface Profile {
   ladder?: LadderRun;
   /** Novo (opcional): hall da escada — os decks que venceram os 5 degraus. */
   ladderHall?: LadderHallEntry[];
+  /** Novo (opcional): torneios entre amigos, os em andamento e os passados (src/ui/tournamentsync.ts). */
+  tournaments?: TourEntry[];
 }
 /** Progresso num desafio: tentativas, quando resolveu e a melhor vitória (menos jogadas). */
 export interface ChallengeProgress {
@@ -270,6 +273,16 @@ export function ladderHall(): LadderHallEntry[] {
 export function addLadderHall(e: LadderHallEntry) {
   const p = profile();
   p.ladderHall = [e, ...(p.ladderHall ?? [])].slice(0, 50);
+  persist();
+}
+
+// ───────────────────────────── torneios ─────────────────────────────
+/** Torneios desta conta (mais recente primeiro). A lógica está em tournamentsync.ts. */
+export function tourEntries(): TourEntry[] {
+  return profile().tournaments ?? [];
+}
+export function setTourEntries(list: TourEntry[]) {
+  profile().tournaments = list;
   persist();
 }
 

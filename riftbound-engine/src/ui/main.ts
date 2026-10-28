@@ -19,6 +19,8 @@ import { challengeArtCodes, challengeHold, challengeHudHtml, challengeOf, challe
 import * as tut from './tutorial';
 import { ladderEndButtons, ladderEndNote, ladderRecord, type LadderMatch } from './ladder';
 import { ladderCodes, ladderHtml, onLadderClick, setLadderHooks } from './ladderscreen';
+import { initTour, knownGames, tourRecord, tourTagOf, type TourTag } from './tournamentsync';
+import { onTourClick, setTourHooks, showTour, tourArtCodes, tourHtml, type TourRoom } from './tournamentscreen';
 import type { DeckList, GameConfig } from '../engine/engine';
 import { chainTargets, liveCombat, locKey, matchDrop, moveCombat, moveTargets, type CombatPreview, type Drop } from './interact';
 import { CONCEPTS, guideHtml, keywordHelpHtml } from './glossary';
@@ -128,7 +130,13 @@ function fullGame(): Game | null {
   }
   return finCache.g;
 }
-const helloMsg = (): Msg => ({ t: 'hello', name: settings.names[0], deck: acc.deckById(settings.decks[0]), v: PROTOCOL, pk: myKeys?.pub });
+const helloMsg = (): Msg => ({ t: 'hello', name: settings.names[0], deck: myDeck(), v: PROTOCOL, pk: myKeys?.pub });
+/** Sala de um confronto do torneio (tournamentscreen.ts): a marca que vai no cfg e o deck inscrito no torneio. */
+let roomTour: { tag: TourTag; deck: DeckList | null } | null = null;
+/** Anfitrião: quem entrou como convidado (id do aparelho; no torneio tem de ser o lado b do confronto). */
+let guestId = '';
+/** Meu deck na sala: o do torneio (fica o mesmo até o fim) ou o escolhido na tela inicial. */
+const myDeck = (): DeckList => roomTour?.deck ?? acc.deckById(settings.decks[0]);
 function sendReq(op: Op, s: number) {
   queueOut(async () => {
     const z = await pack(op, peerKey);
@@ -315,8 +323,10 @@ function sendChat(text: string) {
   render();
 }
 
-function openRoom(role: 'host' | 'guest' | 'watch', code: string, opts?: { pub: boolean; name: string }) {
+function openRoom(role: 'host' | 'guest' | 'watch', code: string, opts?: { pub: boolean; name: string; tour?: typeof roomTour }) {
   net?.close();
+  roomTour = opts?.tour ?? null;
+  guestId = '';
   guest = null;
   hostInfo = null;
   netNote = '';
@@ -381,6 +391,12 @@ function leaveRoom() {
   guestView = watchView = null;
   remoteSteps = null;
   if (location.hash) history.replaceState(null, '', location.pathname + location.search);
+  // sala de um confronto do torneio: volta para a tela do torneio
+  if (roomTour) {
+    page = 'tour';
+    showTour(roomTour.tag.code);
+    roomTour = null;
+  }
   save();
   render();
 }
@@ -465,13 +481,18 @@ function applyOp(op: Op, by: P, accepted = false): boolean {
 }
 function startOnlineGame() {
   if (!net || net.role !== 'host' || !guest || !net.connected) return;
+  if (roomTour && guestId && guestId !== roomTour.tag.b) return; // confronto do torneio: só contra o adversário certo
   game = new Game({
     seed: (Math.random() * 2 ** 31) | 0,
-    decks: [acc.deckById(settings.decks[0]), guest.deck],
+    decks: [myDeck(), guest.deck],
     names: [settings.names[0], guest.name],
     battlefieldMode: settings.bfMode,
     autoPass: settings.autoPass,
-  });
+    // partida de torneio: o resultado volta para o torneio (tournamentsync.ts); o motor ignora
+    ...(roomTour ? { tour: roomTour.tag } : {}),
+    // testes (scripts/tourtest.mjs): partida mais curta
+    ...((window as any).__RB_TEST_CFG__ || {}),
+  } as GameConfig);
   seq = 0;
   owners = [];
   undoReq = null;
@@ -546,13 +567,14 @@ async function handleNet(m: Msg | { t: '__open' }, from: string) {
         return;
       }
       guest = { name: (m.name || 'Amigo').slice(0, 20), deck: m.deck && typeof m.deck === 'object' ? m.deck : DECKS[0] };
+      guestId = from;
       // canal cifrado: chave combinada com a chave pública que veio no hello (antes de mandar a visão)
       const pk = typeof m.pk === 'string' ? m.pk : undefined;
       queueOut(async () => {
         guestPk = pk;
         await keysReady;
         peerKey = myKeys ? await sharedKey(myKeys.priv, pk) : null;
-        net?.send({ t: 'welcome', hostName: settings.names[0], hostDeck: acc.deckById(settings.decks[0]).name, pk: myKeys?.pub });
+        net?.send({ t: 'welcome', hostName: settings.names[0], hostDeck: myDeck().name, pk: myKeys?.pub });
       });
       if (game) sendGuestFull('start');
     } else if (m.t === 'req') {
@@ -695,8 +717,9 @@ let preview: string | null = null;
 let modal: { title: string; html: string } | null = null;
 let flashOpt: string | null = null;
 let zoom: string | null = null;
-/** Tela fora da partida: mesa (configuração), decks, desafios ou a escada contra a IA (src/ui/ladder.ts). */
-let page: 'setup' | 'decks' | 'challenges' | 'ladder' = 'setup';
+/** Tela fora da partida: mesa (configuração), decks, desafios, a escada contra a IA (src/ui/ladder.ts) ou o torneio
+ *  entre amigos (src/ui/tournamentscreen.ts). */
+let page: 'setup' | 'decks' | 'challenges' | 'ladder' | 'tour' = 'setup';
 let logOpen = true;
 /** Unidades escolhidas para mover (clique direto na unidade pronta), válidas enquanto a decisão raiz não muda. */
 let moveSel: string[] = [];
@@ -768,7 +791,7 @@ function save() {
   if (replay) return; // rever uma partida não mexe na partida salva
   if (tut.isTut(game)) return; // tutorial: o progresso fica na conta (tutorial.ts), a partida salva continua a mesma
   try {
-    const on = net ? { role: net.role, code: net.code, seat, seq, owners, pub: net.pub, rname: net.roomName } : null;
+    const on = net ? { role: net.role, code: net.code, seat, seq, owners, pub: net.pub, rname: net.roomName, tour: roomTour } : null;
     localStorage.setItem(STORE, JSON.stringify({ settings, saved: game ? game.serialize() : null, view, online: on }));
   } catch {
     /* armazenamento indisponível: segue sem salvar */
@@ -782,6 +805,8 @@ interface SavedOnline {
   owners: P[];
   pub?: boolean;
   rname?: string;
+  /** sala de um confronto do torneio */
+  tour?: { tag: TourTag; deck: DeckList | null } | null;
 }
 function loadSaved(): { settings: Settings; saved: string | null; view: P; online?: SavedOnline | null } | null {
   try {
@@ -1803,6 +1828,14 @@ function endSummaryHtml(eng: Engine): string {
 
 /** Sobreposição no centro da mesa: escolha de campo, mulligan, cartas fora da mesa, troca de jogador e fim. */
 let overlayHidden = '';
+/** Fim de uma partida de confronto do torneio: a próxima partida (melhor de 3, anfitrião) e a volta ao torneio. */
+function tourEndButtons(eng: Engine, compact = false): string | null {
+  const tag = roomTour && net && !watching() ? tourTagOf(game?.cfg) : null;
+  if (!tag) return roomTour && watching() ? '<button class="primary" data-act="tourback">Voltar ao torneio</button>' : null;
+  const k = knownGames(tag);
+  const next = k.decided ? '' : net!.role === 'host' ? `<button class="primary" data-act="rematch">Próxima partida (${k.w[0]} × ${k.w[1]})</button>` : compact ? '' : `<span class="muted">Confronto em ${k.w[0]} × ${k.w[1]}: ${esc(eng.pl[0].name)} começa a próxima partida aqui.</span>`;
+  return `${next}<button class="${next && net!.role === 'host' ? '' : 'primary'}" data-act="tourback">Voltar ao torneio</button>`;
+}
 function overlayHtml(eng: Engine, d: Decision | null): string {
   if (!game || replay) return '';
   // desafio: abertura e resultado no lugar do fim de jogo
@@ -1815,9 +1848,9 @@ function overlayHtml(eng: Engine, d: Decision | null): string {
     const w = eng.winner;
     const mine = w !== null && (vsAi() ? w === HUMAN : online() ? w === seat : true);
     const btns = online()
-      ? net!.role === 'host'
+      ? tourEndButtons(eng) ?? (net!.role === 'host'
         ? '<button class="primary" data-act="rematch">Revanche</button><button data-act="lobby">Trocar decks</button>'
-        : `<span class="muted">Esperando ${esc(eng.pl[0].name)} pedir a revanche.</span>`
+        : `<span class="muted">Esperando ${esc(eng.pl[0].name)} pedir a revanche.</span>`)
       : ladderEndButtons(game.cfg) ?? '<button class="primary" data-act="newgame">Nova partida</button><button data-act="setup">Trocar decks</button>';
     const lad = ladderEndNote(game.cfg);
     return `<div class="tt-overlay end ${mine ? 'win' : 'lose'}"><div class="tt-obox">
@@ -2651,9 +2684,7 @@ function dockHtml(eng: Engine, d: Decision | null): string {
   if (eng.winner !== null || !d) {
     const w = eng.winner;
     const again = online()
-      ? net!.role === 'host'
-        ? '<button class="primary" data-act="rematch">Revanche</button>'
-        : ''
+      ? tourEndButtons(eng, true) ?? (net!.role === 'host' ? '<button class="primary" data-act="rematch">Revanche</button>' : '')
       : challengeOf(game)
         ? '<button class="primary" data-act="chretry">Tentar de novo</button>'
         : ladderEndButtons(game.cfg, true) ?? '<button class="primary" data-act="newgame">Nova partida</button>';
@@ -2991,7 +3022,7 @@ function setupHtml(): string {
       <div class="modegroup" role="radiogroup" aria-label="Adversário">${MODES.map(
         (m) => `<button type="button" role="radio" class="mode${settings.opponent === m.id ? ' on' : ''}" data-act="mode" data-mode="${m.id}" aria-checked="${settings.opponent === m.id}"><b>${m.t}</b><span>${m.s}</span></button>`,
       ).join('')}</div>
-      <div class="modegroup aux">${tut.homeButton()}<button type="button" class="mode aux" data-act="decks"><b>Meus decks</b><span>Montar, importar e exportar</span></button><button type="button" class="mode aux" data-act="history"><b>Histórico</b><span>Partidas, replays e estatísticas</span></button><button type="button" class="mode aux" data-act="importopen"><b>Abrir replay</b><span>De um arquivo ou relatório</span></button><button type="button" class="mode aux" data-act="challenges"><b>Desafios</b><span>Vença neste turno</span></button><button type="button" class="mode aux ladder" data-act="ladder"><b>Escada</b><span>5 adversários seguidos contra a IA</span></button></div>
+      <div class="modegroup aux">${tut.homeButton()}<button type="button" class="mode aux" data-act="decks"><b>Meus decks</b><span>Montar, importar e exportar</span></button><button type="button" class="mode aux" data-act="history"><b>Histórico</b><span>Partidas, replays e estatísticas</span></button><button type="button" class="mode aux" data-act="importopen"><b>Abrir replay</b><span>De um arquivo ou relatório</span></button><button type="button" class="mode aux" data-act="challenges"><b>Desafios</b><span>Vença neste turno</span></button><button type="button" class="mode aux ladder" data-act="ladder"><b>Escada</b><span>5 adversários seguidos contra a IA</span></button><button type="button" class="mode aux tour" data-act="tour"><b>Torneio</b><span>Chave ou pontos corridos entre amigos</span></button></div>
     </nav>`;
   const summary = `${settings.opponent === 'ai' ? `Contra a IA (${AI_LEVELS.find((l) => l.id === settings.aiLevel)!.t})` : 'Passa-e-joga'} · ${settings.format === 'padrao' ? 'Padrão' : 'Casual'} · campos ${settings.bfMode === 'random' ? 'sorteados' : 'escolhidos'}`;
   return `<header class="topbar"><div class="brand">Riftbound <span>mesa</span></div><div class="turninfo">${esc(acc.profile().name)}</div>
@@ -3117,8 +3148,10 @@ function lobbyHtml(): string {
     const g = guest && net.connected ? guest : null;
     const gRep = g ? checkDeck(g.deck) : null;
     const gBan = g && gRep && (gRep.errors.length || (settings.format === 'padrao' && gRep.banned.length));
+    // confronto do torneio: só o adversário do confronto pode jogar nesta sala
+    const wrong = !!(g && roomTour && guestId && guestId !== roomTour.tag.b);
     return `<section class="lobby panel">
-      <p class="who">Sua sala · <b>${esc(net.roomName || defaultRoomName())}</b> · ${net.pub ? '<span class="hub-tag pub">pública: aparece na lista de salas</span>' : '<span class="hub-tag">privada: só entra quem tiver o código</span>'}</p>
+      <p class="who">${roomTour ? 'Confronto do torneio' : 'Sua sala'} · <b>${esc(net.roomName || defaultRoomName())}</b> · ${roomTour ? '<span class="hub-tag">seu adversário entra sozinho pela tela do torneio</span>' : net.pub ? '<span class="hub-tag pub">pública: aparece na lista de salas</span>' : '<span class="hub-tag">privada: só entra quem tiver o código</span>'}</p>
       <div class="roomcode" aria-label="Código da sala">${esc(net.code)}</div>
       ${(net.kind ?? (claudeApp ? 'room' : 'mqtt')) === 'room' ? '<p class="note">Vocês estão jogando pela página do Claude. Compartilhe esta página com o seu amigo dando acesso de edição (menu Compartilhar); ele abre a página, escolhe "Amigo online" e digita este código.</p>' : web ? `<label for="invite">Link de convite</label><div class="joinrow"><input id="invite" readonly value="${esc(link)}"><button type="button" data-act="copy">Copiar</button></div>` : '<p class="note">Mande este código para o seu amigo. Ele abre o jogo, escolhe "Amigo online" e digita o código.</p>'}
       ${err}
@@ -3130,7 +3163,8 @@ function lobbyHtml(): string {
             : 'Esperando seu amigo entrar…'
       }${net.watcherCount ? ` · ${net.watcherCount} assistindo` : ''}</p>
       ${gBan ? `<p class="err">${gRep!.errors.length ? `O deck do seu amigo não é válido: ${esc(gRep!.errors[0])}` : 'O deck do seu amigo tem cartas banidas no formato Padrão. Troque para Casual para jogar.'}</p>` : ''}
-      <div class="btns"><button class="primary" data-act="ostart" ${g && !gBan ? '' : 'disabled'}>Começar partida</button><button data-act="leave">Fechar sala</button></div>
+      ${wrong ? '<p class="err">Quem entrou não é o seu adversário neste confronto do torneio.</p>' : ''}
+      <div class="btns"><button class="primary" data-act="ostart" ${g && !gBan && !wrong ? '' : 'disabled'}>Começar partida</button><button data-act="leave">${roomTour ? 'Voltar ao torneio' : 'Fechar sala'}</button></div>
     </section>`;
   }
   if (net.role === 'watch')
@@ -3145,7 +3179,7 @@ function lobbyHtml(): string {
     <p class="who">Sala ${esc(net.code)}</p>
     <h2>${net.connected ? (hostInfo ? `Conectado com ${esc(hostInfo.name)}` : 'Conectado') : net.status === 'reconectando' ? 'Procurando a sala…' : 'Conectando…'}</h2>
     ${err}
-    <p class="lstatus">${net.connected ? `Esperando ${esc(hostInfo?.name ?? 'o anfitrião')} começar a partida. Seu deck: <b>${esc(acc.deckById(settings.decks[0]).name)}</b> (pode trocar no campo Deck: o anfitrião vê na hora).` : 'O jogo tenta de novo sozinho a cada poucos segundos.'}</p>
+    <p class="lstatus">${net.connected ? `Esperando ${esc(hostInfo?.name ?? 'o anfitrião')} começar a partida. Seu deck: <b>${esc(myDeck().name)}</b>${roomTour ? ' (o do torneio)' : ' (pode trocar no campo Deck: o anfitrião vê na hora)'}.` : 'O jogo tenta de novo sozinho a cada poucos segundos.'}</p>
     <div class="btns"><button data-act="leave">Sair da sala</button></div>
   </section>`;
 }
@@ -3188,7 +3222,7 @@ function render() {
     for (const el of Array.from(document.querySelectorAll<HTMLElement>('.tt-mat .card[data-obj]')))
       before.set(el.dataset.obj!, { r: el.getBoundingClientRect(), bomb: el.classList.contains('bomb'), unit: el.classList.contains('unit'), art: el.querySelector<HTMLImageElement>('img.art')?.src || '' });
   recordIfOver(); // antes de desenhar: o quadro do fim já mostra o resultado gravado (escada: próximo degrau / vidas)
-  app.innerHTML = game ? gameHtml() : page === 'decks' ? deckbuilderHtml() : page === 'challenges' ? challengesHtml(acc.profile().name) : page === 'ladder' ? ladderHtml(ladderTopbar()) + modalHtml() : setupHtml() + modalHtml();
+  app.innerHTML = game ? gameHtml() : page === 'decks' ? deckbuilderHtml() : page === 'challenges' ? challengesHtml(acc.profile().name) : page === 'ladder' ? ladderHtml(ladderTopbar()) + modalHtml() : page === 'tour' ? tourHtml(ladderTopbar()) + modalHtml() : setupHtml() + modalHtml();
   if (focusId) {
     const el = document.getElementById(focusId) as HTMLInputElement | null;
     if (el && el !== document.activeElement) {
@@ -3232,6 +3266,8 @@ function render() {
         ? challengeArtCodes()
       : page === 'ladder'
         ? [...RUNE_CODES, ...ladderCodes()]
+      : page === 'tour'
+        ? tourArtCodes()
         : [
           ...RUNE_CODES,
           ...settings.decks.flatMap((i) => {
@@ -3311,6 +3347,7 @@ function onClick(ev: MouseEvent) {
   }
   if (!game && page === 'decks' && onDbClick(t)) return;
   if (onLadderClick(t)) return;
+  if (!game && page === 'tour' && onTourClick(t)) return;
   // clique fora do menu da carta fecha o menu (e segue valendo como clique normal)
   if (ctxMenu && !t.closest('.tt-ctx')) {
     ctxMenu = null;
@@ -3685,6 +3722,15 @@ function onClick(ev: MouseEvent) {
       window.scrollTo(0, 0);
       return;
     }
+    if (a === 'tour') {
+      pickSeat = null;
+      page = 'tour';
+      showTour(null);
+      render();
+      window.scrollTo(0, 0);
+      return;
+    }
+    if (a === 'tourback') return leaveRoom(); // sala de um confronto: volta para a tela do torneio
     if (a === 'challenges') {
       pickSeat = null;
       page = 'challenges';
@@ -4144,7 +4190,7 @@ function onHover(ev: MouseEvent) {
 
 function resumeOnline(s: { saved: string | null; online?: SavedOnline | null }) {
   const on = s.online!;
-  openRoom(on.role, on.code, { pub: !!on.pub, name: on.rname || '' });
+  openRoom(on.role, on.code, { pub: !!on.pub, name: on.rname || '', tour: on.tour && tourTagOf({ tour: on.tour.tag }) ? on.tour : null });
   // volta no lance em que estava (o convidado e o espectador recebem o estado do anfitrião logo depois)
   if (s.saved) {
     try {
@@ -4288,6 +4334,8 @@ function recordIfOver() {
   // deck escolhido de cada lado (online: o meu é sempre settings.decks[0]; o do outro não se sabe)
   const prefer: [string | null, string | null] = online() ? (seat === 0 ? [settings.decks[0], null] : [null, settings.decks[0]]) : [settings.decks[0], settings.decks[1]];
   hist.recordGame(full, { mode, seat: mine, prefer });
+  // partida de um confronto do torneio: o resultado (e o replay) vai para o organizador
+  if (online()) tourRecord(full.cfg, full.answers, full.engine.winner, [full.engine.pl[0].points, full.engine.pl[1].points], full.engine.turn, seat);
   if (vsAi()) ladderRecord(full.cfg, full.engine.winner, HUMAN);
 }
 
@@ -4454,6 +4502,37 @@ setLadderHooks({
   },
 });
 
+// ───────────────────────────── torneio entre amigos (src/ui/tournament*.ts) ─────────────────────────────
+/** Abre a sala de um confronto (anfitrião = lado a da chave; o outro entra; os demais assistem). */
+function enterTourRoom(r: TourRoom) {
+  if (replay) exitReplay();
+  if (aiTimer) clearTimeout(aiTimer);
+  aiTimer = null;
+  game = null;
+  ai = null;
+  pickSeat = null;
+  settings.opponent = 'online';
+  page = 'setup';
+  openRoom(r.role, r.room, { pub: false, name: r.name, tour: { tag: r.tag, deck: r.deck } });
+  window.scrollTo(0, 0);
+}
+setTourHooks({
+  render: () => render(),
+  home: () => {
+    page = 'setup';
+    render();
+    window.scrollTo(0, 0);
+  },
+  play: (r) => enterTourRoom(r),
+});
+initTour({
+  // o estado do torneio mudou: redesenha só se a tela do torneio está aberta (não mexe na mesa de uma partida)
+  changed: () => {
+    if (!game && !net && page === 'tour') scheduleRender();
+  },
+  openReplay: (cfg, answers) => openReplay(cfg, answers, answers.length, { view: 0 }),
+});
+
 function start(data: any = {}) {
   const snap = data?.saved ? data : loadSaved();
   if (snap?.settings) settings = normSettings(snap.settings);
@@ -4472,6 +4551,12 @@ function start(data: any = {}) {
   if (hm && !game) {
     settings.opponent = 'online';
     joinCode = hm[1].toUpperCase();
+  }
+  // link de convite do torneio: ...#torneio-ABC123
+  const tm = /^#torneio-([A-Za-z0-9]{6})$/.exec(location.hash);
+  if (tm && !game) {
+    page = 'tour';
+    showTour(tm[1].toUpperCase());
   }
   // caiu ou recarregou no meio de uma sala online: volta sozinho para a mesma sala (o anfitrião manda o lance atual)
   const back = !data?.saved || ViewGame.isSaved(data.saved) ? loadSaved() : null;
