@@ -446,3 +446,21 @@ RiftJudge/playriftbound não acessíveis no contêiner: rulings vieram de resumo
   Conclusões: os pesos atuais já estão no ótimo local (cair muito de unit/might/hand piora, subir não melhora); ganho
   do modo rápido não transfere; o que falta à IA não é peso nem "plano" na avaliação. Próximas ideias: modelar as
   Reactions escondidas do oponente (mana aberta) na busca; usar o tempo do Difícil em amostragem da mão do oponente.
+
+## Escada contra a IA (28/10/2026, branch claude/escada)
+- Tela inicial → **Escada** (`[data-act=ladder]`): escolhe um deck (salvo ou starter) e enfrenta 5 adversários em
+  sequência. Decks à mão em `src/decks/ladder.ts` (`LADDER`: nome, apelido, frase, ideia, nível, trilha, deck), todos
+  legais no Padrão: 1 Rengar (aggro Fúria/Corpo, Fácil), 2 Ziggs (Bombas e Deploy do Radiance, Fácil), 3 Ambessa
+  (Empower do Vendetta, Normal), 4 Lux (control Ordem/Mente, Difícil), 5 Kai'Sa (chefe Fúria/Mente, Difícil). A ordem
+  segue a força medida em round-robin IA Fácil × IA Fácil (com os starters): Kai'Sa 19/24, Lux 16/24, Rengar 11/24,
+  Ambessa 10/24, Ziggs 5–7/24.
+- Progresso na conta (`Profile.ladder` = `LadderRun`: deck, degrau, vidas, derrotas, recomeços, sementes já contadas;
+  `Profile.ladderHall`). Lógica em `src/ui/ladder.ts` (`ladderStart`, `ladderMatch`, `ladderRecord` — conta uma vez
+  por semente e só se a partida é do degrau atual da escada em andamento —, botões do fim da partida), tela em
+  `src/ui/ladderscreen.ts`. Em main.ts: botão, página `'ladder'`, `onLadderClick`, `startLadderGame` (cfg com `aiLevel`,
+  `music` e `ladder: {rung, started}`), botões do fim e `recordIfOver` (agora chamado antes de desenhar).
+- Música: `musicScene({kind:'game', track})` — a partida pode pedir uma trilha (`cfg.music`, id do tabuleiro); sem
+  ela, vale a escolha do deck como antes.
+- Teste: `tests/escada.test.ts` (decks legais, trilhas existentes, 2 partidas IA × IA por deck sem erro, progresso);
+  prints: `node scripts/laddershot.mjs <pasta>` (o fim de partida é forçado só para o print).
+

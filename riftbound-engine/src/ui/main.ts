@@ -15,6 +15,8 @@ import { cycleMusic, loadMusic, musicBoards, musicIcon, musicScene, stopPreview 
 import * as acc from './account';
 import { RUNE_CODES, coverArt, db as dbState, deckbuilderHtml, mountDb, onDbClick, onDbContext, onDbHover, onDbInput, poolCodes, refreshDbPeek, setHooks } from './deckbuilder';
 import * as hist from './history';
+import { ladderEndButtons, ladderEndNote, ladderRecord, type LadderMatch } from './ladder';
+import { ladderCodes, ladderHtml, onLadderClick, setLadderHooks } from './ladderscreen';
 import type { DeckList, GameConfig } from '../engine/engine';
 import { chainTargets, liveCombat, locKey, matchDrop, moveCombat, moveTargets, type CombatPreview, type Drop } from './interact';
 import { CONCEPTS, guideHtml, keywordHelpHtml } from './glossary';
@@ -677,8 +679,8 @@ let preview: string | null = null;
 let modal: { title: string; html: string } | null = null;
 let flashOpt: string | null = null;
 let zoom: string | null = null;
-/** Tela fora da partida: mesa (configuração) ou decks. */
-let page: 'setup' | 'decks' = 'setup';
+/** Tela fora da partida: mesa (configuração), decks ou a escada contra a IA (src/ui/ladder.ts). */
+let page: 'setup' | 'decks' | 'ladder' = 'setup';
 let logOpen = true;
 /** Unidades escolhidas para mover (clique direto na unidade pronta), válidas enquanto a decisão raiz não muda. */
 let moveSel: string[] = [];
@@ -1591,7 +1593,8 @@ function syncMusic() {
   if (!game || replay) return musicScene({ kind: 'menu' });
   const w = game.engine.winner;
   if (w !== null) return musicScene({ kind: 'end', won: w === (mySeat() ?? view), key: `${game.cfg.seed}:${game.answers.length}` });
-  musicScene({ kind: 'game', choice: acc.savedDeckOf(settings.decks[0])?.music, seed: game.cfg.seed });
+  // a partida pode pedir a própria trilha (cfg.music, ex.: degrau da escada); senão vale a escolha do deck
+  musicScene({ kind: 'game', choice: acc.savedDeckOf(settings.decks[0])?.music, track: (game.cfg as { music?: string }).music, seed: game.cfg.seed });
 }
 /** Sons das linhas novas do registro (no replay, só acompanha a leitura). */
 function playSounds(eng: Engine) {
@@ -1724,10 +1727,11 @@ function overlayHtml(eng: Engine, d: Decision | null): string {
       ? net!.role === 'host'
         ? '<button class="primary" data-act="rematch">Revanche</button><button data-act="lobby">Trocar decks</button>'
         : `<span class="muted">Esperando ${esc(eng.pl[0].name)} pedir a revanche.</span>`
-      : '<button class="primary" data-act="newgame">Nova partida</button><button data-act="setup">Trocar decks</button>';
+      : ladderEndButtons(game.cfg) ?? '<button class="primary" data-act="newgame">Nova partida</button><button data-act="setup">Trocar decks</button>';
+    const lad = ladderEndNote(game.cfg);
     return `<div class="tt-overlay end ${mine ? 'win' : 'lose'}"><div class="tt-obox">
       <p class="tt-kicker">Fim de jogo</p><h2>${w !== null ? `${esc(eng.pl[w].name)} venceu` : 'Fim de jogo'}</h2>
-      <p>${esc(eng.winReason || '')} · ${eng.pl[0].points} × ${eng.pl[1].points} · ${eng.turn} turnos</p>${(() => {
+      <p>${esc(eng.winReason || '')} · ${eng.pl[0].points} × ${eng.pl[1].points} · ${eng.turn} turnos</p>${lad ? `<p class="tt-ladnote">${lad}</p>` : ''}${(() => {
         const last = [...eng.log].reverse().find((l) => /ganha \d+ ponto/.test(l.text));
         return last ? `<p class="muted">Último ponto: ${linkCards(eng, last.text)}</p>` : '';
       })()}<div class="btns">${btns}<button data-act="replaythis">Ver o replay</button><button data-act="hideoverlay">Ver a mesa</button></div></div></div>`;
@@ -2559,7 +2563,7 @@ function dockHtml(eng: Engine, d: Decision | null): string {
       ? net!.role === 'host'
         ? '<button class="primary" data-act="rematch">Revanche</button>'
         : ''
-      : '<button class="primary" data-act="newgame">Nova partida</button>';
+      : ladderEndButtons(game.cfg, true) ?? '<button class="primary" data-act="newgame">Nova partida</button>';
     return `<div class="tt-dock decision over"><div class="tt-dmain"><span class="tt-dprompt">${w !== null ? `${esc(eng.pl[w].name)} venceu` : 'Fim de jogo'}</span><span class="tt-dsub">${esc(eng.winReason || '')} · ${eng.pl[0].points} × ${eng.pl[1].points} · ${eng.turn} turnos</span></div><span class="tt-dbtns">${overlayHidden === 'end' ? '<button class="tt-dbtn" data-act="showoverlay">Resultado</button>' : ''}${again}</span></div>`;
   }
   const last = eng.log.filter((l) => !l.text.startsWith('──')).slice(-1)[0];
@@ -2877,7 +2881,7 @@ function setupHtml(): string {
       <div class="modegroup" role="radiogroup" aria-label="Adversário">${MODES.map(
         (m) => `<button type="button" role="radio" class="mode${settings.opponent === m.id ? ' on' : ''}" data-act="mode" data-mode="${m.id}" aria-checked="${settings.opponent === m.id}"><b>${m.t}</b><span>${m.s}</span></button>`,
       ).join('')}</div>
-      <div class="modegroup aux"><button type="button" class="mode aux" data-act="decks"><b>Meus decks</b><span>Montar, importar e exportar</span></button><button type="button" class="mode aux" data-act="history"><b>Histórico</b><span>Partidas, replays e estatísticas</span></button><button type="button" class="mode aux" data-act="importopen"><b>Abrir replay</b><span>De um arquivo ou relatório</span></button></div>
+      <div class="modegroup aux"><button type="button" class="mode aux" data-act="decks"><b>Meus decks</b><span>Montar, importar e exportar</span></button><button type="button" class="mode aux" data-act="history"><b>Histórico</b><span>Partidas, replays e estatísticas</span></button><button type="button" class="mode aux" data-act="importopen"><b>Abrir replay</b><span>De um arquivo ou relatório</span></button><button type="button" class="mode aux ladder" data-act="ladder"><b>Escada</b><span>5 adversários seguidos contra a IA</span></button></div>
     </nav>`;
   const summary = `${settings.opponent === 'ai' ? `Contra a IA (${AI_LEVELS.find((l) => l.id === settings.aiLevel)!.t})` : 'Passa-e-joga'} · ${settings.format === 'padrao' ? 'Padrão' : 'Casual'} · campos ${settings.bfMode === 'random' ? 'sorteados' : 'escolhidos'}`;
   return `<header class="topbar"><div class="brand">Riftbound <span>mesa</span></div><div class="turninfo">${esc(acc.profile().name)}</div>
@@ -3064,7 +3068,8 @@ function render() {
   // bombas na mesa antes de redesenhar (para a explosão sair do lugar onde estava a que morreu)
   const boom = new Map<string, DOMRect>();
   if (game) for (const el of Array.from(document.querySelectorAll<HTMLElement>('.tt-mat .card.bomb[data-obj]'))) boom.set(el.dataset.obj!, el.getBoundingClientRect());
-  app.innerHTML = game ? gameHtml() : page === 'decks' ? deckbuilderHtml() : setupHtml() + modalHtml();
+  recordIfOver(); // antes de desenhar: o quadro do fim já mostra o resultado gravado (escada: próximo degrau / vidas)
+  app.innerHTML = game ? gameHtml() : page === 'decks' ? deckbuilderHtml() : page === 'ladder' ? ladderHtml(ladderTopbar()) + modalHtml() : setupHtml() + modalHtml();
   if (focusId) {
     const el = document.getElementById(focusId) as HTMLInputElement | null;
     if (el && el !== document.activeElement) {
@@ -3092,7 +3097,6 @@ function render() {
     hoveredDest = null;
     queueAuto();
   }
-  recordIfOver();
   yourTurnCue();
   syncMusic();
   const ll = document.getElementById('logl');
@@ -3104,7 +3108,9 @@ function render() {
     ? Object.values(game.engine.objs).map((o) => o.code)
     : page === 'decks'
       ? poolCodes()
-      : [
+      : page === 'ladder'
+        ? [...RUNE_CODES, ...ladderCodes()]
+        : [
           ...RUNE_CODES,
           ...settings.decks.flatMap((i) => {
             const d = acc.deckById(i);
@@ -3182,6 +3188,7 @@ function onClick(ev: MouseEvent) {
     return;
   }
   if (!game && page === 'decks' && onDbClick(t)) return;
+  if (onLadderClick(t)) return;
   // clique fora do menu da carta fecha o menu (e segue valendo como clique normal)
   if (ctxMenu && !t.closest('.tt-ctx')) {
     ctxMenu = null;
@@ -4134,6 +4141,7 @@ function recordIfOver() {
   // deck escolhido de cada lado (online: o meu é sempre settings.decks[0]; o do outro não se sabe)
   const prefer: [string | null, string | null] = online() ? (seat === 0 ? [settings.decks[0], null] : [null, settings.decks[0]]) : [settings.decks[0], settings.decks[1]];
   hist.recordGame(full, { mode, seat: mine, prefer });
+  if (vsAi()) ladderRecord(full.cfg, full.engine.winner, HUMAN);
 }
 
 setHooks({
@@ -4153,6 +4161,65 @@ setHooks({
     window.scrollTo(0, 0);
   },
   touch: () => touchUi(),
+});
+
+// ───────────────────────────── escada contra a IA (src/ui/ladder.ts) ─────────────────────────────
+function ladderTopbar(): string {
+  return `<header class="topbar"><div class="brand">Riftbound <span>mesa</span></div><div class="turninfo">${esc(acc.profile().name)}</div>
+    <div class="tb">${musicBoards().length ? `<button type="button" data-act="music" title="Volume da música (N)">${musicIcon()}</button>` : ''}</div></header>`;
+}
+/** Partida de um degrau: contra a IA no nível do degrau, com a trilha dele (o cfg leva a marca da escada). */
+function startLadderGame(m: LadderMatch) {
+  settings.opponent = 'ai';
+  settings.decks[0] = m.deck;
+  game = new Game({
+    seed: (Math.random() * 2 ** 31) | 0,
+    decks: [acc.deckById(m.deck), m.opp],
+    names: [settings.names[0] === 'Jogador 1' ? acc.profile().name : settings.names[0], m.oppName],
+    battlefieldMode: 'random',
+    autoPass: settings.autoPass,
+    aiLevel: m.aiLevel,
+    music: m.music,
+    ladder: m.ladder,
+  } as GameConfig);
+  selected = [];
+  preview = null;
+  overlayHidden = '';
+  view = HUMAN;
+  handoffPending = false;
+  ai = newAi();
+  save();
+  render();
+  window.scrollTo(0, 0);
+  scheduleAi();
+}
+setLadderHooks({
+  render: () => render(),
+  home: () => {
+    page = 'setup';
+    render();
+    window.scrollTo(0, 0);
+  },
+  open: () => {
+    if (replay) exitReplay();
+    // vindo do fim de uma partida: ela sai (como "Trocar decks"); da tela inicial, a partida salva fica onde está
+    if (game) {
+      game = null;
+      save();
+    }
+    page = 'ladder';
+    render();
+    window.scrollTo(0, 0);
+  },
+  play: (m) => startLadderGame(m),
+  edit: (id) => {
+    page = 'decks';
+    dbState.view = 'edit';
+    dbState.deckId = id;
+    dbState.sample = [];
+    render();
+    window.scrollTo(0, 0);
+  },
 });
 
 function start(data: any = {}) {

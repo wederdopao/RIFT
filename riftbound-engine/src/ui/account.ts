@@ -56,6 +56,41 @@ export interface Profile {
   recorded?: string[]; // partidas já contadas nas estatísticas
   /** Novo: "Pagar: manual" lembrado (ao começar a partida a mesa liga o modo pela ação do motor). Ausente = automático. */
   manualPay?: boolean;
+  /** Novo (opcional): escada contra a IA em andamento (src/ui/ladder.ts). */
+  ladder?: LadderRun;
+  /** Novo (opcional): hall da escada — os decks que venceram os 5 degraus. */
+  ladderHall?: LadderHallEntry[];
+}
+/** Escada contra a IA: o deck escolhido, o degrau atual (0..4; 5 = venceu tudo) e as vidas. */
+export interface LadderRun {
+  /** escolha de deck da tela inicial ('pre:N' ou 'my:<id>') */
+  deck: string;
+  /** nome, lenda e campeão do deck quando a escada começou (capa e hall, mesmo que o deck mude ou suma) */
+  deckName: string;
+  legend: string;
+  champion: string;
+  rung: number;
+  lives: number;
+  started: number;
+  /** derrotas na escada (inclui as das tentativas que recomeçaram) */
+  losses: number;
+  /** quantas vezes as vidas acabaram e a escada recomeçou */
+  resets: number;
+  /** partidas já contadas (semente), para não contar duas vezes a mesma partida */
+  seen: number[];
+  /** última partida: degrau, se venceu e se as vidas acabaram nela (aviso na tela da escada) */
+  last?: { rung: number; won: boolean; reset?: boolean };
+  /** quando venceu o 5º degrau */
+  done?: number;
+}
+export interface LadderHallEntry {
+  deckName: string;
+  legend: string;
+  champion: string;
+  /** código do deck (formato Piltover Archive), quando deu para gerar */
+  code?: string;
+  at: number;
+  losses: number;
 }
 interface Store {
   active: string;
@@ -154,6 +189,26 @@ export function setManualPayPref(on: boolean) {
   if (!!p.manualPay === on) return;
   if (on) p.manualPay = true;
   else delete p.manualPay;
+  persist();
+}
+
+/** Escada contra a IA em andamento nesta conta (ou nenhuma). */
+export function ladderRun(): LadderRun | null {
+  return profile().ladder ?? null;
+}
+export function setLadderRun(r: LadderRun | null) {
+  const p = profile();
+  if (r) p.ladder = r;
+  else delete p.ladder;
+  persist();
+}
+/** Hall da escada (mais recente primeiro). */
+export function ladderHall(): LadderHallEntry[] {
+  return profile().ladderHall ?? [];
+}
+export function addLadderHall(e: LadderHallEntry) {
+  const p = profile();
+  p.ladderHall = [e, ...(p.ladderHall ?? [])].slice(0, 50);
   persist();
 }
 

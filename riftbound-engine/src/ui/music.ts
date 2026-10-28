@@ -127,12 +127,14 @@ export function deckTrack(choice: string | undefined, seed: number): Track | nul
   return bs.find((b) => b.id === choice) ?? bs[Math.abs(seed) % bs.length];
 }
 
-/** A cena atual decide o que toca: menu, partida (com a trilha do deck) ou fim (vitória/derrota, uma vez). */
+/** A cena atual decide o que toca: menu, partida (com a trilha do deck) ou fim (vitória/derrota, uma vez).
+ *  Na partida, `track` (id de um tabuleiro) é a trilha que a própria partida pede (ex.: cada degrau da escada contra a
+ *  IA tem a sua); vale no lugar da escolha do deck. Id desconhecido cai na escolha do deck. */
 let endKey = '';
 /** Prévia do deckbuilder tocando: o tema do menu não a interrompe (o deckbuilder é "menu"). */
 let previewOn = false;
 export const stopPreview = () => (previewOn = false);
-export function musicScene(scene: { kind: 'menu' } | { kind: 'game'; choice?: string; seed: number } | { kind: 'end'; won: boolean; key: string }) {
+export function musicScene(scene: { kind: 'menu' } | { kind: 'game'; choice?: string; track?: string; seed: number } | { kind: 'end'; won: boolean; key: string }) {
   loadMusic();
   if (!index) return;
   if (scene.kind === 'menu') {
@@ -143,7 +145,8 @@ export function musicScene(scene: { kind: 'menu' } | { kind: 'game'; choice?: st
   previewOn = false;
   if (scene.kind === 'game') {
     endKey = '';
-    return play(deckTrack(scene.choice, scene.seed)?.src, true);
+    const pick = scene.track ? musicBoards().find((b) => b.id === scene.track) : undefined;
+    return play((pick ?? deckTrack(scene.choice, scene.seed))?.src, true);
   }
   if (endKey === scene.key) return;
   endKey = scene.key;
