@@ -1,10 +1,14 @@
 // Artes oficiais das cartas. As imagens ficam em pacotes (dist/art/<pacote>.json, base64 de webp) e só os pacotes
 // das cartas em jogo são baixados. Na versão para abrir direto no navegador os pacotes vêm embutidos na página.
+// No site (__RB_ART_FILES__), cada carta é um arquivo art/<código>.webp: a URL sai na hora e o navegador baixa e guarda
+// só as imagens que aparecem.
 const w = window as any;
 /** código da carta → nome do pacote (gerado no build) */
 const INDEX: Record<string, string> = w.__RB_ART_INDEX__ || {};
 /** pacotes já embutidos na página (versão offline) */
 const INLINE: Record<string, Record<string, string>> = w.__RB_ART__ || {};
+/** site: um arquivo por carta em vez de pacotes */
+const FILES = !!w.__RB_ART_FILES__;
 
 const urls = new Map<string, string>();
 const loaded = new Set<string>();
@@ -33,11 +37,13 @@ export function hasArt(code: string): boolean {
 
 /** URL da arte (ou null se ainda não carregou / não existe). */
 export function artUrl(code: string): string | null {
+  if (FILES) return code in INDEX ? `art/${code}.webp` : null;
   return urls.get(code) ?? null;
 }
 
 /** Baixa os pacotes com as artes destes códigos; chama `done` quando algum pacote novo chegar. */
 export function ensureArt(codes: Iterable<string>, done: () => void) {
+  if (FILES) return;
   const packs = new Set<string>();
   for (const c of codes) {
     const p = INDEX[c];

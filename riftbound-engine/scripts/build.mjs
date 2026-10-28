@@ -2,7 +2,7 @@
 //   dist/index.html            página do artifact (motor, cartas, interface e CSS embutidos)
 //   dist/art/<pacote>.json     artes oficiais (webp em base64), em pacotes de até 40 cartas, baixados sob demanda
 //   dist/riftbound-mesa.html   versão para abrir direto no navegador, com as artes dos decks embutidas
-//   dist/site/                 site para hospedar (index.html + art/ + voice/ + music/), com jogo online
+//   dist/site/                 site para hospedar (index.html + art/<código>.webp + voice/ + music/), com jogo online
 import { build } from 'esbuild';
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, rmSync, cpSync, existsSync } from 'node:fs';
 
@@ -46,7 +46,7 @@ const res = await build({
 });
 const js = res.outputFiles[0].text.replace(/<\/script/gi, '<\\/script');
 const css = readFileSync('src/ui/style.css', 'utf8');
-const page = (inlineArt) => `<title>Riftbound Mesa</title>
+const page = (inlineArt, artFiles = false) => `<title>Riftbound Mesa</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -55,7 +55,7 @@ const page = (inlineArt) => `<title>Riftbound Mesa</title>
 ${css}
 </style>
 <div id="app"></div>
-<script>window.__RB_ART_INDEX__=${JSON.stringify(index)};${inlineArt ? `window.__RB_ART__=${JSON.stringify(inlineArt)};` : ''}</script>
+<script>window.__RB_ART_INDEX__=${JSON.stringify(index)};${inlineArt ? `window.__RB_ART__=${JSON.stringify(inlineArt)};` : ''}${artFiles ? 'window.__RB_ART_FILES__=true;' : ''}</script>
 <script>
 ${js}
 </script>
@@ -70,11 +70,12 @@ writeFileSync('dist/index.html', html);
 const offlinePacks = Object.fromEntries(Object.entries(packs).filter(([n]) => /^(OGN|OGS|SFD|UNL|VEN|RAD|TOK)-/.test(n)));
 const offline = page(offlinePacks);
 writeFileSync('dist/riftbound-mesa.html', full(offline));
-// site para hospedar (Netlify, itch.io, GitHub Pages...): página completa + pasta art/
+// site para hospedar (Netlify, itch.io, GitHub Pages...): página completa + pasta art/ com um webp por carta (cada carta
+// baixa só a própria imagem, que o navegador guarda; os pacotes em base64 ficam para o artifact e a versão offline)
 rmSync('dist/site', { recursive: true, force: true });
 mkdirSync('dist/site', { recursive: true });
-writeFileSync('dist/site/index.html', full(html));
-cpSync('dist/art', 'dist/site/art', { recursive: true });
+writeFileSync('dist/site/index.html', full(page(null, true)));
+cpSync(ART_DIR, 'dist/site/art', { recursive: true });
 // vozes dos campeões (scripts/lor_voices.py): o site baixa só as do campeão que fala, quando fala
 if (existsSync('assets/voice/index.json')) cpSync('assets/voice', 'dist/site/voice', { recursive: true });
 // músicas dos tabuleiros (scripts/lor_music.py): cada uma só baixa quando toca
