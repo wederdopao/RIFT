@@ -120,12 +120,24 @@ async function newCtx(tag, w, h) {
   );
   return ctx;
 }
+/** Página recarregada ou fechada: sai das salas do canal simulado. Só o # mudando (history.replaceState, que o torneio
+ *  e a sala usam) não é recarregar: a página continua nas salas. */
+function watchNav(page) {
+  let last = '';
+  page.on('framenavigated', (f) => {
+    if (f !== page.mainFrame()) return;
+    const u = f.url();
+    const base = (x) => x.split('#')[0];
+    if (!last || base(u) !== base(last) || u === last) dropPage(page);
+    last = u;
+  });
+  page.on('close', () => dropPage(page));
+}
 async function open(tag, name, w, h) {
   const ctx = await newCtx(tag, w, h);
   const page = await ctx.newPage();
   page.on('pageerror', (e) => errors.push(tag + ': ' + e.message));
-  page.on('framenavigated', (f) => f === page.mainFrame() && dropPage(page));
-  page.on('close', () => dropPage(page));
+  watchNav(page);
   await page.goto(URL);
   // nome da conta local
   await page.evaluate((n) => {
@@ -325,7 +337,7 @@ await O.close();
 O = await orgCtx.newPage();
 O.who = 'Weder';
 O.on('pageerror', (e) => errors.push('org2: ' + e.message));
-O.on('close', () => dropPage(O));
+watchNav(O);
 await O.goto(`${URL}#torneio-${code}`);
 await O.waitForSelector('.tour-results', { timeout: 20000 });
 ok((await O.textContent('.tour-head .netchip')).includes('organiza'), 'organizador caiu e voltou: continua organizando');
