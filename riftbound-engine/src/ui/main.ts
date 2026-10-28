@@ -273,6 +273,17 @@ interface ChatLine {
   at: number;
 }
 const QUICK_CHAT = ['Boa!', 'Pensando...', 'Ops', 'GG'];
+/** Emotes: um clique na mesa (botão 😊), sem abrir o chat; viajam como chat, com o emoji na frente. */
+const EMOTES: [string, string][] = [
+  ['👍', 'Boa jogada!'],
+  ['🤔', 'Hmm...'],
+  ['😅', 'Ops'],
+  ['😮', 'Uau!'],
+  ['⏳', 'Pensando...'],
+  ['🤝', 'GG'],
+];
+const emoteOf = (text: string) => EMOTES.find(([e, t]) => text === `${e} ${t}`);
+let emoteOpen = false;
 const BUBBLE_MS = 5000;
 let chatLog: ChatLine[] = [];
 let chatOpen = false;
@@ -505,7 +516,9 @@ async function handleNet(m: Msg | { t: '__open' }, from: string) {
       text: cleanText(m.text, 60),
       at: Date.now(),
     };
-    if (pushChat(c) && net.role === 'host') net.send({ t: 'chat', id: c.id, by: c.by, name: c.name, text: c.text });
+    const fresh = pushChat(c);
+    if (fresh && net.role === 'host') net.send({ t: 'chat', id: c.id, by: c.by, name: c.name, text: c.text });
+    if (fresh && c.by !== seat) sfx(emoteOf(c.text) ? 'buff' : 'draw');
     render();
     return;
   }
@@ -1406,7 +1419,11 @@ function chatBubblesHtml(): string {
   const last = new Map<P, ChatLine>();
   for (const c of chatLog) if (now - c.at < BUBBLE_MS) last.set(c.by, c);
   return [...last.values()]
-    .map((c) => `<div class="tt-bubble ${c.by === view ? 'me' : 'them'}" style="animation-delay:-${now - c.at}ms" aria-hidden="true"><b>${esc(c.name)}</b> ${esc(c.text)}</div>`)
+    .map((c) => {
+      const em = emoteOf(c.text);
+      const body = em ? `<i class="tt-emoji">${em[0]}</i>${esc(em[1])}` : esc(c.text);
+      return `<div class="tt-bubble ${c.by === view ? 'me' : 'them'}${em ? ' emote' : ''}" style="animation-delay:-${now - c.at}ms" aria-hidden="true"><b>${esc(c.name)}</b> ${body}</div>`;
+    })
     .join('');
 }
 function chatPopHtml(): string {
@@ -1415,6 +1432,10 @@ function chatPopHtml(): string {
     <div class="tt-chatq">${QUICK_CHAT.map((q) => `<button type="button" data-act="chatq" data-text="${esc(q)}">${esc(q)}</button>`).join('')}</div>
     <div class="tt-chatrow"><input id="chatin" value="${esc(chatDraft)}" maxlength="60" placeholder="Mensagem curta" autocomplete="off"><button type="button" data-act="chatsend">Enviar</button></div>
   </div>`;
+}
+function emotePopHtml(): string {
+  if (!emoteOpen || watching()) return '';
+  return `<div class="tt-emotepop" role="dialog" aria-label="Emotes">${EMOTES.map(([e, t]) => `<button type="button" data-act="emote" data-text="${esc(`${e} ${t}`)}" title="${esc(t)}"><i class="tt-emoji">${e}</i><span>${esc(t)}</span></button>`).join('')}</div>`;
 }
 function chatLogHtml(): string {
   if (!online() || !chatLog.length) return '';
@@ -2551,7 +2572,7 @@ function dockHtml(eng: Engine, d: Decision | null): string {
   if (!game) return '';
   if (replay) return replayBarHtml(eng, d);
   const undo = `<button class="tt-dbtn ico-undo" data-act="undo" ${game.answers.length ? '' : 'disabled'} title="${online() ? 'Desfazer (Z): depois que o oponente agiu, vira um pedido que ele aceita ou recusa' : 'Desfazer (Z)'}"><span class="lbl">Desfazer</span></button>${
-    online() && !watching() ? `<button class="tt-dbtn ico-chat${chatOpen ? ' on' : ''}" data-act="chattog" title="Chat rápido"><span class="lbl">Chat</span></button>` : ''
+    online() && !watching() ? `<button class="tt-dbtn tt-emotebtn${emoteOpen ? ' on' : ''}" data-act="emotetog" title="Emotes (E)">😊</button><button class="tt-dbtn ico-chat${chatOpen ? ' on' : ''}" data-act="chattog" title="Chat rápido"><span class="lbl">Chat</span></button>` : ''
   }`;
   if (eng.winner !== null || !d) {
     const w = eng.winner;
@@ -2697,7 +2718,7 @@ function gameHtml(): string {
       ${handRowHtml(eng, view, false)}
       <svg class="tt-arrows" id="tt-arrows" aria-hidden="true"></svg>
       ${overlayHtml(eng, d)}
-      ${online() ? netWarnHtml(eng) + undoAskHtml(eng) + chatBubblesHtml() + chatPopHtml() : ''}
+      ${online() ? netWarnHtml(eng) + undoAskHtml(eng) + chatBubblesHtml() + chatPopHtml() + emotePopHtml() : ''}
       <div class="tt-peek" id="tt-peek" aria-hidden="true"></div>
     </main>
     ${sideHtml(eng, d)}
@@ -3428,7 +3449,20 @@ function onClick(ev: MouseEvent) {
       if (code.length === 6) openRoom(a === 'lobjoin' ? 'guest' : 'watch', code);
       return;
     }
+    if (a === 'emotetog') {
+      emoteOpen = !emoteOpen;
+      chatOpen = false;
+      render();
+      return;
+    }
+    if (a === 'emote') {
+      emoteOpen = false;
+      sendChat(act.dataset.text || '');
+      render();
+      return;
+    }
     if (a === 'chattog') {
+      emoteOpen = false;
       chatOpen = !chatOpen;
       render();
       if (chatOpen && !touchUi()) document.getElementById('chatin')?.focus();
@@ -4039,7 +4073,7 @@ document.addEventListener('visibilitychange', () => {
   if (!document.hidden) document.title = 'Riftbound Mesa';
 });
 
-/** Atalhos: Espaço = passar/encerrar o turno, Enter = confirmar, Esc = cancelar/fechar, Z = desfazer, M = volume dos sons, N = volume da música. */
+/** Atalhos: Espaço = passar/encerrar o turno, Enter = confirmar, Esc = cancelar/fechar, Z = desfazer, M = volume dos sons, N = volume da música, E = emotes (online). */
 function onKey(ev: KeyboardEvent) {
   const t = ev.target as HTMLElement;
   if (t?.id === 'chatin' && (ev.key === 'Enter' || ev.key === 'Escape')) {
@@ -4120,6 +4154,7 @@ function onKey(ev: KeyboardEvent) {
   else if (ev.key === 'z' || ev.key === 'Z') document.querySelector<HTMLElement>('.decision [data-act=undo]:not([disabled])')?.click();
   else if (ev.key === 'm' || ev.key === 'M') document.querySelector<HTMLElement>('[data-act=sound]')?.click();
   else if (ev.key === 'n' || ev.key === 'N') document.querySelector<HTMLElement>('[data-act=music]')?.click();
+  else if (ev.key === 'e' || ev.key === 'E') document.querySelector<HTMLElement>('[data-act=emotetog]')?.click();
 }
 
 /** Fim de partida: guarda no histórico da conta e conta nas estatísticas do deck (uma vez por partida). */

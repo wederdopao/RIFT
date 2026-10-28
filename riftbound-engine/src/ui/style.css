@@ -1734,6 +1734,17 @@ body.tt-dragging, body.tt-dragging * { user-select: none !important; -webkit-use
   border-radius: 8px; background: rgba(10, 20, 44, 0.98); border: 1px solid var(--gold-soft); box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6);
 }
 .tt-chatq { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+/* emotes: um clique, emoji grande no balão */
+.tt-emotebtn { font-size: 17px; line-height: 1; }
+.tt-emotepop {
+  position: absolute; right: 8px; bottom: calc(var(--dockh) + var(--u) * 1.2); z-index: 31; width: min(330px, 92vw); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; padding: 8px;
+  border-radius: 10px; background: rgba(10, 20, 44, 0.98); border: 1px solid var(--gold-soft); box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6); animation: tt-peek 0.12s ease-out;
+}
+.tt-emotepop button { display: grid; justify-items: center; gap: 2px; padding: 7px 4px; font-size: 12px; }
+.tt-emotepop .tt-emoji { font-size: 24px; }
+.tt-emoji { font-style: normal; }
+.tt-bubble.emote { font-size: 15px; padding: 6px 14px; }
+.tt-bubble.emote .tt-emoji { font-size: 26px; vertical-align: -5px; margin-right: 6px; }
 .tt-chatq button { padding: 6px 2px; font-size: 13px; white-space: nowrap; }
 .tt-chatrow { display: flex; gap: 4px; }
 .tt-chatrow input { flex: 1; min-width: 0; padding: 5px 8px; font-size: 13px; }
