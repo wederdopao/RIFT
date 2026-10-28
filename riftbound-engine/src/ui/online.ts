@@ -14,7 +14,6 @@
 // combinada no hello/welcome): a sala é um canal aberto, e um espectador lendo as mensagens veria a mão do convidado.
 // Mensagens podem se perder: há numeração (seq), diferença sobre a visão anterior (base), pedido de estado completo
 // ("need") e batimentos ("ping"/"sync").
-import mqtt from 'mqtt';
 import type { P } from '../engine/types';
 import type { DeckList } from '../engine/engine';
 
@@ -313,8 +312,14 @@ async function roomLink(code: string, ev: LinkEvents): Promise<Link | null> {
   };
 }
 
+/** A biblioteca MQTT (324 KB) só baixa quando alguém entra numa sala: no site ela é um arquivo à parte (import
+ *  dinâmico); no artifact e na versão offline o build a deixa embutida. */
+let mqttLib: Promise<any> | null = null;
+const loadMqtt = () => (mqttLib ??= import('mqtt').then((m: any) => m.default ?? m));
+
 /** Retransmissores MQTT públicos: publica em todos os conectados e escuta todos (repetidas são descartadas). */
-function mqttLink(code: string, ev: LinkEvents): Link {
+async function mqttLink(code: string, ev: LinkEvents): Promise<Link> {
+  const mqtt = await loadMqtt();
   const topic = `rbmesa/v3/${code}`;
   const clients: any[] = [];
   let upCount = 0;
@@ -447,6 +452,7 @@ async function lobbyLink(h: LobbyHandlers, hostCode?: string): Promise<LobbyLink
       },
     };
   }
+  const mqtt = await loadMqtt();
   const clients: any[] = [];
   const mine = hostCode ? `${LOBBY_TOPIC}/${hostCode}` : '';
   for (const url of brokers()) {
@@ -673,7 +679,9 @@ export class Net {
     };
     const room = await roomLink(this.code, ev);
     if (this.closed) return room?.close();
-    this.link = room ?? mqttLink(this.code, ev);
+    const link = room ?? (await mqttLink(this.code, ev));
+    if (this.closed) return link.close();
+    this.link = link;
     this.kind = this.link.kind;
     if (this.role === 'host' && this.pub) {
       const lk = await lobbyLink({ query: () => this.announce(true), up: () => setTimeout(() => this.announce(true), 100) }, this.code);

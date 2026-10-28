@@ -1,0 +1,21 @@
+# Cache do Netlify (o build copia este arquivo para site/_headers).
+# A página e o service worker sempre conferem a versão; js/ tem hash no nome e nunca muda; o resto pode ser guardado
+# por uma semana e reaproveitado enquanto confere (cartas, tapetes, vozes e músicas mudam raramente).
+/
+  Cache-Control: no-cache
+/index.html
+  Cache-Control: no-cache
+/sw.js
+  Cache-Control: no-cache
+/js/*
+  Cache-Control: public, max-age=31536000, immutable
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+/art/*
+  Cache-Control: public, max-age=604800, stale-while-revalidate=2592000
+/mats/*
+  Cache-Control: public, max-age=604800, stale-while-revalidate=2592000
+/voice/*
+  Cache-Control: public, max-age=604800, stale-while-revalidate=2592000
+/music/*
+  Cache-Control: public, max-age=604800, stale-while-revalidate=2592000

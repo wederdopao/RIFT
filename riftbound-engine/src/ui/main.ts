@@ -14,6 +14,7 @@ import { cycleSound, sfx, soundFromLog, soundIcon } from './sound';
 import { canLink, codeFromText, decodeReplay, encodeReplay, linkFor, prepareReplay } from './replaylink';
 import { copyText, showCopyBox } from './copy';
 import { cycleMusic, deckTrack, loadMusic, musicBoards, musicIcon, musicScene, stopPreview } from './music';
+import { registerSw } from './swreg';
 import { FELTS, currentMat, loadMats, lorMats, matAttrs, matChoice, setMat } from './mats';
 import * as acc from './account';
 import { RUNE_CODES, coverArt, db as dbState, deckbuilderHtml, mountDb, onDbClick, onDbContext, onDbHover, onDbInput, poolCodes, refreshDbPeek, setHooks } from './deckbuilder';
@@ -4532,6 +4533,7 @@ setLadderHooks({
 });
 
 function start(data: any = {}) {
+  registerSw();
   const snap = data?.saved ? data : loadSaved();
   if (snap?.settings) settings = normSettings(snap.settings);
   if (settings.names[0] === 'Você' && acc.profile().name !== 'Você') settings.names[0] = acc.profile().name;
