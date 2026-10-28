@@ -3,6 +3,7 @@
 import { cardData, kindOf, isChampionCard, allCards } from './db';
 import { TOKENS } from './tokens'; // novo (UNL): nomear tags (763)
 import { Rng } from './rng';
+import { applyScenario, type ScenarioSetup } from './scenario'; // novo (modo Desafios)
 import { getScript, empowerSpecs } from './script';
 import type { AbilityDef, ActivatedDef, Aura, CardScript, CostMod, Ctx, EffectText, EventType, OptionalCost, PayUse, TargetSpec, TriggerDef } from './script';
 import {
@@ -50,6 +51,8 @@ export interface GameConfig {
   battlefieldMode?: 'random' | 'choose';
   autoPass?: boolean;
   victoryScore?: number;
+  /** Novo (modo Desafios): começa numa mesa montada, na fase principal do jogador ativo (src/engine/scenario.ts). */
+  scenario?: ScenarioSetup;
 }
 
 export interface GameEvent {
@@ -5461,9 +5464,12 @@ export class Engine {
 
   // ───────────────────────────── turno ─────────────────────────────
   *run(): Gen {
-    yield* this.setup();
+    // novo (modo Desafios): mesa montada no lugar da preparação; o primeiro turno começa na fase principal
+    const sc = this.cfg.scenario;
+    if (sc) applyScenario(this, sc);
+    else yield* this.setup();
     for (let t = 0; t < 400 && this.winner === null; t++) {
-      yield* this.takeTurn();
+      yield* this.takeTurn(!!sc && t === 0);
       if (this.winner !== null) break;
       this.active = this.nextTurnPlayer();
     }
@@ -5537,7 +5543,7 @@ export class Engine {
       if (ids.length) this.say(`${this.pname(p)} troca ${ids.length} carta(s).`, p);
     }
   }
-  *takeTurn(): Gen {
+  *takeTurn(fromMain = false): Gen {
     const p = this.active;
     this.turn++;
     this.scored = [];
@@ -5556,6 +5562,13 @@ export class Engine {
     this.pl[opp(p)].completed = 0;
     for (const x of [s, this.pl[opp(p)]]) x.holdPoints = 0; // novo
     this.say(`── Turno ${this.turn}: ${this.pname(p)} ──`, p);
+    // novo (modo Desafios): o turno montado começa direto na fase principal
+    if (fromMain) {
+      yield* this.mainPhase();
+      if (this.winner !== null) return;
+      yield* this.endingPhase();
+      return;
+    }
     // despertar
     this.phase = 'awaken';
     for (const o of this.board())

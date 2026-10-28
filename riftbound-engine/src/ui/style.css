@@ -1848,3 +1848,70 @@ body.tt-dragging, body.tt-dragging * { user-select: none !important; -webkit-use
   .tt .card.empowered::after { opacity: 0.8; }
   .tt-fx { display: none; }
 }
+
+/* ═════════════════════════════ modo Desafios (src/ui/challenges.ts) ═════════════════════════════ */
+/* tela inicial: o quarto botão auxiliar */
+.modes:has(.modegroup.aux > :nth-child(4)) { grid-template-columns: minmax(0, 3fr) minmax(0, 2.7fr); }
+.modegroup.aux:has(> :nth-child(4)) { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+/* lista */
+.setup.challenges { display: grid; gap: 14px; padding-top: 14px; max-width: 1180px; margin: 0 auto; }
+.chhead { display: flex; gap: 12px 24px; align-items: end; justify-content: space-between; flex-wrap: wrap; }
+.chhead h1 { font: 700 clamp(30px, 4.2vw, 44px)/1 var(--f-display); margin: 0 0 6px; color: var(--gold-hi); }
+.chhead p { margin: 0; color: var(--muted); max-width: 70ch; }
+.chcount { display: grid; justify-items: end; }
+.chcount b { font: 700 40px/1 var(--f-display); color: var(--gold-hi); }
+.chcount span { font-size: 0.84em; color: var(--muted); }
+.chgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 12px; }
+.chcard { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 12px; align-items: start; }
+.chcard.locked { opacity: 0.55; }
+.chcard.locked .chcov img { filter: grayscale(1) brightness(0.5); }
+.chcard.solved { box-shadow: inset 0 0 0 1px rgba(127, 209, 139, 0.35); }
+.chcov { position: relative; aspect-ratio: 744 / 1040; border-radius: 6px; overflow: hidden; background: var(--card); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--gold-soft); }
+.chcov img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.chnum { position: absolute; left: 6px; top: 6px; min-width: 26px; height: 26px; display: grid; place-items: center; padding: 0 6px; border-radius: 4px; background: rgba(6, 12, 26, 0.88); border: 1px solid var(--gold-soft); font: 700 16px/1 var(--f-display); color: var(--gold-hi); }
+.chbody { display: grid; gap: 4px; min-width: 0; }
+.chbody h2 { margin: 0; overflow-wrap: anywhere; }
+.chbody p { margin: 0; }
+.chtop { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.chlv { font-size: 11px; letter-spacing: 2px; color: var(--gold); white-space: nowrap; }
+.chlv i { font: 600 13px var(--f-display); font-style: normal; letter-spacing: 0.04em; color: var(--muted); margin-left: 4px; }
+.chst { font: 600 12px var(--f-display); letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 8px; border-radius: 3px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+.chst.ok { color: var(--ok); border-color: rgba(127, 209, 139, 0.5); }
+.chst.new { color: var(--gold-hi); border-color: var(--gold-soft); }
+.chst.try { color: var(--ink); }
+.chteach { font-size: 0.9em; }
+.chgoal { font: 600 15px var(--f-display); color: var(--gold-hi); letter-spacing: 0.02em; }
+.chprog { font-size: 0.82em; }
+.chhint, .chsol { font-size: 0.88em; padding: 6px 9px; border-radius: 5px; background: rgba(214, 176, 90, 0.08); border-left: 2px solid var(--gold); text-align: left; }
+.chsol { border-left-color: var(--ok); background: rgba(127, 209, 139, 0.07); }
+.chacts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+/* na mesa: faixa do objetivo no alto, no meio */
+.chhud {
+  position: absolute; z-index: 15; top: 6px; left: 50%; transform: translateX(-50%); width: max-content; max-width: min(640px, calc(100% - 16px));
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; align-items: center; padding: 6px 8px 6px 12px;
+  background: rgba(10, 20, 44, 0.94); border: 1px solid var(--gold-soft); border-radius: 6px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+.chhud.won { border-color: var(--ok); }
+.chhud.lost { border-color: var(--danger); }
+.chhud-main { display: grid; min-width: 0; }
+.chhud-k { font: 600 11px var(--f-display); letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chhud-main b { font: 700 17px/1.15 var(--f-display); color: var(--ink); }
+.chhud-btns { display: flex; gap: 6px; }
+.chhud-btns button { font: 600 13px var(--f-display); padding: 4px 10px; }
+.chhud-hint { grid-column: 1 / -1; margin: 0; font-size: 0.86em; color: var(--ink); max-width: 60ch; }
+.chintro .tt-obox, .chres .tt-obox { max-width: min(640px, 100%); }
+.chbrief { text-align: left; max-width: 58ch; }
+.chgoalbig { font: 700 22px/1.15 var(--f-display); color: var(--gold-hi); letter-spacing: 0.02em; }
+.chres .chsol { max-width: 58ch; }
+.chall { font: 600 16px var(--f-display); color: var(--gold-hi); }
+.chres button.link { color: var(--gold-hi); padding: 2px; }
+@media (max-width: 760px) {
+  .modes:has(.modegroup.aux > :nth-child(4)) { grid-template-columns: minmax(0, 1fr); }
+  .modegroup.aux:has(> :nth-child(4)) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .chcard { grid-template-columns: 72px minmax(0, 1fr); gap: 10px; padding: 10px; }
+  .chhud { top: 4px; padding: 4px 6px 4px 8px; gap: 2px 8px; }
+  .chhud-k { font-size: 10px; }
+  .chhud-main b { font-size: 14px; }
+  .chhud-btns button { padding: 3px 7px; font-size: 12px; }
+  .chgoalbig { font-size: 18px; }
+}
