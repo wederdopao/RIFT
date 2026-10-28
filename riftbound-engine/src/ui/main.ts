@@ -2810,7 +2810,13 @@ function pileOf(p: P, kind: 'deck' | 'trash'): HTMLElement | null {
   const row = `.tt-handrow.${p === view ? 'bottom' : 'top'}`;
   return document.querySelector<HTMLElement>(kind === 'trash' ? `.tt-mat [data-trash="${p}"] .tt-pilecard` : `.tt-mat ${row} .tt-pile.deck .tt-pilecard`);
 }
-function animateArrivals(boom: Map<string, DOMRect> = new Map()) {
+interface Seen {
+  r: DOMRect;
+  bomb: boolean;
+  unit: boolean;
+  art: string;
+}
+function animateArrivals(before: Map<string, Seen> = new Map()) {
   if (!game) return;
   const eng = game.engine;
   const fresh = motionGame !== game;
@@ -2834,13 +2840,23 @@ function animateArrivals(boom: Map<string, DOMRect> = new Map()) {
       else if (pemp === '0' && nemp === '1') el.classList.add('empflash');
       else if (pu === '0' && nu === '1' && nz === 'board') el.classList.add('gearunit');
       else if (pe !== ne) el.classList.add(ne === '1' ? 'tap' : 'untap');
-      else if (Number(nd) > Number(pd)) el.classList.add('hit');
+      else if (Number(nd) > Number(pd)) {
+        el.classList.add('hit');
+        // o dano sobe sobre a carta
+        if (!calm) fxAt('dmgpop', el.getBoundingClientRect(), `<b>−${Number(nd) - Number(pd)}</b>`, 1100);
+      }
     }
     if (!calm) {
-      // Bomb que saiu do tabuleiro: explode onde estava
-      for (const [id, r] of boom) {
+      for (const [id, b] of before) {
         const o = eng.objs[id];
-        if (!o || o.zone !== 'board') fxAt('boom', r, '<i></i><b>BOOM</b>', 900);
+        if (o && o.zone === 'board') continue;
+        // Bomb que saiu do tabuleiro: explode onde estava
+        if (b.bomb) fxAt('boom', b.r, '<i></i><b>BOOM</b>', 900);
+        // unidade que morreu (foi do tabuleiro para o descarte, ou banida no lugar — Endless Riches): a arte se parte
+        else if (b.unit && (!o || o.zone === 'trash' || o.zone === 'banish') && motionKeys.get(id)?.startsWith('board|')) {
+          const bg = b.art ? `background-image:url(${JSON.stringify(b.art).slice(1, -1)})` : '';
+          fxAt('shatter', b.r, `<i class="l" style="${bg}"></i><i class="r" style="${bg}"></i>`, 1000);
+        }
       }
       // Burn (e o que mais for do topo do deck direto para o descarte): cartas voando do deck para o descarte
       const burned: Record<number, number> = { 0: 0, 1: 0 };
@@ -3144,8 +3160,11 @@ function render() {
   const focusId = ae && ae.id && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA') && ae.type !== 'checkbox' ? ae.id : null;
   const selRange = focusId ? [ae!.selectionStart, ae!.selectionEnd] : null;
   // bombas na mesa antes de redesenhar (para a explosão sair do lugar onde estava a que morreu)
-  const boom = new Map<string, DOMRect>();
-  if (game) for (const el of Array.from(document.querySelectorAll<HTMLElement>('.tt-mat .card.bomb[data-obj]'))) boom.set(el.dataset.obj!, el.getBoundingClientRect());
+  // cartas na mesa antes de redesenhar: a Bomb que sumiu explode onde estava; a unidade que morreu se parte ali
+  const before = new Map<string, Seen>();
+  if (game)
+    for (const el of Array.from(document.querySelectorAll<HTMLElement>('.tt-mat .card[data-obj]')))
+      before.set(el.dataset.obj!, { r: el.getBoundingClientRect(), bomb: el.classList.contains('bomb'), unit: el.classList.contains('unit'), art: el.querySelector<HTMLImageElement>('img.art')?.src || '' });
   app.innerHTML = game ? gameHtml() : page === 'decks' ? deckbuilderHtml() : setupHtml() + modalHtml();
   if (focusId) {
     const el = document.getElementById(focusId) as HTMLInputElement | null;
@@ -3168,7 +3187,7 @@ function render() {
   // grade da biblioteca: as cartas seguintes entram ao rolar
   if (!game && page === 'decks') mountDb();
   if (game) {
-    animateArrivals(boom);
+    animateArrivals(before);
     peekId = null;
     drawArrows();
     hoveredDest = null;

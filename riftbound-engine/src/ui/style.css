@@ -1850,6 +1850,16 @@ body.tt-dragging, body.tt-dragging * { user-select: none !important; -webkit-use
 .tt .card.gearunit { animation: tt-gearunit 0.75s ease-out; }
 @keyframes tt-gearunit { 0% { transform: rotateY(90deg) scale(0.9); filter: brightness(1.8) hue-rotate(40deg); } 60% { transform: rotateY(0) scale(1.06); } 100% { transform: none; filter: none; } }
 .tt-fx { position: fixed; z-index: 70; pointer-events: none; }
+/* dano: o número sobe sobre a carta */
+.tt-fx.dmgpop { display: grid; place-items: center; }
+.tt-fx.dmgpop b { font: 800 clamp(18px, 2.2vw, 28px)/1 var(--f-display); color: #ff7a66; text-shadow: 0 0 4px #000, 0 2px 8px rgba(0, 0, 0, 0.9); animation: tt-dmgpop 1.05s ease-out forwards; }
+@keyframes tt-dmgpop { 0% { opacity: 0; transform: translateY(8px) scale(0.7); } 15% { opacity: 1; transform: translateY(0) scale(1.15); } 30% { transform: scale(1); } 100% { opacity: 0; transform: translateY(-34px); } }
+/* morte: a arte racha em duas metades que caem e somem */
+.tt-fx.shatter i { position: absolute; inset: 0; border-radius: 6px; background: #2a1520 center / cover no-repeat; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6); }
+.tt-fx.shatter i.l { clip-path: polygon(0 0, 58% 0, 44% 38%, 54% 62%, 40% 100%, 0 100%); animation: tt-shl 0.95s ease-in forwards; }
+.tt-fx.shatter i.r { clip-path: polygon(58% 0, 100% 0, 100% 100%, 40% 100%, 54% 62%, 44% 38%); animation: tt-shr 0.95s ease-in forwards; }
+@keyframes tt-shl { 0% { filter: brightness(1.8) saturate(0.4); } 20% { transform: none; opacity: 1; filter: grayscale(0.6) brightness(1.1); } 100% { transform: translate(-18px, 26px) rotate(-14deg); opacity: 0; filter: grayscale(1) brightness(0.6); } }
+@keyframes tt-shr { 0% { filter: brightness(1.8) saturate(0.4); } 20% { transform: none; opacity: 1; filter: grayscale(0.6) brightness(1.1); } 100% { transform: translate(18px, 30px) rotate(12deg); opacity: 0; filter: grayscale(1) brightness(0.6); } }
 .tt-fx.boom i { position: absolute; inset: -30%; border-radius: 50%; background: radial-gradient(circle, #fff6c8 0%, #ffb54a 30%, #ef5d4e 55%, rgba(239, 93, 78, 0) 72%); animation: tt-boom 0.8s ease-out forwards; }
 .tt-fx.boom b { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font: 800 16px/1 var(--f-display); letter-spacing: 0.08em; color: #fff; text-shadow: 0 0 6px #000, 0 0 12px #ef5d4e; animation: tt-boomtxt 0.85s ease-out forwards; }
 @keyframes tt-boom { 0% { transform: scale(0.2); opacity: 1; } 60% { opacity: 0.9; } 100% { transform: scale(1.5); opacity: 0; } }
