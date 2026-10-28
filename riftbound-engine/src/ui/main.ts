@@ -1830,7 +1830,8 @@ function endSummaryHtml(eng: Engine): string {
 let overlayHidden = '';
 /** Fim de uma partida de confronto do torneio: a próxima partida (melhor de 3, anfitrião) e a volta ao torneio. */
 function tourEndButtons(eng: Engine, compact = false): string | null {
-  const tag = roomTour && net && !watching() ? tourTagOf(game?.cfg) : null;
+  // (a visão do convidado não traz o cfg inteiro: vale a marca da sala)
+  const tag = roomTour && net && !watching() ? tourTagOf(game?.cfg) ?? roomTour.tag : null;
   if (!tag) return roomTour && watching() ? '<button class="primary" data-act="tourback">Voltar ao torneio</button>' : null;
   const k = knownGames(tag);
   const next = k.decided ? '' : net!.role === 'host' ? `<button class="primary" data-act="rematch">Próxima partida (${k.w[0]} × ${k.w[1]})</button>` : compact ? '' : `<span class="muted">Confronto em ${k.w[0]} × ${k.w[1]}: ${esc(eng.pl[0].name)} começa a próxima partida aqui.</span>`;
