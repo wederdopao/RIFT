@@ -343,7 +343,7 @@ await A.screenshot({ path: `${OUT}/torneio-1366-campeao.png`, fullPage: true });
 await B.screenshot({ path: `${OUT}/torneio-390-campeao.png`, fullPage: true });
 
 // replay da semifinal por quem não jogou (pede ao organizador se não tiver)
-const viewer = pages.find((p) => p !== semi.host && p !== semi.guest && p !== O) || third;
+const viewer = pages.find((p) => p.who !== semi.host.who && p.who !== semi.guest.who && !p.isClosed()) || pages.find((p) => p !== O);
 const rpBtns = await viewer.$$('[data-act=trp]');
 ok(rpBtns.length >= 2, 'resultados com link para o replay');
 await rpBtns[rpBtns.length - 1].click();
