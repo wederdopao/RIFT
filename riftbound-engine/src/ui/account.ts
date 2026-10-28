@@ -6,6 +6,7 @@ import { cardData, isChampionCard, isSignature, kindOf } from '../engine/db';
 import { checkDeck, needsExtraLegends } from '../engine/deckcheck';
 import type { DeckList } from '../engine/engine';
 import { DECKS } from '../decks/origins';
+import type { Career, RankStore } from './rating';
 
 export interface SavedDeck {
   id: string;
@@ -64,6 +65,10 @@ export interface Profile {
   ladder?: LadderRun;
   /** Novo (opcional): hall da escada — os decks que venceram os 5 degraus. */
   ladderHall?: LadderHallEntry[];
+  /** Novo (opcional, rating.ts): ranking entre amigos (identidade estável, Elo, amigos, gráfico). Versionado (`v`). */
+  rank?: RankStore;
+  /** Novo (opcional, rating.ts): resumo de todas as partidas para o perfil. Ausente = começa do histórico. */
+  career?: Career;
 }
 /** Progresso num desafio: tentativas, quando resolveu e a melhor vitória (menos jogadas). */
 export interface ChallengeProgress {

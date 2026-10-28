@@ -843,7 +843,7 @@ function histRow(e: hist.HistEntry): string {
   return `<article class="hrow ${res[0]}" data-h="${e.id}">
     <div class="hmeta"><span class="hres">${esc(res[1])}</span><span class="muted small">${when(e.at)} · ${MODE_PT[e.mode]}</span></div>
     <div class="hmatch">${side(me)}<span class="hvs">${e.points[me]}<i>×</i>${e.points[other]}</span>${side(other)}</div>
-    <div class="hinfo small"><span>${e.turns} turnos</span><span>${e.moves} lances</span>${e.reason ? `<span class="muted">${esc(e.reason)}</span>` : ''}</div>
+    <div class="hinfo small"><span>${e.turns} turnos</span><span>${e.moves} lances</span>${e.elo ? `<span title="Ranking entre amigos">${e.elo.d >= 0 ? '+' : '−'}${Math.abs(e.elo.d)} → ${e.elo.after} pontos</span>` : ''}${e.reason ? `<span class="muted">${esc(e.reason)}</span>` : ''}</div>
     <div class="hacts">${can ? `<button type="button" class="primary" data-db="hopen" data-h="${e.id}" title="Abre o replay; de lá dá para continuar jogando de qualquer lance">Ver replay</button>` : '<span class="muted small" title="Saiu para liberar espaço no aparelho">Replay apagado</span>'}<button type="button" class="link small" data-db="hdel" data-h="${e.id}">Excluir</button></div>
   </article>`;
 }

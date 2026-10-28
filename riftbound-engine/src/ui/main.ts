@@ -23,6 +23,8 @@ import type { DeckList, GameConfig } from '../engine/engine';
 import { chainTargets, liveCombat, locKey, matchDrop, moveCombat, moveTargets, type CombatPreview, type Drop } from './interact';
 import { CONCEPTS, guideHtml, keywordHelpHtml } from './glossary';
 import { LobbyWatch, Net, PROTOCOL, cleanCode, cleanText, inClaudeApp, makeKeys, newCode, pack, sharedKey, unpack, type Listing, type Msg, type Op } from './online';
+import * as rating from './rating';
+import { onProfileClick, profileCodes, profileHtml, rankEndNote, rankingHtml, setProfileHooks } from './profile';
 import { ViewGame, ViewKeeper, type ViewDiff, type ViewSource, type ViewState, type Viewer } from '../engine/view';
 /** A página está aberta dentro do app do Claude? (lá o online usa o canal da própria página) */
 let claudeApp = false;
@@ -83,8 +85,8 @@ let net: Net | null = null;
 let seat: P = 0; // meu lugar na partida online (anfitrião 0, convidado 1)
 let seq = 0; // jogadas aplicadas (para o convidado não perder nenhuma)
 let owners: P[] = []; // anfitrião: quem deu cada resposta (para o "desfazer")
-let guest: { name: string; deck: DeckList } | null = null; // anfitrião: quem entrou
-let hostInfo: { name: string; deck: string } | null = null; // convidado: dados do anfitrião
+let guest: { name: string; deck: DeckList; rk?: rating.RankCard | null } | null = null; // anfitrião: quem entrou
+let hostInfo: { name: string; deck: string; rk?: rating.RankCard | null } | null = null; // convidado: dados do anfitrião
 let joinCode = '';
 let netNote = '';
 const online = () => !!net;
@@ -128,7 +130,7 @@ function fullGame(): Game | null {
   }
   return finCache.g;
 }
-const helloMsg = (): Msg => ({ t: 'hello', name: settings.names[0], deck: acc.deckById(settings.decks[0]), v: PROTOCOL, pk: myKeys?.pub });
+const helloMsg = (): Msg => ({ t: 'hello', name: settings.names[0], deck: acc.deckById(settings.decks[0]), v: PROTOCOL, pk: myKeys?.pub, rk: rating.myCard(settings.names[0]) });
 function sendReq(op: Op, s: number) {
   queueOut(async () => {
     const z = await pack(op, peerKey);
@@ -471,7 +473,9 @@ function startOnlineGame() {
     names: [settings.names[0], guest.name],
     battlefieldMode: settings.bfMode,
     autoPass: settings.autoPass,
-  });
+    // ranking: os cartões dos dois como estavam no começo (o motor ignora; os dois lados contam pelo mesmo cfg)
+    ...((r) => (r ? { rank: r } : {}))(rating.rankForGame(rating.myCard(settings.names[0]), rating.latestCard(guest.rk))),
+  } as GameConfig);
   seq = 0;
   owners = [];
   undoReq = null;
@@ -545,14 +549,15 @@ async function handleNet(m: Msg | { t: '__open' }, from: string) {
         net.send({ t: 'deny', msg: 'Vocês estão com versões diferentes do Riftbound Mesa: atualizem a página.' });
         return;
       }
-      guest = { name: (m.name || 'Amigo').slice(0, 20), deck: m.deck && typeof m.deck === 'object' ? m.deck : DECKS[0] };
+      guest = { name: (m.name || 'Amigo').slice(0, 20), deck: m.deck && typeof m.deck === 'object' ? m.deck : DECKS[0], rk: rating.cleanCard(m.rk) };
+      rating.sawFriend(guest.rk ?? null);
       // canal cifrado: chave combinada com a chave pública que veio no hello (antes de mandar a visão)
       const pk = typeof m.pk === 'string' ? m.pk : undefined;
       queueOut(async () => {
         guestPk = pk;
         await keysReady;
         peerKey = myKeys ? await sharedKey(myKeys.priv, pk) : null;
-        net?.send({ t: 'welcome', hostName: settings.names[0], hostDeck: acc.deckById(settings.decks[0]).name, pk: myKeys?.pub });
+        net?.send({ t: 'welcome', hostName: settings.names[0], hostDeck: acc.deckById(settings.decks[0]).name, pk: myKeys?.pub, rk: rating.myCard(settings.names[0]) });
       });
       if (game) sendGuestFull('start');
     } else if (m.t === 'req') {
@@ -576,7 +581,8 @@ async function handleNet(m: Msg | { t: '__open' }, from: string) {
       return;
     } else if (m.t === '__open') return;
     else if (m.t === 'welcome') {
-      hostInfo = { name: m.hostName, deck: m.hostDeck };
+      hostInfo = { name: m.hostName, deck: m.hostDeck, rk: rating.cleanCard(m.rk) };
+      rating.sawFriend(hostInfo.rk ?? null);
       peerKey = myKeys ? await sharedKey(myKeys.priv, m.pk) : null;
     } else if (m.t === 'start' || m.t === 'state' || m.t === 'wstate') {
       try {
@@ -696,7 +702,7 @@ let modal: { title: string; html: string } | null = null;
 let flashOpt: string | null = null;
 let zoom: string | null = null;
 /** Tela fora da partida: mesa (configuração), decks, desafios ou a escada contra a IA (src/ui/ladder.ts). */
-let page: 'setup' | 'decks' | 'challenges' | 'ladder' = 'setup';
+let page: 'setup' | 'decks' | 'challenges' | 'ladder' | 'ranking' | 'profile' = 'setup';
 let logOpen = true;
 /** Unidades escolhidas para mover (clique direto na unidade pronta), válidas enquanto a decisão raiz não muda. */
 let moveSel: string[] = [];
@@ -1819,7 +1825,7 @@ function overlayHtml(eng: Engine, d: Decision | null): string {
         ? '<button class="primary" data-act="rematch">Revanche</button><button data-act="lobby">Trocar decks</button>'
         : `<span class="muted">Esperando ${esc(eng.pl[0].name)} pedir a revanche.</span>`
       : ladderEndButtons(game.cfg) ?? '<button class="primary" data-act="newgame">Nova partida</button><button data-act="setup">Trocar decks</button>';
-    const lad = ladderEndNote(game.cfg);
+    const lad = online() ? rankEndNote(fullGame()?.cfg, seat) : ladderEndNote(game.cfg);
     return `<div class="tt-overlay end ${mine ? 'win' : 'lose'}"><div class="tt-obox">
       <p class="tt-kicker">Fim de jogo</p><h2>${w !== null ? `${esc(eng.pl[w].name)} venceu` : 'Fim de jogo'}</h2>
       <p>${esc(eng.winReason || '')} · ${eng.pl[0].points} × ${eng.pl[1].points} · ${eng.turn} turnos</p>${lad ? `<p class="tt-ladnote">${lad}</p>` : ''}${(() => {
@@ -2991,10 +2997,10 @@ function setupHtml(): string {
       <div class="modegroup" role="radiogroup" aria-label="Adversário">${MODES.map(
         (m) => `<button type="button" role="radio" class="mode${settings.opponent === m.id ? ' on' : ''}" data-act="mode" data-mode="${m.id}" aria-checked="${settings.opponent === m.id}"><b>${m.t}</b><span>${m.s}</span></button>`,
       ).join('')}</div>
-      <div class="modegroup aux">${tut.homeButton()}<button type="button" class="mode aux" data-act="decks"><b>Meus decks</b><span>Montar, importar e exportar</span></button><button type="button" class="mode aux" data-act="history"><b>Histórico</b><span>Partidas, replays e estatísticas</span></button><button type="button" class="mode aux" data-act="importopen"><b>Abrir replay</b><span>De um arquivo ou relatório</span></button><button type="button" class="mode aux" data-act="challenges"><b>Desafios</b><span>Vença neste turno</span></button><button type="button" class="mode aux ladder" data-act="ladder"><b>Escada</b><span>5 adversários seguidos contra a IA</span></button></div>
+      <div class="modegroup aux">${tut.homeButton()}<button type="button" class="mode aux" data-act="decks"><b>Meus decks</b><span>Montar, importar e exportar</span></button><button type="button" class="mode aux" data-act="history"><b>Histórico</b><span>Partidas, replays e estatísticas</span></button><button type="button" class="mode aux" data-act="importopen"><b>Abrir replay</b><span>De um arquivo ou relatório</span></button><button type="button" class="mode aux" data-act="challenges"><b>Desafios</b><span>Vença neste turno</span></button><button type="button" class="mode aux ladder" data-act="ladder"><b>Escada</b><span>5 adversários seguidos contra a IA</span></button><button type="button" class="mode aux" data-act="ranking"><b>Ranking</b><span>${rating.rankStore().elo} pontos · amigos online</span></button><button type="button" class="mode aux" data-act="profile"><b>Perfil</b><span>Pontuação, vitórias e decks</span></button></div>
     </nav>`;
   const summary = `${settings.opponent === 'ai' ? `Contra a IA (${AI_LEVELS.find((l) => l.id === settings.aiLevel)!.t})` : 'Passa-e-joga'} · ${settings.format === 'padrao' ? 'Padrão' : 'Casual'} · campos ${settings.bfMode === 'random' ? 'sorteados' : 'escolhidos'}`;
-  return `<header class="topbar"><div class="brand">Riftbound <span>mesa</span></div><div class="turninfo">${esc(acc.profile().name)}</div>
+  return `<header class="topbar"><div class="brand">Riftbound <span>mesa</span></div><div class="turninfo"><button type="button" class="tb-acct" data-act="profile" title="Ver o perfil">${esc(acc.profile().name)} <span>${rating.rankStore().elo}</span></button></div>
     <div class="tb">${musicBoards().length ? `<button type="button" data-act="music" title="Volume da música (N)">${musicIcon()}</button>` : ''}${net ? '<button type="button" data-act="decks">Meus decks</button>' : ''}</div></header>
   <main class="setup home">
     ${net ? lobbyHtml() : `<div class="hero"><h1>Riftbound na mesa</h1><p>As regras rodam sozinhas: custos, pilha, combate, pontos e o efeito de cada carta.</p></div>
@@ -3126,7 +3132,7 @@ function lobbyHtml(): string {
         net.status === 'abrindo'
           ? 'Abrindo a sala…'
           : g
-            ? `<b>${esc(g.name)}</b> entrou com o deck <b>${esc(g.deck.name)}</b>.`
+            ? `<b>${esc(g.name)}</b>${g.rk ? ` (${rating.latestCard(g.rk)!.elo} pontos)` : ''} entrou com o deck <b>${esc(g.deck.name)}</b>.`
             : 'Esperando seu amigo entrar…'
       }${net.watcherCount ? ` · ${net.watcherCount} assistindo` : ''}</p>
       ${gBan ? `<p class="err">${gRep!.errors.length ? `O deck do seu amigo não é válido: ${esc(gRep!.errors[0])}` : 'O deck do seu amigo tem cartas banidas no formato Padrão. Troque para Casual para jogar.'}</p>` : ''}
@@ -3143,7 +3149,7 @@ function lobbyHtml(): string {
   </section>`;
   return `<section class="lobby panel">
     <p class="who">Sala ${esc(net.code)}</p>
-    <h2>${net.connected ? (hostInfo ? `Conectado com ${esc(hostInfo.name)}` : 'Conectado') : net.status === 'reconectando' ? 'Procurando a sala…' : 'Conectando…'}</h2>
+    <h2>${net.connected ? (hostInfo ? `Conectado com ${esc(hostInfo.name)}${hostInfo.rk ? ` (${rating.latestCard(hostInfo.rk)!.elo} pontos)` : ''}` : 'Conectado') : net.status === 'reconectando' ? 'Procurando a sala…' : 'Conectando…'}</h2>
     ${err}
     <p class="lstatus">${net.connected ? `Esperando ${esc(hostInfo?.name ?? 'o anfitrião')} começar a partida. Seu deck: <b>${esc(acc.deckById(settings.decks[0]).name)}</b> (pode trocar no campo Deck: o anfitrião vê na hora).` : 'O jogo tenta de novo sozinho a cada poucos segundos.'}</p>
     <div class="btns"><button data-act="leave">Sair da sala</button></div>
@@ -3188,7 +3194,7 @@ function render() {
     for (const el of Array.from(document.querySelectorAll<HTMLElement>('.tt-mat .card[data-obj]')))
       before.set(el.dataset.obj!, { r: el.getBoundingClientRect(), bomb: el.classList.contains('bomb'), unit: el.classList.contains('unit'), art: el.querySelector<HTMLImageElement>('img.art')?.src || '' });
   recordIfOver(); // antes de desenhar: o quadro do fim já mostra o resultado gravado (escada: próximo degrau / vidas)
-  app.innerHTML = game ? gameHtml() : page === 'decks' ? deckbuilderHtml() : page === 'challenges' ? challengesHtml(acc.profile().name) : page === 'ladder' ? ladderHtml(ladderTopbar()) + modalHtml() : setupHtml() + modalHtml();
+  app.innerHTML = game ? gameHtml() : page === 'decks' ? deckbuilderHtml() : page === 'challenges' ? challengesHtml(acc.profile().name) : page === 'ladder' ? ladderHtml(ladderTopbar()) + modalHtml() : page === 'ranking' ? rankingHtml(ladderTopbar()) : page === 'profile' ? profileHtml(ladderTopbar()) : setupHtml() + modalHtml();
   if (focusId) {
     const el = document.getElementById(focusId) as HTMLInputElement | null;
     if (el && el !== document.activeElement) {
@@ -3232,6 +3238,8 @@ function render() {
         ? challengeArtCodes()
       : page === 'ladder'
         ? [...RUNE_CODES, ...ladderCodes()]
+      : page === 'profile'
+        ? profileCodes()
         : [
           ...RUNE_CODES,
           ...settings.decks.flatMap((i) => {
@@ -3311,6 +3319,7 @@ function onClick(ev: MouseEvent) {
   }
   if (!game && page === 'decks' && onDbClick(t)) return;
   if (onLadderClick(t)) return;
+  if (onProfileClick(t)) return;
   // clique fora do menu da carta fecha o menu (e segue valendo como clique normal)
   if (ctxMenu && !t.closest('.tt-ctx')) {
     ctxMenu = null;
@@ -4397,7 +4406,7 @@ setChallengeHooks({
 
 // ───────────────────────────── escada contra a IA (src/ui/ladder.ts) ─────────────────────────────
 function ladderTopbar(): string {
-  return `<header class="topbar"><div class="brand">Riftbound <span>mesa</span></div><div class="turninfo">${esc(acc.profile().name)}</div>
+  return `<header class="topbar"><div class="brand">Riftbound <span>mesa</span></div><div class="turninfo"><button type="button" class="tb-acct" data-act="profile" title="Ver o perfil">${esc(acc.profile().name)} <span>${rating.rankStore().elo}</span></button></div>
     <div class="tb">${musicBoards().length ? `<button type="button" data-act="music" title="Volume da música (N)">${musicIcon()}</button>` : ''}</div></header>`;
 }
 /** Partida de um degrau: contra a IA no nível do degrau, com a trilha dele (o cfg leva a marca da escada). */
@@ -4425,6 +4434,24 @@ function startLadderGame(m: LadderMatch) {
   window.scrollTo(0, 0);
   scheduleAi();
 }
+setProfileHooks({
+  render: () => render(),
+  home: () => {
+    page = 'setup';
+    render();
+    window.scrollTo(0, 0);
+  },
+  open: (pg) => {
+    if (replay) exitReplay();
+    if (game) {
+      game = null;
+      save();
+    }
+    page = pg;
+    render();
+    window.scrollTo(0, 0);
+  },
+});
 setLadderHooks({
   render: () => render(),
   home: () => {

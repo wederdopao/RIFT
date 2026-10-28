@@ -114,6 +114,11 @@ Projeto de fã, sem fins comerciais, feito sob a política "Legal Jibber Jabber"
   Focus, palavras-chave, o último ponto e encerrar o turno; no fim leva à partida contra a IA (Fácil). Dá para sair e
   continuar depois (progresso na conta local) ou refazer. Roteiro em `src/ui/tutorial-script.ts`, tela em
   `src/ui/tutorial.ts`.
+- **Ranking entre amigos e Perfil** (tela inicial, ou o nome da conta no topo): cada conta tem uma pontuação Elo
+  (começa em 1000, K = 32) que muda só com partidas **online** contra amigos; a tela Ranking lista os amigos que você
+  já enfrentou (pontuação vista por último, vitórias × derrotas, sequência, última partida). O Perfil mostra a
+  pontuação partida a partida, taxa de vitória geral, por deck, por lenda e por adversário (amigo ou IA por nível),
+  deck mais usado, maior sequência e partidas por modo. Lógica em `src/ui/rating.ts`, telas em `src/ui/profile.ts`.
 
 ## Como jogar fora do app
 
@@ -140,6 +145,7 @@ node scripts/uioverlap.mjs                                  # a barra cobre algu
 node scripts/uireplay.mjs <pasta>                           # relatório baixado → aberto no replay → lances → continuar
 node scripts/tutorialplay.mjs <pasta>                       # tutorial inteiro pela mesa, com prints de cada passo
 node scripts/laddershot.mjs <pasta>                         # prints da escada contra a IA (SIZES=1920x1080,1366x768,390x844)
+node scripts/rankingtest.mjs <pasta>                        # ranking: partida online inteira entre duas contas + prints
 ```
 
 ## Estrutura

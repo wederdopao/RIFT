@@ -47,8 +47,10 @@ test('histórico: grava, abre o replay, conta estatísticas e não duplica', asy
 });
 
 test('histórico: sem espaço, tira replays antigos e não quebra', async () => {
-  // a conta e o histórico do teste anterior continuam na memória e precisam caber no aparelho "pequeno"
-  const st = fakeStorage(6000);
+  // a conta e o histórico do teste anterior continuam na memória e precisam caber no aparelho "pequeno" (a conta agora
+  // também guarda o resumo do perfil, ~600 bytes a mais: rating.ts)
+  const LIMIT = 6800;
+  const st = fakeStorage(LIMIT);
   const { hist } = await seedHistory(3, 200);
   const list = hist.list();
   assert.ok(list.length >= 1);
@@ -56,7 +58,7 @@ test('histórico: sem espaço, tira replays antigos e não quebra', async () => 
   assert.ok(list.some((e) => e.dropped) || list.length < 6, 'replays (ou partidas) antigos saíram para caber');
   assert.ok(hist.lastNote, 'avisa a falta de espaço');
   const total = Object.entries(st.dump()).reduce((a, [k, v]) => a + k.length + v.length, 0);
-  assert.ok(total <= 6000);
+  assert.ok(total <= LIMIT);
 });
 
 test('conta: decks antigos (sem campos novos) continuam valendo', async () => {
