@@ -12,6 +12,7 @@ import * as acc from './account';
 import * as hist from './history';
 import { copyText } from './copy';
 import { needsExtraLegends } from '../engine/deckcheck';
+import { loadMusic, musicBoards, previewTrack } from './music';
 
 type Cat = 'unit' | 'champion' | 'spell' | 'signature' | 'gear' | 'legend' | 'battlefield' | 'rune';
 const CAT_PT: Record<Cat, string> = {
@@ -549,6 +550,7 @@ function deckPanel(d: acc.SavedDeck): string {
     <div class="dkacts"><button type="button" class="primary" data-db="play" ${v.ok ? '' : 'disabled'}>Jogar com este deck</button><button type="button" data-db="sample" ${acc.count(d.main) >= 4 ? '' : 'disabled'}>Mão de teste</button></div>
     <div class="dkexport"><span>Exportar</span><button type="button" data-db="copycode" ${d.legend ? '' : 'disabled'}>Copiar código</button><button type="button" data-db="copytext" ${d.legend ? '' : 'disabled'}>Copiar lista</button></div>
     <div class="dkexport"><span>Versões</span><button type="button" data-db="compare" ${acc.profile().decks.length > 1 ? '' : 'disabled'} title="Ver as cartas que mudam entre este deck e outro">${origin ? `Comparar com a original` : 'Comparar com outro deck'}</button><button type="button" data-db="dupedit" title="Faz uma cópia para testar mudanças sem perder esta versão">Duplicar</button></div>
+    ${musicRowHtml(d)}
     ${db.sample.length ? `<div class="sample"><div class="dgl">Mão inicial de teste <button type="button" class="link small" data-db="sample">sortear de novo</button> <button type="button" class="link small" data-db="nosample">fechar</button></div><div class="srow">${db.sample.map((c) => `<div class="scard" data-dbcode="${c}" data-db="peek">${img(c) || `<span>${esc(cardData(c).name)}</span>`}</div>`).join('')}</div></div>` : ''}
     ${extraLegendsHtml(d)}
     <div class="dsec"><div class="dgl">Curva de energia <span>deck principal</span></div>${curveHtml(d)}</div>
@@ -660,6 +662,20 @@ function compareHtml(d: acc.SavedDeck): string {
 // ───────────────────────────── capa ─────────────────────────────
 const COVER_DEFAULT = { x: 0.6, y: 0.3, z: 1.25 };
 const COVER_WIDE = { x: 0.5, y: 0.45, z: 1 };
+const rerender = () => hooks.render();
+/** Música da partida deste deck (temas de tabuleiro do Legends of Runeterra; só no site, que tem a pasta music/). */
+let previewing = false;
+function musicRowHtml(d: acc.SavedDeck): string {
+  loadMusic(rerender);
+  const bs = musicBoards();
+  if (!bs.length) return '';
+  const cur = d.music ?? '';
+  const opt = (v: string, label: string) => `<option value="${esc(v)}"${v === cur ? ' selected' : ''}>${esc(label)}</option>`;
+  const opts = [opt('', 'Sorteada a cada partida'), opt('none', 'Sem música'), ...bs.map((b) => opt(b.id, b.name))].join('');
+  const can = cur && cur !== 'none';
+  return `<div class="dkexport dkmusic"><span>Música</span><select id="dbmusic" title="Música que toca nas suas partidas com este deck">${opts}</select><button type="button" data-db="musicprev" ${can ? '' : 'disabled'} title="Ouvir a trilha escolhida">${previewing && can ? '■ Parar' : '▶ Ouvir'}</button></div>`;
+}
+
 const coverDefault = (code: string) => (kindOf(code) === 'battlefield' ? COVER_WIDE : COVER_DEFAULT);
 function coverHtml(d: acc.SavedDeck): string {
   const cur = d.cover && hasCard(d.cover.code) ? d.cover : null;
@@ -1137,6 +1153,11 @@ export function onDbClick(t: HTMLElement): boolean {
       db.shown = 0;
       break;
     }
+    case 'musicprev': {
+      if (!d?.music || d.music === 'none') return true;
+      previewing = previewTrack(d.music);
+      break;
+    }
     case 'dupedit': {
       if (!d) return true;
       const c = acc.duplicateDeck(d);
@@ -1388,6 +1409,16 @@ export function onDbInput(t: HTMLElement): boolean {
   if (id === 'dbcmp') {
     db.compareWith = v;
     lightRender();
+    return true;
+  }
+  if (id === 'dbmusic') {
+    if (d) {
+      d.music = v;
+      acc.saveDeck(d);
+      // ouvindo a prévia: troca para a nova escolha
+      if (previewing) previewing = v !== '' && v !== 'none' && previewTrack(v);
+      hooks.render();
+    }
     return true;
   }
   if (id === 'histdeck') {

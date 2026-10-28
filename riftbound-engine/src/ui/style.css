@@ -681,6 +681,7 @@ textarea { font: 13px/1.4 ui-monospace, 'SFMono-Regular', Menlo, monospace; colo
 .dkexport { display: flex; align-items: center; gap: 6px; }
 .dkexport span { font-size: 0.8em; color: var(--muted); }
 .dkexport button { flex: 1; }
+.dkmusic select { flex: 2; min-width: 0; }
 .dgl { font: 600 15px var(--f-display); letter-spacing: 0.01em; color: var(--gold-hi); display: flex; gap: 8px; align-items: baseline; }
 .dgl span { color: var(--muted); font-weight: 500; }
 .dgl .link { margin-left: auto; }
@@ -1759,6 +1760,7 @@ body.tt-dragging, body.tt-dragging * { user-select: none !important; -webkit-use
 @media (max-width: 860px) and (orientation: portrait) {
   .tt-bubble { font-size: 12px; }
   .tt-chatpop { left: 8px; right: 8px; width: auto; }
+}
 /* ── confirmar antes de jogar: carta armada, alvos/locais acesos e o painel ── */
 .tt .card.armed { box-shadow: 0 0 0 3px var(--gold-hi), 0 0 26px rgba(240, 212, 138, 0.9); transform: translateY(-6px); z-index: 6; }
 .tt .card.armtgt { outline: 2px dashed #7fe3d2; outline-offset: 3px; cursor: pointer; }

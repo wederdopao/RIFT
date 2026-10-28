@@ -27,6 +27,8 @@ export interface SavedDeck {
   stats?: DeckStats;
   /** Novo (opcional): id do deck de onde esta cópia saiu (para comparar com a original). */
   origin?: string;
+  /** Novo (opcional): música da partida (id do tabuleiro em src/ui/music.ts; vazio = sorteada; 'none' = sem música). */
+  music?: string;
 }
 export interface DeckCover {
   code: string;
@@ -156,6 +158,10 @@ export function setManualPayPref(on: boolean) {
 }
 
 // ───────────────────────────── decks ─────────────────────────────
+/** O deck salvo por trás de uma escolha da tela inicial ("pre:N" é starter: não tem). */
+export function savedDeckOf(choice: string | number): SavedDeck | undefined {
+  return typeof choice === 'string' && !choice.startsWith('pre:') ? getDeck(choice.slice(3)) : undefined;
+}
 export function getDeck(id: string): SavedDeck | undefined {
   return profile().decks.find((d) => d.id === id);
 }
