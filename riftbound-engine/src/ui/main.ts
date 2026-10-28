@@ -9,7 +9,7 @@ import { MANUAL_PAY, type Engine } from '../engine/engine';
 import type { Decision, Domain, Loc, Obj, Option, P } from '../engine/types';
 import { DOMAIN_COLOR, DOMAIN_PT, esc, rulesHtml } from './text';
 import { AiPlayer, quickPick, AI_LEVELS, isAiLevel, type AiLevel } from '../ai/ai';
-import { artUrl, ensureArt } from './art';
+import { artHd, artUrl, ensureArt } from './art';
 import { cycleSound, sfx, soundFromLog, soundIcon } from './sound';
 import { canLink, codeFromText, decodeReplay, encodeReplay, linkFor, prepareReplay } from './replaylink';
 import { copyText, showCopyBox } from './copy';
@@ -1241,7 +1241,8 @@ function cardHtml(eng: Engine, o: Obj, mode: 'hand' | 'board' | 'small' | 'thumb
   const bar = doms.length ? doms.join(', ') : 'var(--line)';
   const opts = optionsFor(o.id);
   const sel = selected.includes(o.id) || opts.some((x) => selected.includes(x.id));
-  const url = artUrl(o.code);
+  // na mão a carta é grande (e cresce ao passar o mouse; o mulligan também usa a mão): arte em alta no site
+  const url = mode === 'hand' ? artHd(o.code) : artUrl(o.code);
   const classes = ['card', mode, k, url ? 'has-art' : 'frame'];
   const onBoard = o.zone === 'board';
   // a lenda também gira quando exaure (ela fica na zona da lenda, não no tabuleiro)
@@ -1404,7 +1405,7 @@ function isHiddenFromView(eng: Engine, o: Obj): boolean {
 function cardDetail(eng: Engine, o: Obj): string {
   const d = cardData(o.code);
   const k = o.zone === 'board' && eng.isUnit(o) ? 'unit' : kindOf(o.code); // novo: unit gear
-  const url = artUrl(o.code);
+  const url = artHd(o.code);
   const eff = d.effectText ? `<p class="eff"><b>Quando equipado:</b> ${rulesHtml(d.effectText)}</p>` : '';
   const sc = (eng.script(o) as any)?.notes;
   const live: string[] = [];
@@ -1657,6 +1658,19 @@ function syncMusic() {
   // a partida pode pedir a própria trilha (cfg.music, ex.: degrau da escada); senão vale a escolha do deck
   musicScene({ kind: 'game', choice: acc.savedDeckOf(settings.decks[0])?.music, track: (game.cfg as { music?: string }).music, seed: game.cfg.seed });
 }
+/** Cartas e textos maiores (botão "Aa"/tecla A; para quem enxerga pouco): classe no <html>, guardada no aparelho. */
+let bigText = false;
+try {
+  bigText = localStorage.getItem('rb-bigtext') === '1';
+} catch {}
+function setBigText(on: boolean) {
+  bigText = on;
+  document.documentElement.classList.toggle('rb-big', on);
+  try {
+    localStorage.setItem('rb-bigtext', on ? '1' : '0');
+  } catch {}
+}
+if (typeof document !== 'undefined') document.documentElement.classList.toggle('rb-big', bigText);
 /** O tabuleiro (id) da música desta partida, mesmo com a música desligada: o tapete 'auto' acompanha. */
 function gameTrackId(): string | undefined {
   if (!game) return undefined;
@@ -1906,7 +1920,7 @@ function overlayHtml(eng: Engine, d: Decision | null): string {
   if (d.kind === 'setup') {
     const picks = d.options
       .map((o) => {
-        const url = hasCard(o.id) ? artUrl(o.id) : null;
+        const url = hasCard(o.id) ? artHd(o.id) : null;
         return `<button class="tt-pick land" data-opt="${esc(o.id)}" ${hasCard(o.id) ? `data-hover="code:${esc(o.id)}"` : ''}>${url ? `<img src="${url}" alt="" draggable="false">` : `<span class="tt-pickname">${esc(o.label)}</span>`}<span class="tt-picklabel">${esc(o.label)}</span></button>`;
       })
       .join('');
@@ -1934,7 +1948,7 @@ function overlayHtml(eng: Engine, d: Decision | null): string {
         const ob = o.obj ? eng.objs[o.obj] : null;
         const on = selected.includes(o.id);
         if (!ob) return `<button class="tt-pick text${on ? ' on' : ''}" data-opt="${esc(o.id)}"><span class="tt-pickname">${esc(o.label)}</span></button>`;
-        const url = artUrl(ob.code);
+        const url = artHd(ob.code);
         return `<button class="tt-pick${on ? ' on' : ''}" data-opt="${esc(o.id)}" data-hover="${ob.id}" title="${esc(o.label)}">${url ? `<img src="${url}" alt="" draggable="false">` : `<span class="tt-pickname">${esc(cardData(ob.code).name)}</span>`}<span class="tt-picklabel">${esc(o.label)}</span></button>`;
       })
       .join('');
@@ -2005,7 +2019,7 @@ function peekHtml(eng: Engine, id: string | null): string {
   if (!o.id.startsWith('code:') && isHiddenFromView(eng, o)) return '';
   const d = cardData(o.code);
   const k = o.zone === 'board' && eng.isUnit(o) ? 'unit' : kindOf(o.code); // novo: unit gear
-  const url = artUrl(o.code);
+  const url = artHd(o.code);
   const live: string[] = [];
   if (k === 'unit' && o.zone === 'board') {
     live.push(`Might <b>${eng.might(o)}</b>`);
@@ -2048,6 +2062,7 @@ function sideHtml(eng: Engine, d: Decision | null): string {
         <button data-act="sound" class="tt-sound" title="Volume dos sons (M)">${soundIcon()}</button>
         <button data-act="music" class="tt-sound" title="Volume da música (N); a trilha de cada deck se escolhe no deckbuilder">${musicIcon()}</button>
         <button data-act="matpick" title="Trocar o tapete da mesa (T)">Tapete</button>
+        <button data-act="bigtext" class="tt-sound${bigText ? ' on' : ''}" title="Cartas e textos maiores (A)" aria-pressed="${bigText}">Aa</button>
         ${replay ? '' : '<button data-act="report" title="Guardar esta partida para mostrar um problema">Relatar problema</button>'}
         ${online() ? '<button data-act="leave">Sair da sala</button>' : '<button data-act="setup">Menu</button>'}
       </div>
@@ -3614,6 +3629,11 @@ function onClick(ev: MouseEvent) {
       render();
       return;
     }
+    if (a === 'bigtext') {
+      setBigText(!bigText);
+      render();
+      return;
+    }
     if (a === 'matpick') {
       loadMats(() => {
         if (modal?.title === 'Tapete da mesa') modal.html = matPickHtml();
@@ -4327,7 +4347,7 @@ document.addEventListener('visibilitychange', () => {
   if (!document.hidden) document.title = 'Riftbound Mesa';
 });
 
-/** Atalhos: Espaço = passar/encerrar o turno, Enter = confirmar, Esc = cancelar/fechar, Z = desfazer, M = volume dos sons, N = volume da música, E = emotes (online), T = tapete. */
+/** Atalhos: Espaço = passar/encerrar o turno, Enter = confirmar, Esc = cancelar/fechar, Z = desfazer, M = volume dos sons, N = volume da música, E = emotes (online), T = tapete, A = cartas e textos maiores. */
 function onKey(ev: KeyboardEvent) {
   const t = ev.target as HTMLElement;
   if (t?.id === 'chatin' && (ev.key === 'Enter' || ev.key === 'Escape')) {
@@ -4410,6 +4430,10 @@ function onKey(ev: KeyboardEvent) {
   else if (ev.key === 'n' || ev.key === 'N') document.querySelector<HTMLElement>('[data-act=music]')?.click();
   else if (ev.key === 'e' || ev.key === 'E') document.querySelector<HTMLElement>('[data-act=emotetog]')?.click();
   else if (ev.key === 't' || ev.key === 'T') document.querySelector<HTMLElement>('[data-act=matpick]')?.click();
+  else if (ev.key === 'a' || ev.key === 'A') {
+    setBigText(!bigText);
+    render();
+  }
 }
 
 /** Fim de partida: guarda no histórico da conta e conta nas estatísticas do deck (uma vez por partida). */

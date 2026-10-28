@@ -3,10 +3,10 @@
 //  - página (index.html): sai do cache na hora e é conferida na rede ao mesmo tempo; se mudou, avisa a página
 //    ("nova versão") e a próxima abertura já vem nova;
 //  - js/ (nome com hash, nunca muda), fonts/: do cache, para sempre;
-//  - art/ e mats/: do cache na hora, conferidas na rede em segundo plano (uma carta com arte nova se corrige sozinha);
+//  - art/, art-hd/ e mats/: do cache na hora, conferidas na rede em segundo plano (uma carta com arte nova se corrige sozinha);
 //  - voice/ e music/ ficam de fora: o <audio> pede pedaços (Range) e o cache do navegador já cuida delas.
-const VERSAO = '0a4b17941231'; // muda a cada build: é o que faz o navegador trocar de service worker
-const JS = ["app-JIEQN4AO.js","c-Y6MRID7F.js","c-KGNFAV5Y.js"];
+const VERSAO = 'fd06a9966bae'; // muda a cada build: é o que faz o navegador trocar de service worker
+const JS = ["app-RTGF3QBA.js","c-Y6MRID7F.js","c-KGNFAV5Y.js"];
 const PAGE = 'rb-page';
 const STATIC = 'rb-static';
 const MEDIA = 'rb-media';
@@ -84,5 +84,5 @@ self.addEventListener('fetch', (e) => {
   const path = url.pathname.slice(new URL(self.registration.scope).pathname.length);
   if (req.mode === 'navigate' && (path === '' || path === 'index.html')) return e.respondWith(page(req));
   if (path.startsWith('js/') || path.startsWith('fonts/')) return e.respondWith(cacheFirst(req, STATIC, false));
-  if (path.startsWith('art/') || path.startsWith('mats/')) return e.respondWith(cacheFirst(req, MEDIA, true));
+  if (path.startsWith('art/') || path.startsWith('art-hd/') || path.startsWith('mats/')) return e.respondWith(cacheFirst(req, MEDIA, true));
 });

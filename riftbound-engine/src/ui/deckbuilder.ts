@@ -6,7 +6,7 @@ import { isImplemented } from '../engine/script';
 import type { Domain } from '../engine/types';
 import { BANNED_STANDARD } from '../data/banlist';
 import { DECKS } from '../decks/origins';
-import { artUrl } from './art';
+import { artHd, artUrl } from './art';
 import { DOMAIN_COLOR, DOMAIN_PT, esc, rulesHtml } from './text';
 import * as acc from './account';
 import * as hist from './history';
@@ -332,7 +332,7 @@ function addChampionIfFits(d: acc.SavedDeck, code: string) {
 // ───────────────────────────── HTML ─────────────────────────────
 const SETS: [string, string][] = [['OGN', 'Origins'], ['OGS', 'Proving Grounds'], ['SFD', 'Spiritforged'], ['UNL', 'Unleashed'], ['VEN', 'Vendetta'], ['RAD', 'Radiance']];
 function img(code: string, cls = '') {
-  const u = artUrl(code);
+  const u = cls === 'big' ? artHd(code) : artUrl(code);
   return u ? `<img class="${cls}" src="${u}" alt="${esc(cardData(code).name)}" draggable="false" loading="lazy">` : '';
 }
 function chip(on: boolean, attr: string, label: string, style = '') {

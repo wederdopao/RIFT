@@ -2344,3 +2344,16 @@ body.tut .tt-endbtn.tut-off { opacity: 0.45; }
 @media (min-width: 2500px) and (min-height: 1380px) { html { zoom: 1.333; --zf: 1.333; } }
 @media (min-width: 3000px) and (min-height: 1650px) { html { zoom: 1.6; --zf: 1.6; } }
 @media (min-width: 3600px) and (min-height: 2000px) { html { zoom: 2; --zf: 2; } }
+
+/* "Aa" — cartas e textos maiores (para quem enxerga pouco): prévia da carta, carta ampliada, registro e deckbuilder */
+.tt-sound.on { border-color: var(--gold); color: var(--gold-hi); }
+.rb-big .tt-peekin { width: clamp(300px, calc(var(--u) * 4.2), 460px); }
+.rb-big .tt-peekin.land { width: clamp(400px, calc(var(--u) * 5.8), 620px); }
+.rb-big .tt-peekin img { max-height: min(70dvh, calc(100dvh - 400px)); width: auto; max-width: 100%; margin-inline: auto; }
+.rb-big .tt-peektext { font-size: 1.02em; padding: 10px 12px; }
+.rb-big .tt-peektext .tt-ptx { font-size: 1.12em; line-height: 1.4; }
+.rb-big .zoom .mbox { width: min(560px, 100%); }
+.rb-big .zoom .dbptext { font-size: 1.05em; }
+.rb-big .panel.log { font-size: 1.1em; }
+.rb-big .dbpeek { width: 400px; font-size: 1em; }
+.rb-big .tt-dock { font-size: 1.08em; }

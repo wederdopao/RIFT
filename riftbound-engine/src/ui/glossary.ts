@@ -116,7 +116,7 @@ export function guideHtml(): string {
     ])}
     ${sec('Atalhos de teclado', [
       '<b>Espaço</b> passa ou encerra o turno · <b>Enter</b> confirma · <b>Esc</b> cancela ou fecha · <b>Z</b> desfaz',
-      '<b>V</b> prévia da pilha · <b>?</b> este guia · <b>T</b> tapete da mesa',
+      '<b>V</b> prévia da pilha · <b>?</b> este guia · <b>T</b> tapete da mesa · <b>A</b> cartas e textos maiores',
       '<b>M</b> volume dos sons · <b>N</b> volume da música · <b>E</b> emotes (online)',
     ])}
   </div>`;

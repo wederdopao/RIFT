@@ -616,3 +616,8 @@ RiftJudge/playriftbound não acessíveis no contêiner: rulings vieram de resumo
   `src/ui/zoom.ts` (fator medido por sonda). uiinteract em 2560×1440: mover 47/47, arrastar 21/21.
 - Torneio e ranking juntos: hello/welcome levam `rk` (ranking) e o deck do torneio (`myDeck()`); home com 9 botões
   auxiliares (3 colunas). Atalhos de teclado listados no "Como funciona".
+- **Artes em alta + "Aa"** (pedido do Weder: amigo com dificuldade de enxergar): `scripts/art_hd.py` baixa as originais
+  da galeria oficial (playriftbound.com, 744×1039, webp q80 → `assets/art-hd`, 85 MB; fichas TOK-* copiadas das leves).
+  Só no site (`__RB_ART_HD__`): `artHd()` em art.ts para a carta grande (prévia, ampliada, mão/mulligan, escolhas,
+  deckbuilder); a mesa continua com as leves de 360 px. Botão **Aa** (tecla A, `rb-bigtext` no aparelho, classe
+  `html.rb-big`): prévia/ampliada/registro/deckbuilder maiores.

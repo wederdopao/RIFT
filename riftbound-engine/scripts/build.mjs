@@ -68,7 +68,7 @@ ${localFonts ? ['barlow-400', 'barlow-condensed-600'].map((f) => `<link rel="pre
 ${siteJs && localFonts ? readFileSync('assets/fonts/fonts.css', 'utf8') : ''}${css}
 </style>
 <div id="app"></div>
-<script>window.__RB_ART_INDEX__=${JSON.stringify(index)};${inlineArt ? `window.__RB_ART__=${JSON.stringify(inlineArt)};` : ''}${artFiles ? 'window.__RB_ART_FILES__=true;' : ''}</script>
+<script>window.__RB_ART_INDEX__=${JSON.stringify(index)};${inlineArt ? `window.__RB_ART__=${JSON.stringify(inlineArt)};` : ''}${artFiles ? `window.__RB_ART_FILES__=true;${existsSync('assets/art-hd') ? 'window.__RB_ART_HD__=true;' : ''}` : ''}</script>
 ${siteJs ? `<script type="module" src="${siteJs}"></script>` : `<script>
 ${js}
 </script>`}
@@ -113,6 +113,9 @@ const versao = createHash('sha1').update(sitePage).digest('hex').slice(0, 12);
 writeFileSync('dist/site/sw.js', readFileSync('src/sw.js', 'utf8').replace("'__VERSAO__'", `'${versao}'`).replace('= __JS__;', `= ${JSON.stringify(siteJsFiles)};`));
 writeFileSync('dist/site/_headers', readFileSync('src/netlify-headers.txt', 'utf8'));
 cpSync(ART_DIR, 'dist/site/art', { recursive: true });
+// artes em alta (scripts/art_hd.py): só quando a carta aparece grande (ampliada, prévia, mão, deckbuilder)
+const artHd = existsSync('assets/art-hd');
+if (artHd) cpSync('assets/art-hd', 'dist/site/art-hd', { recursive: true });
 // vozes dos campeões (scripts/lor_voices.py): o site baixa só as do campeão que fala, quando fala
 if (existsSync('assets/voice/index.json')) cpSync('assets/voice', 'dist/site/voice', { recursive: true });
 // músicas dos tabuleiros (scripts/lor_music.py): cada uma só baixa quando toca
