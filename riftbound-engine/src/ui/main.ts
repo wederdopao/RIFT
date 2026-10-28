@@ -4327,7 +4327,7 @@ document.addEventListener('visibilitychange', () => {
   if (!document.hidden) document.title = 'Riftbound Mesa';
 });
 
-/** Atalhos: Espaço = passar/encerrar o turno, Enter = confirmar, Esc = cancelar/fechar, Z = desfazer, M = volume dos sons, N = volume da música, E = emotes (online). */
+/** Atalhos: Espaço = passar/encerrar o turno, Enter = confirmar, Esc = cancelar/fechar, Z = desfazer, M = volume dos sons, N = volume da música, E = emotes (online), T = tapete. */
 function onKey(ev: KeyboardEvent) {
   const t = ev.target as HTMLElement;
   if (t?.id === 'chatin' && (ev.key === 'Enter' || ev.key === 'Escape')) {

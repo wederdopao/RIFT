@@ -1585,7 +1585,7 @@ body.tt-dragging, body.tt-dragging * { user-select: none !important; -webkit-use
 .ico-help { font-weight: 700; }
 /* histórico (coluna da esquerda, em cima da trilha de pontos) */
 .tt-rail.left { justify-content: space-between; }
-.tt-hist { display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 0; overflow: hidden; flex: 1 1 auto; padding-top: 2px; }
+.tt-hist { display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 0; overflow: hidden; flex: 1 1 auto; padding-top: 2px; -webkit-mask-image: linear-gradient(#000 88%, transparent); mask-image: linear-gradient(#000 88%, transparent); }
 .tt-histl { font: 600 8px var(--f-display); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
 .tt-hi { width: calc(var(--rail) - 14px); aspect-ratio: 744 / 1040; border-radius: 4px; overflow: hidden; flex: 0 0 auto; background: var(--card); cursor: help; box-shadow: 0 0 0 2px var(--line-mid); }
 .tt-hi.me { box-shadow: 0 0 0 2px rgba(92, 200, 184, 0.75); }

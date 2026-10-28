@@ -598,3 +598,21 @@ RiftJudge/playriftbound não acessíveis no contêiner: rulings vieram de resumo
   agora guarda também o resumo do perfil).
 - O Histórico mostra "+16 → 1016 pontos" nas partidas online que contaram (`HistEntry.elo`).
 - Ficou de fora: o ranking não é à prova de quem edita o próprio localStorage (é entre amigos, sem servidor).
+
+## Tapetes, abertura rápida e PC (28/10/2026, tarde)
+- **Tapetes** (`src/ui/mats.ts`, botão "Tapete"/tecla T na mesa, todos liberados, escolha no aparelho `rb-mat`):
+  6 feltros de CSS (`.tt-mat.mat-<id>`) + 36 ilustrações de "tela de carregamento" dos tabuleiros do LoR
+  (`scripts/lor_mats.py` → `assets/mats/*.webp` 1280 px, 1,4 MB; só no site). As capturas 3D dos tabuleiros ficaram de
+  fora (trazem a interface do LoR). "Automático" = o tabuleiro da música da partida (mesmo id da música).
+- **Abertura**: no site o código vai em `js/app-<hash>.js` (esbuild esm + splitting, `modulepreload`); a biblioteca MQTT
+  (324 KB) é import dinâmico (`loadMqtt` em online.ts; no artifact/offline continua embutida). Fontes Barlow servidas do
+  próprio site (`scripts/fonts.py` → `assets/fonts`). Service worker `src/sw.js` (página stale-while-revalidate + aviso
+  "Nova versão" via mensagem `check`, `src/ui/swreg.ts`; js/fonts cache-first; art/mats cache + revalida; voz/música
+  fora por causa de Range). `src/netlify-headers.txt` → `site/_headers`. Medido (20 Mbps simulados): 1ª visita ~945 →
+  ~420 ms; seguintes ~615 → ~240 ms; JS próprio na abertura ~25 ms.
+- **Telas grandes de PC**: `html { zoom; --zf }` em ≥2200×1200 (1.2), ≥2500×1380 (1.333), ≥3000×1650 (1.6), ≥3600×2000 (2).
+  No Chrome vh/vw não descontam o zoom: o build reescreve cada `Nvh/Nvw` como `calc(N… / var(--zf, 1))` (sem isso a mesa
+  crescia e a barra cobria a base — mover falhava). Posições escritas a partir do mouse/retângulos passam por
+  `src/ui/zoom.ts` (fator medido por sonda). uiinteract em 2560×1440: mover 47/47, arrastar 21/21.
+- Torneio e ranking juntos: hello/welcome levam `rk` (ranking) e o deck do torneio (`myDeck()`); home com 9 botões
+  auxiliares (3 colunas). Atalhos de teclado listados no "Como funciona".
