@@ -446,3 +446,31 @@ RiftJudge/playriftbound não acessíveis no contêiner: rulings vieram de resumo
   Conclusões: os pesos atuais já estão no ótimo local (cair muito de unit/might/hand piora, subir não melhora); ganho
   do modo rápido não transfere; o que falta à IA não é peso nem "plano" na avaliação. Próximas ideias: modelar as
   Reactions escondidas do oponente (mana aberta) na busca; usar o tempo do Difícil em amostragem da mão do oponente.
+
+## Tutorial "Aprender a jogar" (28/10/2026, branch claude/tutorial)
+- **O que é**: botão "Aprender a jogar" na tela inicial (e a faixa "Primeira vez no Riftbound?" enquanto a conta não
+  abriu nem dispensou). Partida guiada contra um oponente que segue roteiro (não usa a IA), ~10 minutos, 22 passos +
+  3 de esperar o oponente. Fim: "Jogar contra a IA (Fácil)", "Refazer o tutorial", "Voltar ao início".
+- **Roteiro** (`src/ui/tutorial-script.ts`, sem DOM): seus cards Lee Sin (Staunch Survivor, Laurent Bladekeeper, En
+  Garde + enchimento caro), oponente Darius (Lingering Animus, Against the Odds, Noxus Saboteur, Vanguard Sergeant).
+  Turnos: T1 joga a Survivor (2 + [Body]: exaure as 2 runas e recicla a de Body) · T2 oponente joga o Animus · T3 move a
+  Survivor para Bandle Tree (showdown sem combate, passa, conquista → 5) e joga o Laurent na base · T4 oponente conquista
+  Grove (5) e joga o Saboteur guardando 2 runas · T5 hold (6), Laurent ataca Grove, você passa o Focus, o oponente joga
+  Against the Odds (Animus 4), você responde com En Garde (Laurent 5), 5 × 4: Animus morre, conquista (7); ler as
+  palavras-chave da Survivor; regra do último ponto · T6 oponente só joga o Sergeant · T7 hold dos dois campos → vitória.
+  `STEPS` (info / act / watch / read / end) com `allow` (a resposta vale?), `done` (pelo estado da partida), `point`/`use`
+  (seletores da mesa) e `solve` (a jogada certa, para o teste). `oppAnswer` = jogadas do oponente.
+- **Motor** (genérico, sem mudar regra): `GameConfig.fixedOrder` (decks na ordem da lista, 1º = topo) e
+  `GameConfig.startPoints`.
+- **Tela** (`src/ui/tutorial.ts`): `TutorialGame` (subclasse de `Game`: cada resposta sua passa pelo passo; desfazer
+  não existe), caixa/seta/destaque numa camada própria (`#tut-layer`, fora do `#app`), o que não é do passo ganha
+  `.tut-off` e o clique é barrado com a explicação (captura no document). Ganchos em `main.ts`: `tut.init` (host),
+  `scheduleAi` (oponente pelo roteiro), `save` (a partida do tutorial não substitui a salva), `recordIfOver` (fora do
+  histórico), `render` (`tut.afterRender`; ao sair volta as configurações de antes) e os botões da tela inicial.
+  Celular: o toque na carta arma a jogada ("Jogar" apontado); para ler as palavras-chave o toque abre o zoom; a caixa
+  prefere as bordas da tela e pode ser recolhida. CSS no fim de `style.css` (seção "tutorial").
+- **Progresso**: `Profile.tutorial` (`acc.tutorialProgress/setTutorialProgress`): passo, respostas, `done`, `dismissed`.
+  Continuar refaz a partida pelas respostas; se o roteiro mudar e as respostas não servirem, começa de novo.
+- **Testes**: `tests/tutorial.test.ts` (roteiro inteiro pelo motor; outras opções raiz recusadas em cada passo) e
+  `node scripts/tutorialplay.mjs docs/prints/tutorial` (pela mesa, 1366x768 e 390x844 com toque: segue a seta, confere
+  a jogada barrada, sai no meio e continua, chega à vitória, começa a partida Fácil; prints JPEG de cada passo).

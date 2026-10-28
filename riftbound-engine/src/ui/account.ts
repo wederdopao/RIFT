@@ -56,6 +56,18 @@ export interface Profile {
   recorded?: string[]; // partidas já contadas nas estatísticas
   /** Novo: "Pagar: manual" lembrado (ao começar a partida a mesa liga o modo pela ação do motor). Ausente = automático. */
   manualPay?: boolean;
+  /** Novo: progresso do tutorial "Aprender a jogar" (ver tutorial.ts). Ausente = nunca abriu nem dispensou. */
+  tutorial?: TutorialProgress;
+}
+/** Tutorial: a partida guiada é refeita pelas respostas (cfg fixo); `step` = passo em que parou. */
+export interface TutorialProgress {
+  step: number;
+  answers: string[][];
+  /** terminou pelo menos uma vez */
+  done?: boolean;
+  /** dispensou a sugestão da primeira visita sem abrir */
+  dismissed?: boolean;
+  at: number;
 }
 interface Store {
   active: string;
@@ -154,6 +166,17 @@ export function setManualPayPref(on: boolean) {
   if (!!p.manualPay === on) return;
   if (on) p.manualPay = true;
   else delete p.manualPay;
+  persist();
+}
+
+/** Progresso do tutorial nesta conta (null: nunca abriu nem dispensou a sugestão). */
+export function tutorialProgress(): TutorialProgress | null {
+  return profile().tutorial ?? null;
+}
+export function setTutorialProgress(t: TutorialProgress | null) {
+  const p = profile();
+  if (t) p.tutorial = t;
+  else delete p.tutorial;
   persist();
 }
 
