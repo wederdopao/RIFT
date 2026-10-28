@@ -11,6 +11,8 @@ import { DOMAIN_COLOR, DOMAIN_PT, esc, rulesHtml } from './text';
 import { AiPlayer, quickPick, AI_LEVELS, isAiLevel, type AiLevel } from '../ai/ai';
 import { artUrl, ensureArt } from './art';
 import { cycleSound, sfx, soundFromLog, soundIcon } from './sound';
+import { canLink, codeFromText, decodeReplay, encodeReplay, linkFor, prepareReplay } from './replaylink';
+import { copyText, showCopyBox } from './copy';
 import { cycleMusic, loadMusic, musicBoards, musicIcon, musicScene, stopPreview } from './music';
 import * as acc from './account';
 import { RUNE_CODES, coverArt, db as dbState, deckbuilderHtml, mountDb, onDbClick, onDbContext, onDbHover, onDbInput, poolCodes, refreshDbPeek, setHooks } from './deckbuilder';
@@ -1825,7 +1827,12 @@ function overlayHtml(eng: Engine, d: Decision | null): string {
       <p>${esc(eng.winReason || '')} · ${eng.pl[0].points} × ${eng.pl[1].points} · ${eng.turn} turnos</p>${lad ? `<p class="tt-ladnote">${lad}</p>` : ''}${(() => {
         const last = [...eng.log].reverse().find((l) => /ganha \d+ ponto/.test(l.text));
         return last ? `<p class="muted">Último ponto: ${linkCards(eng, last.text)}</p>` : '';
-      })()}${endSummaryHtml(eng)}<div class="btns">${btns}<button data-act="replaythis">Ver o replay</button><button data-act="hideoverlay">Ver a mesa</button></div></div></div>`;
+      })()}${endSummaryHtml(eng)}<div class="btns">${btns}<button data-act="replaythis">Ver o replay</button>${(() => {
+        const fg = fullGame();
+        if (!fg) return '';
+        const sv = JSON.parse(fg.serialize());
+        return replayShareBtn(sv.cfg, sv.answers);
+      })()}<button data-act="hideoverlay">Ver a mesa</button></div></div></div>`;
   }
   if (handoffPending)
     return `<div class="tt-overlay handoff"><div class="tt-obox"><p class="tt-kicker">Passe o aparelho</p><h2>Vez de ${esc(eng.pl[d.player].name)}</h2>
@@ -2372,6 +2379,13 @@ function optListHtml(eng: Engine, d: Decision, head = ''): string {
   return `<div class="tt-optlist${head ? ' forced' : ''}">${head ? `<p class="tt-olh">${esc(head)}</p>` : ''}${[...groups.entries()].map(([g, opts]) => `${g ? `<div class="og">${esc(g)}</div>` : ''}<div class="opts">${optButtons(eng, opts, multi)}</div>`).join('')}</div>`;
 }
 
+/** Botão de compartilhar o replay: o link (site) ou o código (offline), preparado antes para o clique só copiar. */
+let shareCode: string | null = null;
+function replayShareBtn(cfg: any, answers: string[][], cls = ''): string {
+  shareCode = prepareReplay(`${cfg?.seed}:${answers.length}`, { cfg, answers, view }, scheduleRender);
+  const label = canLink() ? 'Copiar link do replay' : 'Copiar código do replay';
+  return `<button class="${cls}" data-act="rlink" ${shareCode ? '' : 'disabled'} title="${canLink() ? 'Quem abrir o link vê a partida inteira, lance a lance' : 'Cole o código em Abrir replay, na tela inicial'}">${label}</button>`;
+}
 function replayBarHtml(eng: Engine, d: Decision | null): string {
   const r = replay!;
   const n = r.answers.length;
@@ -2387,6 +2401,7 @@ function replayBarHtml(eng: Engine, d: Decision | null): string {
       <button class="tt-dbtn" data-act="rgo" data-to="${r.pos + 1}" title="Próximo lance (→)">▶</button>
       <button class="tt-dbtn" data-act="rgo" data-to="${n}" title="Fim">⏭</button>
       <button class="tt-dbtn" data-act="flip" title="Ver do outro lado">Girar</button>
+      ${replayShareBtn(r.cfg, r.answers, 'tt-dbtn')}
       <button class="tt-dbtn" data-act="rplay" data-mode="human" title="Continuar daqui, os dois no mesmo aparelho">Jogar daqui</button>
       <button class="tt-dbtn" data-act="rplay" data-mode="ai" title="Continuar daqui contra a IA (você é o Jogador 1)">Daqui × IA</button>
       <button class="primary" data-act="rexit">Sair do replay</button>
@@ -2486,12 +2501,22 @@ function importHtml(): string {
     <p>Abra um relatório (ou o arquivo de uma partida) para rever lance a lance.</p>
     <input type="file" id="rfile" accept=".json,.txt,application/json,text/plain">
     <label for="rpaste">Ou cole o conteúdo aqui</label>
-    <textarea id="rpaste" rows="4" placeholder='{"app":"riftbound-mesa", ...}'></textarea>
+    <textarea id="rpaste" rows="4" placeholder='O link do replay, o código rb1:… ou o conteúdo do relatório'></textarea>
     <div class="btns"><button class="primary" data-act="rimport">Abrir</button></div>
     <p class="err" id="rerr"></p>
   </div>`;
 }
 function importText(text: string): string | null {
+  const code = codeFromText(text);
+  if (code) {
+    void decodeReplay(code)
+      .then((d) => openReplay(d.cfg, d.answers, 0, { view: d.view as P }))
+      .catch(() => {
+        const el = document.getElementById('rerr');
+        if (el) el.textContent = 'Não consegui ler este link ou código: confira se copiou inteiro.';
+      });
+    return null;
+  }
   try {
     const o = JSON.parse(text.trim());
     if (o?.partial && !o.game)
@@ -3475,6 +3500,21 @@ function onClick(ev: MouseEvent) {
       const err = importText(t);
       const el = document.getElementById('rerr');
       if (err && el) el.textContent = err;
+      return;
+    }
+    if (a === 'rlink') {
+      if (!shareCode) {
+        // ainda preparando: gera agora e mostra numa caixa para copiar (fora do clique a cópia automática falha)
+        const src = replay ? { cfg: replay.cfg, answers: replay.answers } : fullGame() ? JSON.parse(fullGame()!.serialize()) : null;
+        if (src) void encodeReplay({ cfg: src.cfg, answers: src.answers, view }).then((c) => showCopyBox(canLink() ? linkFor(c) : `rb1:${c}`, canLink() ? 'Link do replay' : 'Código do replay', 'O link ficou pronto agora.'));
+        return;
+      }
+      const text = canLink() ? linkFor(shareCode) : `rb1:${shareCode}`;
+      copyText(text, canLink() ? 'Link do replay' : 'Código do replay', () => {
+        uiHint = canLink() ? 'Link do replay copiado: quem abrir vê a partida inteira.' : 'Código copiado: cole em Abrir replay, na tela inicial.';
+        modal = { title: 'Replay', html: `<p>${uiHint}</p>` };
+        render();
+      });
       return;
     }
     if (a === 'replaythis' && game) {
@@ -4532,6 +4572,17 @@ function start(data: any = {}) {
   window.addEventListener('resize', () => drawArrows());
   render();
   scheduleAi();
+  // link de replay: ...#r=<código> abre direto no replay, do primeiro lance
+  const rl = /^#r=([zj][A-Za-z0-9_-]+)$/.exec(location.hash);
+  if (rl) {
+    history.replaceState(null, '', location.pathname + location.search);
+    void decodeReplay(rl[1])
+      .then((d) => openReplay(d.cfg, d.answers, 0, { view: d.view as P }))
+      .catch(() => {
+        modal = { title: 'Replay', html: '<p>Este link de replay está incompleto ou quebrado: peça para enviarem de novo.</p>' };
+        render();
+      });
+  }
 }
 
 const w = window as any;
