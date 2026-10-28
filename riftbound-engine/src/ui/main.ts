@@ -1733,6 +1733,67 @@ function visibleOnMat(eng: Engine, o: Obj): boolean {
   return false;
 }
 
+/**
+ * Resumo do fim da partida, tirado do registro: pontos de cada um turno a turno (gráfico), a virada (ou desde quando o
+ * vencedor liderou), a carta que mais causou dano e quantas cartas cada um jogou.
+ */
+function endSummaryHtml(eng: Engine): string {
+  const vs = eng.cfg.victoryScore || 8;
+  const turns = Math.max(1, eng.turn);
+  // pontos ao fim de cada turno (o registro traz o total depois de cada ponto: "→ N")
+  const pts: [number[], number[]] = [Array(turns + 1).fill(0), Array(turns + 1).fill(0)];
+  const played = [0, 0];
+  const dmg = new Map<string, number>();
+  for (const l of eng.log) {
+    let m: RegExpExecArray | null;
+    if (l.player !== undefined && (m = /ganha \d+ ponto.*→ (\d+)\.$/.exec(l.text))) {
+      for (let t = Math.min(l.turn, turns); t <= turns; t++) pts[l.player][t] = Number(m[1]);
+    } else if (l.player !== undefined && / joga /.test(l.text)) played[l.player]++;
+    else if ((m = /^.+? recebe (\d+) de dano de (.+?)\.$/.exec(l.text))) dmg.set(m[2], (dmg.get(m[2]) || 0) + Number(m[1]));
+  }
+  const me = (mySeat() ?? 0) as P;
+  const name = (p: P) => esc(eng.pl[p].name);
+  // gráfico: x = turno, y = pontos (0..vs); a linha do oponente é tracejada e cada uma tem o nome na ponta
+  const W = 320, H = 120, L = 22, R = 64, T = 8, B = 20;
+  const x = (t: number) => L + ((W - L - R) * t) / turns;
+  const y = (v: number) => T + (H - T - B) * (1 - Math.min(v, vs) / vs);
+  const line = (p: P) => pts[p].map((v, t) => `${t ? 'H' : 'M'}${x(t).toFixed(1)}${t ? ` V${y(v).toFixed(1)}` : ` ${y(v).toFixed(1)}`}`).join(' ');
+  const series = ([me, (1 - me) as P] as P[])
+    .map((p) => {
+      const c = p === me ? 'var(--me)' : 'var(--them)';
+      const end = pts[p][turns];
+      return `<path d="${line(p)}" fill="none" stroke="${c}" stroke-width="2" stroke-linejoin="round"${p === me ? '' : ' stroke-dasharray="5 4"'}/>
+        <circle cx="${x(turns)}" cy="${y(end)}" r="4.5" fill="${c}" stroke="var(--panel)" stroke-width="2"/>
+        <text x="${x(turns) + 9}" y="${y(end) + (p === me ? -2 : 10)}" class="tt-sumlbl">${name(p)} ${end}</text>`;
+    })
+    .join('');
+  const grid = [0, Math.round(vs / 2), vs].map((v) => `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" class="tt-sumgrid"/><text x="${L - 6}" y="${y(v) + 3}" class="tt-sumax" text-anchor="end">${v}</text>`).join('');
+  const hits = Array.from({ length: turns }, (_, i) => i + 1)
+    .map((t) => `<rect x="${x(t - 1)}" y="${T}" width="${x(t) - x(t - 1)}" height="${H - T - B}" fill="transparent"><title>Turno ${t}: ${eng.pl[0].name} ${pts[0][t]} × ${pts[1][t]} ${eng.pl[1].name}</title></rect>`)
+    .join('');
+  const chart = `<svg class="tt-sumchart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Pontos por turno: ${name(0)} ${pts[0][turns]}, ${name(1)} ${pts[1][turns]}">${grid}${series}${hits}<text x="${(L + W - R) / 2}" y="${H - 4}" class="tt-sumax" text-anchor="middle">turnos</text></svg>`;
+  // a virada: o último turno em que o vencedor não estava na frente
+  const w = eng.winner;
+  let turn = '';
+  if (w !== null) {
+    const o = (1 - w) as P;
+    let lastNot = 0;
+    let behind = false;
+    for (let t = 1; t <= turns; t++) {
+      if (pts[w][t] <= pts[o][t]) lastNot = t;
+      if (pts[w][t] < pts[o][t]) behind = true;
+    }
+    turn = lastNot >= turns ? '' : behind ? `Virada no turno ${lastNot + 1}` : `${name(w)} na frente desde o turno ${lastNot + 1}`;
+  }
+  const top = [...dmg.entries()].sort((a, b) => b[1] - a[1])[0];
+  const facts = [
+    turn,
+    top ? `Mais dano: <b>${esc(top[0])}</b> (${top[1]})` : '',
+    `Cartas jogadas: ${name(0)} ${played[0]} · ${name(1)} ${played[1]}`,
+  ].filter(Boolean);
+  return `<div class="tt-summary"><div class="tt-sumh">Pontos por turno</div>${chart}<ul class="tt-sumfacts">${facts.map((f) => `<li>${f}</li>`).join('')}</ul></div>`;
+}
+
 /** Sobreposição no centro da mesa: escolha de campo, mulligan, cartas fora da mesa, troca de jogador e fim. */
 let overlayHidden = '';
 function overlayHtml(eng: Engine, d: Decision | null): string {
@@ -1751,7 +1812,7 @@ function overlayHtml(eng: Engine, d: Decision | null): string {
       <p>${esc(eng.winReason || '')} · ${eng.pl[0].points} × ${eng.pl[1].points} · ${eng.turn} turnos</p>${(() => {
         const last = [...eng.log].reverse().find((l) => /ganha \d+ ponto/.test(l.text));
         return last ? `<p class="muted">Último ponto: ${linkCards(eng, last.text)}</p>` : '';
-      })()}<div class="btns">${btns}<button data-act="replaythis">Ver o replay</button><button data-act="hideoverlay">Ver a mesa</button></div></div></div>`;
+      })()}${endSummaryHtml(eng)}<div class="btns">${btns}<button data-act="replaythis">Ver o replay</button><button data-act="hideoverlay">Ver a mesa</button></div></div></div>`;
   }
   if (handoffPending)
     return `<div class="tt-overlay handoff"><div class="tt-obox"><p class="tt-kicker">Passe o aparelho</p><h2>Vez de ${esc(eng.pl[d.player].name)}</h2>
