@@ -3,6 +3,7 @@
 import { cardData, kindOf, isChampionCard, allCards } from './db';
 import { TOKENS } from './tokens'; // novo (UNL): nomear tags (763)
 import { Rng } from './rng';
+import { applyScenario, type ScenarioSetup } from './scenario'; // novo (modo Desafios)
 import { getScript, empowerSpecs } from './script';
 import type { AbilityDef, ActivatedDef, Aura, CardScript, CostMod, Ctx, EffectText, EventType, OptionalCost, PayUse, TargetSpec, TriggerDef } from './script';
 import {
@@ -50,6 +51,15 @@ export interface GameConfig {
   battlefieldMode?: 'random' | 'choose';
   autoPass?: boolean;
   victoryScore?: number;
+  /** Novo (modo Desafios): começa numa mesa montada, na fase principal do jogador ativo (src/engine/scenario.ts). */
+  scenario?: ScenarioSetup;
+  /**
+   * Novo (tutorial e cenários roteirizados): decks na ordem da lista, sem embaralhar — o 1º da lista é o topo (deck
+   * principal e de runas). Não muda nenhuma regra; só a ordem inicial.
+   */
+  fixedOrder?: boolean;
+  /** Novo (tutorial): pontos com que cada jogador começa (padrão 0). */
+  startPoints?: [number, number];
 }
 
 export interface GameEvent {
@@ -346,7 +356,7 @@ export class Engine {
       hand: [],
       trash: [],
       banish: [],
-      points: 0,
+      points: cfg.startPoints?.[p] ?? 0,
       xp: 0,
       pool: { energy: 0, power: {} },
       played: [],
@@ -5461,9 +5471,12 @@ export class Engine {
 
   // ───────────────────────────── turno ─────────────────────────────
   *run(): Gen {
-    yield* this.setup();
+    // novo (modo Desafios): mesa montada no lugar da preparação; o primeiro turno começa na fase principal
+    const sc = this.cfg.scenario;
+    if (sc) applyScenario(this, sc);
+    else yield* this.setup();
     for (let t = 0; t < 400 && this.winner === null; t++) {
-      yield* this.takeTurn();
+      yield* this.takeTurn(!!sc && t === 0);
       if (this.winner !== null) break;
       this.active = this.nextTurnPlayer();
     }
@@ -5495,8 +5508,10 @@ export class Engine {
       s.champion = ch.id;
       for (const [code, n] of d.main) for (let i = 0; i < n; i++) s.mainDeck.push(this.newObj(code, p, 'mainDeck').id);
       for (const [code, n] of d.runes) for (let i = 0; i < n; i++) s.runeDeck.push(this.newObj(code, p, 'runeDeck').id);
-      this.rng.shuffle(s.mainDeck);
-      this.rng.shuffle(s.runeDeck);
+      if (!this.cfg.fixedOrder) {
+        this.rng.shuffle(s.mainDeck);
+        this.rng.shuffle(s.runeDeck);
+      }
     }
     // campos: cada jogador usa 1 dos 3
     for (const p of [0, 1] as P[]) {
@@ -5537,7 +5552,7 @@ export class Engine {
       if (ids.length) this.say(`${this.pname(p)} troca ${ids.length} carta(s).`, p);
     }
   }
-  *takeTurn(): Gen {
+  *takeTurn(fromMain = false): Gen {
     const p = this.active;
     this.turn++;
     this.scored = [];
@@ -5556,6 +5571,13 @@ export class Engine {
     this.pl[opp(p)].completed = 0;
     for (const x of [s, this.pl[opp(p)]]) x.holdPoints = 0; // novo
     this.say(`── Turno ${this.turn}: ${this.pname(p)} ──`, p);
+    // novo (modo Desafios): o turno montado começa direto na fase principal
+    if (fromMain) {
+      yield* this.mainPhase();
+      if (this.winner !== null) return;
+      yield* this.endingPhase();
+      return;
+    }
     // despertar
     this.phase = 'awaken';
     for (const o of this.board())

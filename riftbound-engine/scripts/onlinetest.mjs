@@ -437,6 +437,13 @@ for (; i < MAX; i++) {
     ok((await seen(C, 'Boa!')) && (await seen(C, 'valeu, bora')), 'espectador lê o chat');
     ok(!(await C.$('[data-act=chattog]')), 'espectador não tem botão de chat');
     await A.screenshot({ path: `${OUT}/online-chat.png` });
+    // emote: um clique no 😊, sem abrir o chat; o outro vê o balão com o emoji
+    await A.waitForTimeout(800);
+    await A.click('[data-act=emotetog]');
+    await A.click('.tt-emotepop [data-act=emote]');
+    ok(await B.waitForSelector('.tt-bubble.emote', { timeout: 8000 }).then(() => true, () => false), 'emote chega ao outro jogador com o emoji');
+    ok(!(await C.$('[data-act=emotetog]')), 'espectador não tem emotes');
+    await B.screenshot({ path: `${OUT}/online-emote.png` });
   }
   if (i >= 30 && i % 6 === 0 && !(undoDone.hostAcc && undoDone.guestAcc && undoDone.refuse)) {
     if (!undoDone.hostAcc) undoDone.hostAcc = !!(await undoRequest(A, B, true));

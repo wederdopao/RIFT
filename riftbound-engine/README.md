@@ -19,10 +19,19 @@ Projeto de fã, sem fins comerciais, feito sob a política "Legal Jibber Jabber"
   Recycle, Counter, Prevent, Recall, Attach, fichas (Recruit, Sprite, Gold, Bird...).
 - **Cartas**: o Origins inteiro (OGN), o Proving Grounds (OGS), o Spiritforged inteiro (SFD-001 a SFD-221) e o
   Unleashed inteiro (UNL-001 a UNL-219: XP, Hunt, Level, Ambush, cópias, Brush e Baron Pit). Texto com a errata oficial mais recente.
+- **Desafios** ("vença neste turno"; tela inicial → Desafios): mesas montadas com objetivo (vencer, conquistar um
+  campo, destruir uma unidade, sobreviver ao turno do oponente), cada uma ensinando uma interação. Dados em
+  `src/data/challenges.ts` (para criar um desafio, acrescente um item e um teste em `tests/desafios.test.ts`), tela em
+  `src/ui/challenges.ts`, progresso na conta. A mesa montada é `GameConfig.scenario` (`src/engine/scenario.ts`): o
+  motor monta tudo no começo de `run()` e começa na fase principal, então desfazer, salvar e replay valem.
 - **Decks e conta** (`src/ui/deckbuilder.ts`, `src/ui/account.ts`): biblioteca com filtros (domínio, tipo, custo,
   coleção, raridade, busca), deck principal, side (até 10), runas, campos, validação pelas regras 103 e 601.1.c,
   curva de energia, mão de teste, código de deck no formato do Piltover Archive (importar e copiar), decks salvos por
   conta, várias contas no mesmo aparelho, backup da conta e placar de vitórias por deck.
+- **Escada contra a IA** (`src/decks/ladder.ts`, `src/ui/ladder.ts`, `src/ui/ladderscreen.ts`): botão "Escada" na
+  tela inicial; o jogador escolhe um deck e enfrenta 5 adversários com decks temáticos (Rengar aggro, Ziggs Bombas/
+  Deploy, Ambessa Empower, Lux control, Kai'Sa chefe), IA de Fácil a Difícil e um tema de tabuleiro do LoR por degrau;
+  3 vidas (sem vidas, recomeça); vencer os 5 põe o deck no hall da conta. Progresso em `Profile.ladder`/`ladderHall`.
 - **Mesa de verdade** (`src/ui/main.ts`, seção "mesa"; lógica pura em `src/ui/interact.ts`): tapete com oponente em
   cima e você embaixo, os campos de batalha no meio, mão em leque, runas como cartas (exauridas deitadas; a lenda
   também gira), pilhas com contagem, trilhas de pontos nas laterais e prévia grande da carta ao apontar.
@@ -98,6 +107,13 @@ Projeto de fã, sem fins comerciais, feito sob a política "Legal Jibber Jabber"
   sala com um clique. **Assistir**: qualquer um com o código entra só para ver (sem ver nenhuma mão); o anfitrião vê
   quantos estão assistindo.
 - **Desfazer** e **cancelar ação** (a partida é refeita a partir das respostas, de forma determinística).
+- **Tutorial "Aprender a jogar"** (tela inicial; sugerido na primeira visita): partida guiada de ~10 minutos contra um
+  oponente roteirizado, com decks em ordem fixa e os dois começando com 4 pontos. Uma caixa explica cada passo e uma
+  seta aponta o que usar; só a jogada do passo vale (o resto fica apagado e o clique é explicado). Cobre o objetivo,
+  runas (canalizar, exaurir, reciclar), jogar unidade, mover e conquistar, hold, combate, pilha e Reaction, showdown e
+  Focus, palavras-chave, o último ponto e encerrar o turno; no fim leva à partida contra a IA (Fácil). Dá para sair e
+  continuar depois (progresso na conta local) ou refazer. Roteiro em `src/ui/tutorial-script.ts`, tela em
+  `src/ui/tutorial.ts`.
 
 ## Como jogar fora do app
 
@@ -122,6 +138,8 @@ node scripts/uiplay.mjs <pasta>                             # partida inteira cl
 node scripts/uiinteract.mjs <pasta>                         # partida usando a mesa: mover com clique, arrastar, setas
 node scripts/uioverlap.mjs                                  # a barra cobre alguma carta? o pedido sai cortado? (6 telas)
 node scripts/uireplay.mjs <pasta>                           # relatório baixado → aberto no replay → lances → continuar
+node scripts/tutorialplay.mjs <pasta>                       # tutorial inteiro pela mesa, com prints de cada passo
+node scripts/laddershot.mjs <pasta>                         # prints da escada contra a IA (SIZES=1920x1080,1366x768,390x844)
 ```
 
 ## Estrutura
@@ -131,7 +149,7 @@ src/engine/       motor: engine.ts (regras), game.ts (respostas/desfazer), scrip
                   types.ts, db.ts, tokens.ts, deckcheck.ts
 src/cards/<set>/  uma carta por arquivo (ex.: OGN-169-gust.ts) + index.ts do set
 src/decks/        listas de deck
-src/data/         cards.json (todas as cartas, gerado por scripts/build_carddata.py) e banlist.ts
+src/data/         cards.json (todas as cartas, gerado por scripts/build_carddata.py), banlist.ts e challenges.ts (desafios)
 src/ai/           IA adversária
 src/ui/           interface (TypeScript puro + CSS); art.ts carrega as artes
 assets/art/       artes oficiais das cartas (<CÓDIGO>.webp)

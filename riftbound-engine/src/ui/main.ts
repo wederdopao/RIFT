@@ -15,6 +15,10 @@ import { cycleMusic, loadMusic, musicBoards, musicIcon, musicScene, stopPreview 
 import * as acc from './account';
 import { RUNE_CODES, coverArt, db as dbState, deckbuilderHtml, mountDb, onDbClick, onDbContext, onDbHover, onDbInput, poolCodes, refreshDbPeek, setHooks } from './deckbuilder';
 import * as hist from './history';
+import { challengeArtCodes, challengeHold, challengeHudHtml, challengeOf, challengeOverlayHtml, challengesHtml, onChallengeClick, setChallengeHooks } from './challenges';
+import * as tut from './tutorial';
+import { ladderEndButtons, ladderEndNote, ladderRecord, type LadderMatch } from './ladder';
+import { ladderCodes, ladderHtml, onLadderClick, setLadderHooks } from './ladderscreen';
 import type { DeckList, GameConfig } from '../engine/engine';
 import { chainTargets, liveCombat, locKey, matchDrop, moveCombat, moveTargets, type CombatPreview, type Drop } from './interact';
 import { CONCEPTS, guideHtml, keywordHelpHtml } from './glossary';
@@ -53,7 +57,7 @@ const DEFAULTS: Settings = {
 const HUMAN: P = 0;
 let ai: AiPlayer | null = null;
 let aiTimer: ReturnType<typeof setTimeout> | null = null;
-const vsAi = () => settings.opponent === 'ai';
+const vsAi = () => settings.opponent === 'ai' || !!challengeOf(game); // desafio: sempre contra a IA
 /** Nível da IA da partida aberta: o guardado no cfg dela (replay e relatório reproduzem); sem ele, o das configurações. */
 const aiLevelOf = (g: Game | null): AiLevel => {
   const l = (g?.cfg as { aiLevel?: unknown } | undefined)?.aiLevel;
@@ -273,6 +277,17 @@ interface ChatLine {
   at: number;
 }
 const QUICK_CHAT = ['Boa!', 'Pensando...', 'Ops', 'GG'];
+/** Emotes: um clique na mesa (botão 😊), sem abrir o chat; viajam como chat, com o emoji na frente. */
+const EMOTES: [string, string][] = [
+  ['👍', 'Boa jogada!'],
+  ['🤔', 'Hmm...'],
+  ['😅', 'Ops'],
+  ['😮', 'Uau!'],
+  ['⏳', 'Pensando...'],
+  ['🤝', 'GG'],
+];
+const emoteOf = (text: string) => EMOTES.find(([e, t]) => text === `${e} ${t}`);
+let emoteOpen = false;
 const BUBBLE_MS = 5000;
 let chatLog: ChatLine[] = [];
 let chatOpen = false;
@@ -505,7 +520,9 @@ async function handleNet(m: Msg | { t: '__open' }, from: string) {
       text: cleanText(m.text, 60),
       at: Date.now(),
     };
-    if (pushChat(c) && net.role === 'host') net.send({ t: 'chat', id: c.id, by: c.by, name: c.name, text: c.text });
+    const fresh = pushChat(c);
+    if (fresh && net.role === 'host') net.send({ t: 'chat', id: c.id, by: c.by, name: c.name, text: c.text });
+    if (fresh && c.by !== seat) sfx(emoteOf(c.text) ? 'buff' : 'draw');
     render();
     return;
   }
@@ -642,7 +659,7 @@ let aiSlow = false;
 /** A IA está pensando (decisão em fatias, ver AiPlayer.decideAsync). */
 let aiThinking = false;
 function scheduleAi() {
-  if (!game || replay || !isAiTurn() || aiTimer || aiThinking) return;
+  if (!game || replay || !isAiTurn() || aiTimer || aiThinking || challengeHold(game)) return;
   aiTimer = setTimeout(() => {
     aiTimer = null;
     if (!game || !isAiTurn()) return;
@@ -654,7 +671,8 @@ function scheduleAi() {
     // a IA pensa em fatias (a mesa continua respondendo); se a partida mudou no meio (desfazer, sair), descarta
     const stale = () => game !== g || g.answers.length !== at || ai !== who || !!replay;
     aiThinking = true;
-    void who.decideAsync(g, stale).then((ans) => {
+    const think = tut.isTut(g) ? Promise.resolve(tut.oppAnswer(g)) : who.decideAsync(g, stale);
+    void think.then((ans) => {
       aiThinking = false;
       if (!ans || stale()) return scheduleAi();
       if (!g.answer(ans)) {
@@ -677,8 +695,8 @@ let preview: string | null = null;
 let modal: { title: string; html: string } | null = null;
 let flashOpt: string | null = null;
 let zoom: string | null = null;
-/** Tela fora da partida: mesa (configuração) ou decks. */
-let page: 'setup' | 'decks' = 'setup';
+/** Tela fora da partida: mesa (configuração), decks, desafios ou a escada contra a IA (src/ui/ladder.ts). */
+let page: 'setup' | 'decks' | 'challenges' | 'ladder' = 'setup';
 let logOpen = true;
 /** Unidades escolhidas para mover (clique direto na unidade pronta), válidas enquanto a decisão raiz não muda. */
 let moveSel: string[] = [];
@@ -748,6 +766,7 @@ const STORE = 'riftbound-mesa-v1';
 
 function save() {
   if (replay) return; // rever uma partida não mexe na partida salva
+  if (tut.isTut(game)) return; // tutorial: o progresso fica na conta (tutorial.ts), a partida salva continua a mesma
   try {
     const on = net ? { role: net.role, code: net.code, seat, seq, owners, pub: net.pub, rname: net.roomName } : null;
     localStorage.setItem(STORE, JSON.stringify({ settings, saved: game ? game.serialize() : null, view, online: on }));
@@ -1406,7 +1425,11 @@ function chatBubblesHtml(): string {
   const last = new Map<P, ChatLine>();
   for (const c of chatLog) if (now - c.at < BUBBLE_MS) last.set(c.by, c);
   return [...last.values()]
-    .map((c) => `<div class="tt-bubble ${c.by === view ? 'me' : 'them'}" style="animation-delay:-${now - c.at}ms" aria-hidden="true"><b>${esc(c.name)}</b> ${esc(c.text)}</div>`)
+    .map((c) => {
+      const em = emoteOf(c.text);
+      const body = em ? `<i class="tt-emoji">${em[0]}</i>${esc(em[1])}` : esc(c.text);
+      return `<div class="tt-bubble ${c.by === view ? 'me' : 'them'}${em ? ' emote' : ''}" style="animation-delay:-${now - c.at}ms" aria-hidden="true"><b>${esc(c.name)}</b> ${body}</div>`;
+    })
     .join('');
 }
 function chatPopHtml(): string {
@@ -1415,6 +1438,10 @@ function chatPopHtml(): string {
     <div class="tt-chatq">${QUICK_CHAT.map((q) => `<button type="button" data-act="chatq" data-text="${esc(q)}">${esc(q)}</button>`).join('')}</div>
     <div class="tt-chatrow"><input id="chatin" value="${esc(chatDraft)}" maxlength="60" placeholder="Mensagem curta" autocomplete="off"><button type="button" data-act="chatsend">Enviar</button></div>
   </div>`;
+}
+function emotePopHtml(): string {
+  if (!emoteOpen || watching()) return '';
+  return `<div class="tt-emotepop" role="dialog" aria-label="Emotes">${EMOTES.map(([e, t]) => `<button type="button" data-act="emote" data-text="${esc(`${e} ${t}`)}" title="${esc(t)}"><i class="tt-emoji">${e}</i><span>${esc(t)}</span></button>`).join('')}</div>`;
 }
 function chatLogHtml(): string {
   if (!online() || !chatLog.length) return '';
@@ -1507,7 +1534,7 @@ function heroHtml(eng: Engine, p: P): string {
   return `<div class="tt-zone tt-hero">
     <div class="tt-slotcol"><div class="tt-zl">Lenda</div>${cardHtml(eng, legend, 'small')}<span class="tt-xp" title="Experiência">XP <b>${s.xp}</b></span></div>
     ${eng.legendsOf(p).slice(1).map((l) => `<div class="tt-slotcol"><div class="tt-zl">Lenda (Neeko)</div>${cardHtml(eng, l, 'small')}</div>`).join('')}
-    <div class="tt-slotcol"><div class="tt-zl">Campeão</div>${champ ? cardHtml(eng, champ, 'small') : '<div class="tt-emptyslot">em jogo</div>'}</div>
+    <div class="tt-slotcol"><div class="tt-zl">Campeão</div>${champ ? cardHtml(eng, champ, 'small') : `<div class="tt-emptyslot">${eng.cfg.decks[p].champion ? 'em jogo' : 'vazio'}</div>`}</div>
   </div>`;
 }
 
@@ -1591,7 +1618,8 @@ function syncMusic() {
   if (!game || replay) return musicScene({ kind: 'menu' });
   const w = game.engine.winner;
   if (w !== null) return musicScene({ kind: 'end', won: w === (mySeat() ?? view), key: `${game.cfg.seed}:${game.answers.length}` });
-  musicScene({ kind: 'game', choice: acc.savedDeckOf(settings.decks[0])?.music, seed: game.cfg.seed });
+  // a partida pode pedir a própria trilha (cfg.music, ex.: degrau da escada); senão vale a escolha do deck
+  musicScene({ kind: 'game', choice: acc.savedDeckOf(settings.decks[0])?.music, track: (game.cfg as { music?: string }).music, seed: game.cfg.seed });
 }
 /** Sons das linhas novas do registro (no replay, só acompanha a leitura). */
 function playSounds(eng: Engine) {
@@ -1712,10 +1740,76 @@ function visibleOnMat(eng: Engine, o: Obj): boolean {
   return false;
 }
 
+/**
+ * Resumo do fim da partida, tirado do registro: pontos de cada um turno a turno (gráfico), a virada (ou desde quando o
+ * vencedor liderou), a carta que mais causou dano e quantas cartas cada um jogou.
+ */
+function endSummaryHtml(eng: Engine): string {
+  const vs = eng.cfg.victoryScore || 8;
+  const turns = Math.max(1, eng.turn);
+  // pontos ao fim de cada turno (o registro traz o total depois de cada ponto: "→ N")
+  const pts: [number[], number[]] = [Array(turns + 1).fill(0), Array(turns + 1).fill(0)];
+  const played = [0, 0];
+  const dmg = new Map<string, number>();
+  for (const l of eng.log) {
+    let m: RegExpExecArray | null;
+    if (l.player !== undefined && (m = /ganha \d+ ponto.*→ (\d+)\.$/.exec(l.text))) {
+      for (let t = Math.min(l.turn, turns); t <= turns; t++) pts[l.player][t] = Number(m[1]);
+    } else if (l.player !== undefined && / joga /.test(l.text)) played[l.player]++;
+    else if ((m = /^.+? recebe (\d+) de dano de (.+?)\.$/.exec(l.text))) dmg.set(m[2], (dmg.get(m[2]) || 0) + Number(m[1]));
+  }
+  const me = (mySeat() ?? 0) as P;
+  const name = (p: P) => esc(eng.pl[p].name);
+  // gráfico: x = turno, y = pontos (0..vs); a linha do oponente é tracejada e cada uma tem o nome na ponta
+  const W = 320, H = 120, L = 22, R = 64, T = 8, B = 20;
+  const x = (t: number) => L + ((W - L - R) * t) / turns;
+  const y = (v: number) => T + (H - T - B) * (1 - Math.min(v, vs) / vs);
+  const line = (p: P) => pts[p].map((v, t) => `${t ? 'H' : 'M'}${x(t).toFixed(1)}${t ? ` V${y(v).toFixed(1)}` : ` ${y(v).toFixed(1)}`}`).join(' ');
+  const series = ([me, (1 - me) as P] as P[])
+    .map((p) => {
+      const c = p === me ? 'var(--me)' : 'var(--them)';
+      const end = pts[p][turns];
+      return `<path d="${line(p)}" fill="none" stroke="${c}" stroke-width="2" stroke-linejoin="round"${p === me ? '' : ' stroke-dasharray="5 4"'}/>
+        <circle cx="${x(turns)}" cy="${y(end)}" r="4.5" fill="${c}" stroke="var(--panel)" stroke-width="2"/>
+        <text x="${x(turns) + 9}" y="${y(end) + (p === me ? -2 : 10)}" class="tt-sumlbl">${name(p)} ${end}</text>`;
+    })
+    .join('');
+  const grid = [0, Math.round(vs / 2), vs].map((v) => `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" class="tt-sumgrid"/><text x="${L - 6}" y="${y(v) + 3}" class="tt-sumax" text-anchor="end">${v}</text>`).join('');
+  const hits = Array.from({ length: turns }, (_, i) => i + 1)
+    .map((t) => `<rect x="${x(t - 1)}" y="${T}" width="${x(t) - x(t - 1)}" height="${H - T - B}" fill="transparent"><title>Turno ${t}: ${eng.pl[0].name} ${pts[0][t]} × ${pts[1][t]} ${eng.pl[1].name}</title></rect>`)
+    .join('');
+  const chart = `<svg class="tt-sumchart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Pontos por turno: ${name(0)} ${pts[0][turns]}, ${name(1)} ${pts[1][turns]}">${grid}${series}${hits}<text x="${(L + W - R) / 2}" y="${H - 4}" class="tt-sumax" text-anchor="middle">turnos</text></svg>`;
+  // a virada: o último turno em que o vencedor não estava na frente
+  const w = eng.winner;
+  let turn = '';
+  if (w !== null) {
+    const o = (1 - w) as P;
+    let lastNot = 0;
+    let behind = false;
+    for (let t = 1; t <= turns; t++) {
+      if (pts[w][t] <= pts[o][t]) lastNot = t;
+      if (pts[w][t] < pts[o][t]) behind = true;
+    }
+    turn = lastNot >= turns ? '' : behind ? `Virada no turno ${lastNot + 1}` : `${name(w)} na frente desde o turno ${lastNot + 1}`;
+  }
+  const top = [...dmg.entries()].sort((a, b) => b[1] - a[1])[0];
+  const facts = [
+    turn,
+    top ? `Mais dano: <b>${esc(top[0])}</b> (${top[1]})` : '',
+    `Cartas jogadas: ${name(0)} ${played[0]} · ${name(1)} ${played[1]}`,
+  ].filter(Boolean);
+  return `<div class="tt-summary"><div class="tt-sumh">Pontos por turno</div>${chart}<ul class="tt-sumfacts">${facts.map((f) => `<li>${f}</li>`).join('')}</ul></div>`;
+}
+
 /** Sobreposição no centro da mesa: escolha de campo, mulligan, cartas fora da mesa, troca de jogador e fim. */
 let overlayHidden = '';
 function overlayHtml(eng: Engine, d: Decision | null): string {
   if (!game || replay) return '';
+  // desafio: abertura e resultado no lugar do fim de jogo
+  if (challengeOf(game)) {
+    const ch = challengeOverlayHtml(game);
+    if (ch || eng.winner !== null || !d) return ch;
+  }
   if (eng.winner !== null || !d) {
     if (overlayHidden === 'end') return '';
     const w = eng.winner;
@@ -1724,13 +1818,14 @@ function overlayHtml(eng: Engine, d: Decision | null): string {
       ? net!.role === 'host'
         ? '<button class="primary" data-act="rematch">Revanche</button><button data-act="lobby">Trocar decks</button>'
         : `<span class="muted">Esperando ${esc(eng.pl[0].name)} pedir a revanche.</span>`
-      : '<button class="primary" data-act="newgame">Nova partida</button><button data-act="setup">Trocar decks</button>';
+      : ladderEndButtons(game.cfg) ?? '<button class="primary" data-act="newgame">Nova partida</button><button data-act="setup">Trocar decks</button>';
+    const lad = ladderEndNote(game.cfg);
     return `<div class="tt-overlay end ${mine ? 'win' : 'lose'}"><div class="tt-obox">
       <p class="tt-kicker">Fim de jogo</p><h2>${w !== null ? `${esc(eng.pl[w].name)} venceu` : 'Fim de jogo'}</h2>
-      <p>${esc(eng.winReason || '')} · ${eng.pl[0].points} × ${eng.pl[1].points} · ${eng.turn} turnos</p>${(() => {
+      <p>${esc(eng.winReason || '')} · ${eng.pl[0].points} × ${eng.pl[1].points} · ${eng.turn} turnos</p>${lad ? `<p class="tt-ladnote">${lad}</p>` : ''}${(() => {
         const last = [...eng.log].reverse().find((l) => /ganha \d+ ponto/.test(l.text));
         return last ? `<p class="muted">Último ponto: ${linkCards(eng, last.text)}</p>` : '';
-      })()}<div class="btns">${btns}<button data-act="replaythis">Ver o replay</button><button data-act="hideoverlay">Ver a mesa</button></div></div></div>`;
+      })()}${endSummaryHtml(eng)}<div class="btns">${btns}<button data-act="replaythis">Ver o replay</button><button data-act="hideoverlay">Ver a mesa</button></div></div></div>`;
   }
   if (handoffPending)
     return `<div class="tt-overlay handoff"><div class="tt-obox"><p class="tt-kicker">Passe o aparelho</p><h2>Vez de ${esc(eng.pl[d.player].name)}</h2>
@@ -2551,7 +2646,7 @@ function dockHtml(eng: Engine, d: Decision | null): string {
   if (!game) return '';
   if (replay) return replayBarHtml(eng, d);
   const undo = `<button class="tt-dbtn ico-undo" data-act="undo" ${game.answers.length ? '' : 'disabled'} title="${online() ? 'Desfazer (Z): depois que o oponente agiu, vira um pedido que ele aceita ou recusa' : 'Desfazer (Z)'}"><span class="lbl">Desfazer</span></button>${
-    online() && !watching() ? `<button class="tt-dbtn ico-chat${chatOpen ? ' on' : ''}" data-act="chattog" title="Chat rápido"><span class="lbl">Chat</span></button>` : ''
+    online() && !watching() ? `<button class="tt-dbtn tt-emotebtn${emoteOpen ? ' on' : ''}" data-act="emotetog" title="Emotes (E)">😊</button><button class="tt-dbtn ico-chat${chatOpen ? ' on' : ''}" data-act="chattog" title="Chat rápido"><span class="lbl">Chat</span></button>` : ''
   }`;
   if (eng.winner !== null || !d) {
     const w = eng.winner;
@@ -2559,13 +2654,15 @@ function dockHtml(eng: Engine, d: Decision | null): string {
       ? net!.role === 'host'
         ? '<button class="primary" data-act="rematch">Revanche</button>'
         : ''
-      : '<button class="primary" data-act="newgame">Nova partida</button>';
+      : challengeOf(game)
+        ? '<button class="primary" data-act="chretry">Tentar de novo</button>'
+        : ladderEndButtons(game.cfg, true) ?? '<button class="primary" data-act="newgame">Nova partida</button>';
     return `<div class="tt-dock decision over"><div class="tt-dmain"><span class="tt-dprompt">${w !== null ? `${esc(eng.pl[w].name)} venceu` : 'Fim de jogo'}</span><span class="tt-dsub">${esc(eng.winReason || '')} · ${eng.pl[0].points} × ${eng.pl[1].points} · ${eng.turn} turnos</span></div><span class="tt-dbtns">${overlayHidden === 'end' ? '<button class="tt-dbtn" data-act="showoverlay">Resultado</button>' : ''}${again}</span></div>`;
   }
   const last = eng.log.filter((l) => !l.text.startsWith('──')).slice(-1)[0];
   const lastHtml = last ? `<span class="tt-dlast ${last.player === undefined ? '' : last.player === view ? 'me' : 'them'}">${linkCards(eng, last.text)}</span>` : '';
   if (isOtherTurn())
-    return `<div class="tt-dock decision thinking">${stackHtml(eng)}<span class="tt-dprompt wait"><span class="dots"><i></i><i></i><i></i></span>${esc(eng.pl[d.player].name)} ${online() ? 'está jogando' : 'está pensando'}</span>${lastHtml}${netNote ? `<span class="err">${esc(netNote)}</span>` : ''}<span class="tt-dbtns">${watching() || replay ? '' : undo}<button class="tt-dbtn ico-menu tt-sidebtn" data-act="sidetoggle" title="Registro e menu"><span class="lbl">Registro</span></button></span></div>`;
+    return `<div class="tt-dock decision thinking">${stackHtml(eng)}<span class="tt-dprompt wait"><span class="dots"><i></i><i></i><i></i></span>${challengeHold(game) ? 'Desafio encerrado' : `${esc(eng.pl[d.player].name)} ${online() ? 'está jogando' : 'está pensando'}`}</span>${lastHtml}${netNote ? `<span class="err">${esc(netNote)}</span>` : ''}<span class="tt-dbtns">${watching() || replay ? '' : undo}<button class="tt-dbtn ico-menu tt-sidebtn" data-act="sidetoggle" title="Registro e menu"><span class="lbl">Registro</span></button></span></div>`;
   if (handoffPending)
     return `<div class="tt-dock decision"><span class="tt-dprompt">Vez de ${esc(eng.pl[d.player].name)}</span><span class="tt-dsub">passe o aparelho</span></div>`;
   const multi = d.max > 1 || d.min === 0;
@@ -2696,8 +2793,9 @@ function gameHtml(): string {
       ${homeRowHtml(eng, view, false)}
       ${handRowHtml(eng, view, false)}
       <svg class="tt-arrows" id="tt-arrows" aria-hidden="true"></svg>
+      ${challengeOf(game) && !replay ? challengeHudHtml(game!) : ''}
       ${overlayHtml(eng, d)}
-      ${online() ? netWarnHtml(eng) + undoAskHtml(eng) + chatBubblesHtml() + chatPopHtml() : ''}
+      ${online() ? netWarnHtml(eng) + undoAskHtml(eng) + chatBubblesHtml() + chatPopHtml() + emotePopHtml() : ''}
       <div class="tt-peek" id="tt-peek" aria-hidden="true"></div>
     </main>
     ${sideHtml(eng, d)}
@@ -2728,7 +2826,13 @@ function pileOf(p: P, kind: 'deck' | 'trash'): HTMLElement | null {
   const row = `.tt-handrow.${p === view ? 'bottom' : 'top'}`;
   return document.querySelector<HTMLElement>(kind === 'trash' ? `.tt-mat [data-trash="${p}"] .tt-pilecard` : `.tt-mat ${row} .tt-pile.deck .tt-pilecard`);
 }
-function animateArrivals(boom: Map<string, DOMRect> = new Map()) {
+interface Seen {
+  r: DOMRect;
+  bomb: boolean;
+  unit: boolean;
+  art: string;
+}
+function animateArrivals(before: Map<string, Seen> = new Map()) {
   if (!game) return;
   const eng = game.engine;
   const fresh = motionGame !== game;
@@ -2752,13 +2856,23 @@ function animateArrivals(boom: Map<string, DOMRect> = new Map()) {
       else if (pemp === '0' && nemp === '1') el.classList.add('empflash');
       else if (pu === '0' && nu === '1' && nz === 'board') el.classList.add('gearunit');
       else if (pe !== ne) el.classList.add(ne === '1' ? 'tap' : 'untap');
-      else if (Number(nd) > Number(pd)) el.classList.add('hit');
+      else if (Number(nd) > Number(pd)) {
+        el.classList.add('hit');
+        // o dano sobe sobre a carta
+        if (!calm) fxAt('dmgpop', el.getBoundingClientRect(), `<b>−${Number(nd) - Number(pd)}</b>`, 1100);
+      }
     }
     if (!calm) {
-      // Bomb que saiu do tabuleiro: explode onde estava
-      for (const [id, r] of boom) {
+      for (const [id, b] of before) {
         const o = eng.objs[id];
-        if (!o || o.zone !== 'board') fxAt('boom', r, '<i></i><b>BOOM</b>', 900);
+        if (o && o.zone === 'board') continue;
+        // Bomb que saiu do tabuleiro: explode onde estava
+        if (b.bomb) fxAt('boom', b.r, '<i></i><b>BOOM</b>', 900);
+        // unidade que morreu (foi do tabuleiro para o descarte, ou banida no lugar — Endless Riches): a arte se parte
+        else if (b.unit && (!o || o.zone === 'trash' || o.zone === 'banish') && motionKeys.get(id)?.startsWith('board|')) {
+          const bg = b.art ? `background-image:url(${JSON.stringify(b.art).slice(1, -1)})` : '';
+          fxAt('shatter', b.r, `<i class="l" style="${bg}"></i><i class="r" style="${bg}"></i>`, 1000);
+        }
       }
       // Burn (e o que mais for do topo do deck direto para o descarte): cartas voando do deck para o descarte
       const burned: Record<number, number> = { 0: 0, 1: 0 };
@@ -2877,13 +2991,14 @@ function setupHtml(): string {
       <div class="modegroup" role="radiogroup" aria-label="Adversário">${MODES.map(
         (m) => `<button type="button" role="radio" class="mode${settings.opponent === m.id ? ' on' : ''}" data-act="mode" data-mode="${m.id}" aria-checked="${settings.opponent === m.id}"><b>${m.t}</b><span>${m.s}</span></button>`,
       ).join('')}</div>
-      <div class="modegroup aux"><button type="button" class="mode aux" data-act="decks"><b>Meus decks</b><span>Montar, importar e exportar</span></button><button type="button" class="mode aux" data-act="history"><b>Histórico</b><span>Partidas, replays e estatísticas</span></button><button type="button" class="mode aux" data-act="importopen"><b>Abrir replay</b><span>De um arquivo ou relatório</span></button></div>
+      <div class="modegroup aux">${tut.homeButton()}<button type="button" class="mode aux" data-act="decks"><b>Meus decks</b><span>Montar, importar e exportar</span></button><button type="button" class="mode aux" data-act="history"><b>Histórico</b><span>Partidas, replays e estatísticas</span></button><button type="button" class="mode aux" data-act="importopen"><b>Abrir replay</b><span>De um arquivo ou relatório</span></button><button type="button" class="mode aux" data-act="challenges"><b>Desafios</b><span>Vença neste turno</span></button><button type="button" class="mode aux ladder" data-act="ladder"><b>Escada</b><span>5 adversários seguidos contra a IA</span></button></div>
     </nav>`;
   const summary = `${settings.opponent === 'ai' ? `Contra a IA (${AI_LEVELS.find((l) => l.id === settings.aiLevel)!.t})` : 'Passa-e-joga'} · ${settings.format === 'padrao' ? 'Padrão' : 'Casual'} · campos ${settings.bfMode === 'random' ? 'sorteados' : 'escolhidos'}`;
   return `<header class="topbar"><div class="brand">Riftbound <span>mesa</span></div><div class="turninfo">${esc(acc.profile().name)}</div>
     <div class="tb">${musicBoards().length ? `<button type="button" data-act="music" title="Volume da música (N)">${musicIcon()}</button>` : ''}${net ? '<button type="button" data-act="decks">Meus decks</button>' : ''}</div></header>
   <main class="setup home">
     ${net ? lobbyHtml() : `<div class="hero"><h1>Riftbound na mesa</h1><p>As regras rodam sozinhas: custos, pilha, combate, pontos e o efeito de cada carta.</p></div>
+      ${tut.homeBanner()}
       ${saved && (saved.saved || saved.online) ? `<div class="resume mz"><span>${saved.online ? 'Você estava numa sala online.' : 'Há uma partida em andamento.'}</span><button class="primary" data-act="resume">${resumeLabel}</button></div>` : ''}
       ${modes}`}
     <form class="form" id="setupform">
@@ -3050,6 +3165,11 @@ function scheduleRender() {
 const touchUi = () => matchMedia('(hover: none), (pointer: coarse)').matches;
 
 function render() {
+  // saiu do tutorial por qualquer caminho (menu, fim): volta às configurações de antes
+  if (tutPrev && !tut.isTut(game)) {
+    settings = tutPrev;
+    tutPrev = null;
+  }
   const app = $app();
   const logScrolled = document.getElementById('logl');
   const grid = document.querySelector('.dbgrid');
@@ -3062,9 +3182,13 @@ function render() {
   const focusId = ae && ae.id && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA') && ae.type !== 'checkbox' ? ae.id : null;
   const selRange = focusId ? [ae!.selectionStart, ae!.selectionEnd] : null;
   // bombas na mesa antes de redesenhar (para a explosão sair do lugar onde estava a que morreu)
-  const boom = new Map<string, DOMRect>();
-  if (game) for (const el of Array.from(document.querySelectorAll<HTMLElement>('.tt-mat .card.bomb[data-obj]'))) boom.set(el.dataset.obj!, el.getBoundingClientRect());
-  app.innerHTML = game ? gameHtml() : page === 'decks' ? deckbuilderHtml() : setupHtml() + modalHtml();
+  // cartas na mesa antes de redesenhar: a Bomb que sumiu explode onde estava; a unidade que morreu se parte ali
+  const before = new Map<string, Seen>();
+  if (game)
+    for (const el of Array.from(document.querySelectorAll<HTMLElement>('.tt-mat .card[data-obj]')))
+      before.set(el.dataset.obj!, { r: el.getBoundingClientRect(), bomb: el.classList.contains('bomb'), unit: el.classList.contains('unit'), art: el.querySelector<HTMLImageElement>('img.art')?.src || '' });
+  recordIfOver(); // antes de desenhar: o quadro do fim já mostra o resultado gravado (escada: próximo degrau / vidas)
+  app.innerHTML = game ? gameHtml() : page === 'decks' ? deckbuilderHtml() : page === 'challenges' ? challengesHtml(acc.profile().name) : page === 'ladder' ? ladderHtml(ladderTopbar()) + modalHtml() : setupHtml() + modalHtml();
   if (focusId) {
     const el = document.getElementById(focusId) as HTMLInputElement | null;
     if (el && el !== document.activeElement) {
@@ -3086,13 +3210,13 @@ function render() {
   // grade da biblioteca: as cartas seguintes entram ao rolar
   if (!game && page === 'decks') mountDb();
   if (game) {
-    animateArrivals(boom);
+    animateArrivals(before);
     peekId = null;
     drawArrows();
     hoveredDest = null;
     queueAuto();
   }
-  recordIfOver();
+  tut.afterRender();
   yourTurnCue();
   syncMusic();
   const ll = document.getElementById('logl');
@@ -3104,7 +3228,11 @@ function render() {
     ? Object.values(game.engine.objs).map((o) => o.code)
     : page === 'decks'
       ? poolCodes()
-      : [
+      : page === 'challenges'
+        ? challengeArtCodes()
+      : page === 'ladder'
+        ? [...RUNE_CODES, ...ladderCodes()]
+        : [
           ...RUNE_CODES,
           ...settings.decks.flatMap((i) => {
             const d = acc.deckById(i);
@@ -3182,6 +3310,7 @@ function onClick(ev: MouseEvent) {
     return;
   }
   if (!game && page === 'decks' && onDbClick(t)) return;
+  if (onLadderClick(t)) return;
   // clique fora do menu da carta fecha o menu (e segue valendo como clique normal)
   if (ctxMenu && !t.closest('.tt-ctx')) {
     ctxMenu = null;
@@ -3214,6 +3343,7 @@ function onClick(ev: MouseEvent) {
       return;
     }
   }
+  if (onChallengeClick(t, replay ? null : game)) return;
   let act = t.closest('[data-act]') as HTMLElement | null;
   // botão de opção dentro de um contêiner com data-act (ex.: as ações no zoom da carta): vale a opção
   const optIn = t.closest('[data-opt]') as HTMLElement | null;
@@ -3428,7 +3558,20 @@ function onClick(ev: MouseEvent) {
       if (code.length === 6) openRoom(a === 'lobjoin' ? 'guest' : 'watch', code);
       return;
     }
+    if (a === 'emotetog') {
+      emoteOpen = !emoteOpen;
+      chatOpen = false;
+      render();
+      return;
+    }
+    if (a === 'emote') {
+      emoteOpen = false;
+      sendChat(act.dataset.text || '');
+      render();
+      return;
+    }
     if (a === 'chattog') {
+      emoteOpen = false;
       chatOpen = !chatOpen;
       render();
       if (chatOpen && !touchUi()) document.getElementById('chatin')?.focus();
@@ -3542,6 +3685,13 @@ function onClick(ev: MouseEvent) {
       window.scrollTo(0, 0);
       return;
     }
+    if (a === 'challenges') {
+      pickSeat = null;
+      page = 'challenges';
+      render();
+      window.scrollTo(0, 0);
+      return;
+    }
     if (a === 'decks' || a === 'history') {
       pickSeat = null;
       page = 'decks';
@@ -3571,6 +3721,7 @@ function onClick(ev: MouseEvent) {
         render();
         return;
       }
+      if (challengeOf(game)) page = 'challenges'; // o Menu de um desafio volta para a lista
       game = null;
       save();
       render();
@@ -4039,7 +4190,7 @@ document.addEventListener('visibilitychange', () => {
   if (!document.hidden) document.title = 'Riftbound Mesa';
 });
 
-/** Atalhos: Espaço = passar/encerrar o turno, Enter = confirmar, Esc = cancelar/fechar, Z = desfazer, M = volume dos sons, N = volume da música. */
+/** Atalhos: Espaço = passar/encerrar o turno, Enter = confirmar, Esc = cancelar/fechar, Z = desfazer, M = volume dos sons, N = volume da música, E = emotes (online). */
 function onKey(ev: KeyboardEvent) {
   const t = ev.target as HTMLElement;
   if (t?.id === 'chatin' && (ev.key === 'Enter' || ev.key === 'Escape')) {
@@ -4120,11 +4271,14 @@ function onKey(ev: KeyboardEvent) {
   else if (ev.key === 'z' || ev.key === 'Z') document.querySelector<HTMLElement>('.decision [data-act=undo]:not([disabled])')?.click();
   else if (ev.key === 'm' || ev.key === 'M') document.querySelector<HTMLElement>('[data-act=sound]')?.click();
   else if (ev.key === 'n' || ev.key === 'N') document.querySelector<HTMLElement>('[data-act=music]')?.click();
+  else if (ev.key === 'e' || ev.key === 'E') document.querySelector<HTMLElement>('[data-act=emotetog]')?.click();
 }
 
 /** Fim de partida: guarda no histórico da conta e conta nas estatísticas do deck (uma vez por partida). */
 function recordIfOver() {
   if (!game || replay || game.engine.winner === null) return;
+  if (challengeOf(game)) return; // desafio: o progresso vai para a conta (challenges.ts), não para o histórico
+  if (tut.isTut(game)) return; // o tutorial não entra no histórico nem nas estatísticas
   if (online() && watching()) return;
   // convidado: grava com a partida completa que o anfitrião manda no fim (até ela chegar, espera)
   const full = fullGame();
@@ -4134,7 +4288,59 @@ function recordIfOver() {
   // deck escolhido de cada lado (online: o meu é sempre settings.decks[0]; o do outro não se sabe)
   const prefer: [string | null, string | null] = online() ? (seat === 0 ? [settings.decks[0], null] : [null, settings.decks[0]]) : [settings.decks[0], settings.decks[1]];
   hist.recordGame(full, { mode, seat: mine, prefer });
+  if (vsAi()) ladderRecord(full.cfg, full.engine.winner, HUMAN);
 }
+
+/** Configurações de antes do tutorial (ele joga como "contra a IA" com o oponente roteirizado). */
+let tutPrev: Settings | null = null;
+tut.init({
+  game: () => game,
+  start: (g) => {
+    if (replay) exitReplay();
+    if (!tutPrev) tutPrev = { ...settings };
+    settings = { ...settings, opponent: 'ai', names: ['Você', 'Oponente'] };
+    if (aiTimer) clearTimeout(aiTimer);
+    aiTimer = null;
+    game = g;
+    view = HUMAN;
+    ai = newAi();
+    selected = [];
+    preview = null;
+    zoom = null;
+    armed = null;
+    moveSel = [];
+    trigPlan = null;
+    pickSeat = null;
+    page = 'setup';
+    render();
+    scheduleAi();
+  },
+  exit: () => {
+    game = null;
+    zoom = null;
+    armed = null;
+    moveSel = [];
+    render();
+    window.scrollTo(0, 0);
+  },
+  render: () => render(),
+  answer: (ids) => answer(ids),
+  touch: () => touchUi(),
+  zoomId: () => zoom,
+  zoom: (id) => {
+    zoom = id;
+    armed = null;
+    moveSel = [];
+    render();
+  },
+  playEasy: () => {
+    game = null;
+    render(); // devolve as configurações de antes
+    settings.opponent = 'ai';
+    settings.aiLevel = 'easy';
+    newGame();
+  },
+});
 
 setHooks({
   render: () => render(),
@@ -4153,6 +4359,99 @@ setHooks({
     window.scrollTo(0, 0);
   },
   touch: () => touchUi(),
+});
+
+// modo Desafios: a partida do desafio entra na mesa como uma partida contra a IA
+const leaveGame = (to: typeof page) => {
+  if (aiTimer) clearTimeout(aiTimer);
+  aiTimer = null;
+  game = null;
+  ai = null;
+  page = to;
+  save();
+  render();
+  window.scrollTo(0, 0);
+};
+setChallengeHooks({
+  play: (g) => {
+    if (aiTimer) clearTimeout(aiTimer);
+    aiTimer = null;
+    game = g;
+    view = HUMAN;
+    handoffPending = false;
+    selected = [];
+    armed = null;
+    moveSel = [];
+    pendingDrop = null;
+    trigPlan = null;
+    overlayHidden = '';
+    ai = newAi();
+    save();
+    render();
+    scheduleAi();
+  },
+  home: () => leaveGame('setup'),
+  list: () => leaveGame('challenges'),
+  render: () => render(),
+});
+
+// ───────────────────────────── escada contra a IA (src/ui/ladder.ts) ─────────────────────────────
+function ladderTopbar(): string {
+  return `<header class="topbar"><div class="brand">Riftbound <span>mesa</span></div><div class="turninfo">${esc(acc.profile().name)}</div>
+    <div class="tb">${musicBoards().length ? `<button type="button" data-act="music" title="Volume da música (N)">${musicIcon()}</button>` : ''}</div></header>`;
+}
+/** Partida de um degrau: contra a IA no nível do degrau, com a trilha dele (o cfg leva a marca da escada). */
+function startLadderGame(m: LadderMatch) {
+  settings.opponent = 'ai';
+  settings.decks[0] = m.deck;
+  game = new Game({
+    seed: (Math.random() * 2 ** 31) | 0,
+    decks: [acc.deckById(m.deck), m.opp],
+    names: [settings.names[0] === 'Jogador 1' ? acc.profile().name : settings.names[0], m.oppName],
+    battlefieldMode: 'random',
+    autoPass: settings.autoPass,
+    aiLevel: m.aiLevel,
+    music: m.music,
+    ladder: m.ladder,
+  } as GameConfig);
+  selected = [];
+  preview = null;
+  overlayHidden = '';
+  view = HUMAN;
+  handoffPending = false;
+  ai = newAi();
+  save();
+  render();
+  window.scrollTo(0, 0);
+  scheduleAi();
+}
+setLadderHooks({
+  render: () => render(),
+  home: () => {
+    page = 'setup';
+    render();
+    window.scrollTo(0, 0);
+  },
+  open: () => {
+    if (replay) exitReplay();
+    // vindo do fim de uma partida: ela sai (como "Trocar decks"); da tela inicial, a partida salva fica onde está
+    if (game) {
+      game = null;
+      save();
+    }
+    page = 'ladder';
+    render();
+    window.scrollTo(0, 0);
+  },
+  play: (m) => startLadderGame(m),
+  edit: (id) => {
+    page = 'decks';
+    dbState.view = 'edit';
+    dbState.deckId = id;
+    dbState.sample = [];
+    render();
+    window.scrollTo(0, 0);
+  },
 });
 
 function start(data: any = {}) {
@@ -4236,7 +4535,7 @@ function start(data: any = {}) {
 }
 
 const w = window as any;
-w.claude?.hot?.snapshot?.(() => ({ settings, saved: game?.serialize(), view }));
+w.claude?.hot?.snapshot?.(() => (tut.isTut(game) ? { settings: tutPrev ?? settings, saved: null, view } : { settings, saved: game?.serialize(), view }));
 if (w.claude?.hot?.ready) w.claude.hot.ready(start);
 else start(w.claude?.hot?.data ?? {});
 

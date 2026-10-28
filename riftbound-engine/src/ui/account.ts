@@ -56,6 +56,62 @@ export interface Profile {
   recorded?: string[]; // partidas já contadas nas estatísticas
   /** Novo: "Pagar: manual" lembrado (ao começar a partida a mesa liga o modo pela ação do motor). Ausente = automático. */
   manualPay?: boolean;
+  /** Novo (modo Desafios): progresso por id de desafio (src/data/challenges.ts). Ausente = nenhum tentado. */
+  challenges?: Record<string, ChallengeProgress>;
+  /** Novo: progresso do tutorial "Aprender a jogar" (ver tutorial.ts). Ausente = nunca abriu nem dispensou. */
+  tutorial?: TutorialProgress;
+  /** Novo (opcional): escada contra a IA em andamento (src/ui/ladder.ts). */
+  ladder?: LadderRun;
+  /** Novo (opcional): hall da escada — os decks que venceram os 5 degraus. */
+  ladderHall?: LadderHallEntry[];
+}
+/** Progresso num desafio: tentativas, quando resolveu e a melhor vitória (menos jogadas). */
+export interface ChallengeProgress {
+  tries: number;
+  solved?: number; // data da primeira vitória
+  best?: number; // menos jogadas (ações completas) numa vitória
+  hint?: boolean; // pediu a dica
+}
+/** Tutorial: a partida guiada é refeita pelas respostas (cfg fixo); `step` = passo em que parou. */
+export interface TutorialProgress {
+  step: number;
+  answers: string[][];
+  /** terminou pelo menos uma vez */
+  done?: boolean;
+  /** dispensou a sugestão da primeira visita sem abrir */
+  dismissed?: boolean;
+  at: number;
+}
+/** Escada contra a IA: o deck escolhido, o degrau atual (0..4; 5 = venceu tudo) e as vidas. */
+export interface LadderRun {
+  /** escolha de deck da tela inicial ('pre:N' ou 'my:<id>') */
+  deck: string;
+  /** nome, lenda e campeão do deck quando a escada começou (capa e hall, mesmo que o deck mude ou suma) */
+  deckName: string;
+  legend: string;
+  champion: string;
+  rung: number;
+  lives: number;
+  started: number;
+  /** derrotas na escada (inclui as das tentativas que recomeçaram) */
+  losses: number;
+  /** quantas vezes as vidas acabaram e a escada recomeçou */
+  resets: number;
+  /** partidas já contadas (semente), para não contar duas vezes a mesma partida */
+  seen: number[];
+  /** última partida: degrau, se venceu e se as vidas acabaram nela (aviso na tela da escada) */
+  last?: { rung: number; won: boolean; reset?: boolean };
+  /** quando venceu o 5º degrau */
+  done?: number;
+}
+export interface LadderHallEntry {
+  deckName: string;
+  legend: string;
+  champion: string;
+  /** código do deck (formato Piltover Archive), quando deu para gerar */
+  code?: string;
+  at: number;
+  losses: number;
 }
 interface Store {
   active: string;
@@ -154,6 +210,66 @@ export function setManualPayPref(on: boolean) {
   if (!!p.manualPay === on) return;
   if (on) p.manualPay = true;
   else delete p.manualPay;
+  persist();
+}
+
+// ───────────────────────────── desafios ─────────────────────────────
+export function challengeProgress(id: string): ChallengeProgress | undefined {
+  return profile().challenges?.[id];
+}
+function challengeEntry(id: string): ChallengeProgress {
+  const p = profile();
+  return ((p.challenges ||= {})[id] ||= { tries: 0 });
+}
+/** Uma tentativa começou (abrir o desafio ou "tentar de novo"). */
+export function recordChallengeTry(id: string) {
+  challengeEntry(id).tries++;
+  persist();
+}
+/** Venceu o desafio com `moves` jogadas. Devolve true se foi a melhor vitória até agora. */
+export function recordChallengeWin(id: string, moves: number): boolean {
+  const c = challengeEntry(id);
+  c.solved ||= Date.now();
+  const better = c.best === undefined || moves < c.best;
+  if (better) c.best = moves;
+  persist();
+  return better;
+}
+export function recordChallengeHint(id: string) {
+  const c = challengeEntry(id);
+  if (c.hint) return;
+  c.hint = true;
+  persist();
+}
+// ───────────────────────────── tutorial ─────────────────────────────
+/** Progresso do tutorial nesta conta (null: nunca abriu nem dispensou a sugestão). */
+export function tutorialProgress(): TutorialProgress | null {
+  return profile().tutorial ?? null;
+}
+export function setTutorialProgress(t: TutorialProgress | null) {
+  const p = profile();
+  if (t) p.tutorial = t;
+  else delete p.tutorial;
+  persist();
+}
+// ───────────────────────────── escada contra a IA ─────────────────────────────
+/** Escada contra a IA em andamento nesta conta (ou nenhuma). */
+export function ladderRun(): LadderRun | null {
+  return profile().ladder ?? null;
+}
+export function setLadderRun(r: LadderRun | null) {
+  const p = profile();
+  if (r) p.ladder = r;
+  else delete p.ladder;
+  persist();
+}
+/** Hall da escada (mais recente primeiro). */
+export function ladderHall(): LadderHallEntry[] {
+  return profile().ladderHall ?? [];
+}
+export function addLadderHall(e: LadderHallEntry) {
+  const p = profile();
+  p.ladderHall = [e, ...(p.ladderHall ?? [])].slice(0, 50);
   persist();
 }
 

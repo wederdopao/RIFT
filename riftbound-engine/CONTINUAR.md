@@ -414,6 +414,23 @@ RiftJudge/playriftbound não acessíveis no contêiner: rulings vieram de resumo
 - ~~`scripts/onlinetest.mjs` instável no clique do pedido de desfazer~~ — resolvido (27/10): o clique usa localizador
   em vez de ElementHandle; 3 rodadas seguidas passaram.
 
+## Mesa, site e modos novos (28/10/2026)
+- **CSS**: um `@media (max-width: 860px) and (orientation: portrait)` sem `}` deixava o resto do arquivo valendo só em
+  celular em pé (o painel de jogar a carta saía "gigante" no computador). Corrigido, e `tests/css.test.ts` confere que
+  toda chave abre e fecha — na junção dos modos novos o mesmo erro voltou (um `@media` dos desafios) e o teste pegou.
+- **Site**: arte em `art/<código>.webp` (uma por carta, `__RB_ART_FILES__`) em vez dos pacotes base64 — abrir uma
+  partida baixa ~360 KB de arte. O artifact e o offline continuam com os pacotes.
+- **Sons e música**: `src/ui/sound.ts` (efeitos gerados + vozes do LoR, `scripts/lor_voices.py`, 81 campeões) e
+  `src/ui/music.ts` (20 temas de tabuleiro do LoR, `scripts/lor_music.py`; trilha por deck no deckbuilder, ou pedida
+  pela partida em `cfg.music`, como na escada). Volume: 🔊/M e 🎵/N.
+- **Emotes** no online (😊/E): viajam pelo chat com o emoji na frente (`EMOTES` em main.ts), balão com o emoji grande.
+- **Fim da partida**: `endSummaryHtml` (pontos por turno em SVG, virada, mais dano, cartas jogadas), tirado do registro.
+- **Animações**: dano que sobe (`.tt-fx.dmgpop`) e unidade que morre se partindo (`.tt-fx.shatter`), em `animateArrivals`
+  com as posições das cartas antes de redesenhar (`Seen`).
+- **Modos novos** (feitos em 3 sessões paralelas e juntados aqui): Desafios, Tutorial e Escada — ver as seções de cada um.
+  Ordem no `render()`: `recordIfOver()` antes de desenhar (a escada mostra o resultado já gravado), `tut.afterRender()`
+  depois.
+
 ## Retomada (27/10/2026)
 - **Mesa**: `touchUi()` agora vai pelo ponteiro (`(hover: none), (pointer: coarse)`), não pela largura — em notebook
   com zoom do Windows (125%/150%) o clique na carta abria o zoom gigante e travava. Zoom no toque: tocar na carta fecha,
@@ -446,3 +463,75 @@ RiftJudge/playriftbound não acessíveis no contêiner: rulings vieram de resumo
   Conclusões: os pesos atuais já estão no ótimo local (cair muito de unit/might/hand piora, subir não melhora); ganho
   do modo rápido não transfere; o que falta à IA não é peso nem "plano" na avaliação. Próximas ideias: modelar as
   Reactions escondidas do oponente (mana aberta) na busca; usar o tempo do Difícil em amostragem da mão do oponente.
+
+## Modo Desafios (28/10/2026, branch claude/desafios)
+- Tela inicial → **Desafios**: lista com 13 desafios (fácil → difícil), estado de cada um (novo / em aberto /
+  resolvido / bloqueado: o seguinte libera quando o anterior é resolvido), tentativas, melhor vitória (menos jogadas),
+  dica só se pedir e a solução depois de resolver. Na mesa: faixa do objetivo no alto (Dica, Recomeçar), abertura com a
+  situação, resultado (próximo / jogar de novo / desfazer / lista). A IA joga pelo oponente; quando o desafio tem
+  resultado ela para (`challengeHold`). Desafio não entra no Histórico.
+- **Motor** (genérico): `GameConfig.scenario` (`src/engine/scenario.ts`, `applyScenario`): lenda, campeão, pontos, XP,
+  mão, deck (topo primeiro; sem deck, completa com Playful Phantom para nenhum "compre" virar Burn Out), runas, deck de
+  runas, base, descarte, campos com controlador, unidades (exaurida, dano, buff, atordoada, equipamentos anexados) e
+  cartas escondidas. `run()` monta no lugar de `setup()` e `takeTurn(true)` começa na fase principal. Como tudo está no
+  cfg, desfazer, salvar/carregar, replay e relatório funcionam sem mudança.
+- **Dados**: `src/data/challenges.ts` (`CHALLENGES`, `challengeConfig`, `challengeResult`, `goalText`). Objetivos: `win`,
+  `conquer` (campo), `kill` (código), `survive` (chegar ao seu próximo turno). O cfg leva `challenge: id` (o motor
+  ignora). Progresso: `Profile.challenges` em account.ts (`recordChallengeTry/Win/Hint`).
+- **Testes**: `tests/desafios.test.ts` joga a solução de cada desafio pelo motor (o oponente passa; no "hold" também com
+  a IA de verdade) e a jogada errada óbvia; confere cartas, montagem e desfazer/salvar. Interface:
+  `node scripts/challengeshot.mjs <pasta>` (resolve o 1º pela lista de opções, erra o 2º, desfazer, recomeçar,
+  progresso salvo); prints em `docs/prints/desafios-*`.
+- Os 13: Escudo contra Assalto (Shield/Assault/Action no showdown), Mão na arma (Equip), Força interior (Empower),
+  O último ponto (471.1.b.1), Pele de pedra (Deflect), Carta na manga (Hidden por [0]), Não tão rápido (pilha: Not So
+  Fast no gatilho da Ahri), Parede de escudos (Tank), Último suspiro (Deathknell), Segure a linha (conquista × hold,
+  sobreviver), A legião primeiro (Legion), Mestre de armas (Accelerate + Weaponmaster), Duas frentes (Ride the Wind +
+  último ponto).
+- Ideias para mais: Backline, Quick-Draw, Vision/Predict, Repeat, Flow, XP/Level, Ambush, Temporary; desafios de
+  vários turnos; mostrar a mão do oponente quando o desafio depender dela.
+
+## Tutorial "Aprender a jogar" (28/10/2026, branch claude/tutorial)
+- **O que é**: botão "Aprender a jogar" na tela inicial (e a faixa "Primeira vez no Riftbound?" enquanto a conta não
+  abriu nem dispensou). Partida guiada contra um oponente que segue roteiro (não usa a IA), ~10 minutos, 22 passos +
+  3 de esperar o oponente. Fim: "Jogar contra a IA (Fácil)", "Refazer o tutorial", "Voltar ao início".
+- **Roteiro** (`src/ui/tutorial-script.ts`, sem DOM): seus cards Lee Sin (Staunch Survivor, Laurent Bladekeeper, En
+  Garde + enchimento caro), oponente Darius (Lingering Animus, Against the Odds, Noxus Saboteur, Vanguard Sergeant).
+  Turnos: T1 joga a Survivor (2 + [Body]: exaure as 2 runas e recicla a de Body) · T2 oponente joga o Animus · T3 move a
+  Survivor para Bandle Tree (showdown sem combate, passa, conquista → 5) e joga o Laurent na base · T4 oponente conquista
+  Grove (5) e joga o Saboteur guardando 2 runas · T5 hold (6), Laurent ataca Grove, você passa o Focus, o oponente joga
+  Against the Odds (Animus 4), você responde com En Garde (Laurent 5), 5 × 4: Animus morre, conquista (7); ler as
+  palavras-chave da Survivor; regra do último ponto · T6 oponente só joga o Sergeant · T7 hold dos dois campos → vitória.
+  `STEPS` (info / act / watch / read / end) com `allow` (a resposta vale?), `done` (pelo estado da partida), `point`/`use`
+  (seletores da mesa) e `solve` (a jogada certa, para o teste). `oppAnswer` = jogadas do oponente.
+- **Motor** (genérico, sem mudar regra): `GameConfig.fixedOrder` (decks na ordem da lista, 1º = topo) e
+  `GameConfig.startPoints`.
+- **Tela** (`src/ui/tutorial.ts`): `TutorialGame` (subclasse de `Game`: cada resposta sua passa pelo passo; desfazer
+  não existe), caixa/seta/destaque numa camada própria (`#tut-layer`, fora do `#app`), o que não é do passo ganha
+  `.tut-off` e o clique é barrado com a explicação (captura no document). Ganchos em `main.ts`: `tut.init` (host),
+  `scheduleAi` (oponente pelo roteiro), `save` (a partida do tutorial não substitui a salva), `recordIfOver` (fora do
+  histórico), `render` (`tut.afterRender`; ao sair volta as configurações de antes) e os botões da tela inicial.
+  Celular: o toque na carta arma a jogada ("Jogar" apontado); para ler as palavras-chave o toque abre o zoom; a caixa
+  prefere as bordas da tela e pode ser recolhida. CSS no fim de `style.css` (seção "tutorial").
+- **Progresso**: `Profile.tutorial` (`acc.tutorialProgress/setTutorialProgress`): passo, respostas, `done`, `dismissed`.
+  Continuar refaz a partida pelas respostas; se o roteiro mudar e as respostas não servirem, começa de novo.
+- **Testes**: `tests/tutorial.test.ts` (roteiro inteiro pelo motor; outras opções raiz recusadas em cada passo) e
+  `node scripts/tutorialplay.mjs docs/prints/tutorial` (pela mesa, 1366x768 e 390x844 com toque: segue a seta, confere
+  a jogada barrada, sai no meio e continua, chega à vitória, começa a partida Fácil; prints JPEG de cada passo).
+
+## Escada contra a IA (28/10/2026, branch claude/escada)
+- Tela inicial → **Escada** (`[data-act=ladder]`): escolhe um deck (salvo ou starter) e enfrenta 5 adversários em
+  sequência. Decks à mão em `src/decks/ladder.ts` (`LADDER`: nome, apelido, frase, ideia, nível, trilha, deck), todos
+  legais no Padrão: 1 Rengar (aggro Fúria/Corpo, Fácil), 2 Ziggs (Bombas e Deploy do Radiance, Fácil), 3 Ambessa
+  (Empower do Vendetta, Normal), 4 Lux (control Ordem/Mente, Difícil), 5 Kai'Sa (chefe Fúria/Mente, Difícil). A ordem
+  segue a força medida em round-robin IA Fácil × IA Fácil (com os starters): Kai'Sa 19/24, Lux 16/24, Rengar 11/24,
+  Ambessa 10/24, Ziggs 5–7/24.
+- Progresso na conta (`Profile.ladder` = `LadderRun`: deck, degrau, vidas, derrotas, recomeços, sementes já contadas;
+  `Profile.ladderHall`). Lógica em `src/ui/ladder.ts` (`ladderStart`, `ladderMatch`, `ladderRecord` — conta uma vez
+  por semente e só se a partida é do degrau atual da escada em andamento —, botões do fim da partida), tela em
+  `src/ui/ladderscreen.ts`. Em main.ts: botão, página `'ladder'`, `onLadderClick`, `startLadderGame` (cfg com `aiLevel`,
+  `music` e `ladder: {rung, started}`), botões do fim e `recordIfOver` (agora chamado antes de desenhar).
+- Música: `musicScene({kind:'game', track})` — a partida pode pedir uma trilha (`cfg.music`, id do tabuleiro); sem
+  ela, vale a escolha do deck como antes.
+- Teste: `tests/escada.test.ts` (decks legais, trilhas existentes, 2 partidas IA × IA por deck sem erro, progresso);
+  prints: `node scripts/laddershot.mjs <pasta>` (o fim de partida é forçado só para o print).
+
