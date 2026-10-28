@@ -434,3 +434,15 @@ RiftJudge/playriftbound não acessíveis no contêiner: rulings vieram de resumo
   peso de campo contestado ×1,5 65 × 63, ×0,6 60 × 68. Conclusão: mais tempo/largura de busca não vira força — o limite
   está na avaliação e no modelo do oponente. Por estilo (256 partidas × antiga): a nova vence em todos os confrontos;
   os decks aggro do gerador é que são fracos (aggro × ramp: 22% com a nova pilotando o aggro, 16% com a antiga).
+- **Afinação dos pesos da avaliação (27–28/10)**, num worktree com os números fixos de `evaluate` virando pesos em `W`
+  (pt, hand, rune, unit, might, bfHeld, bfOppEnd...), a IA atual congelada como adversária (`tests/ai-cur.ts`,
+  `--old cur`) e um modo rápido (`--fast`: as duas pensam ~6× menos; 512 partidas espelhadas em ~10 min; o efeito
+  conhecido "sem conferência = 45%" aparece igual nele). Controle sem mudança: 51,2%. Resultados (512 cada):
+  hand 10 → 40,6%, 3 → 52,9%, 1 → 52,7%; might 2 → 43,6%, 3,5 → 50,2%, 4 → 55,5%, 4,5 → 53,8%, 5 → 51,6%;
+  unit 1 → 36,5%, 10 → 51,4%; pt 95/150, bfHeld 35/80, bfOppEnd 60, rune 2/7 → 49–52%; bfOppEnd 150 → 46,1%.
+  Ideias do Weder: "corrida" (quem chega antes a 8, ajustando defesa/ataque) 46–51% em 4 variações; peças-chave do
+  deck (campeão, finalizadores, motores) 49–52% em 3. **Confirmação do might 4 na velocidade real** (`--old cur`, sem
+  `--fast`): 65 × 62 espelhado + 116 × 121 com decks variados = **49,7%: não se confirmou**. Nada mudou na IA.
+  Conclusões: os pesos atuais já estão no ótimo local (cair muito de unit/might/hand piora, subir não melhora); ganho
+  do modo rápido não transfere; o que falta à IA não é peso nem "plano" na avaliação. Próximas ideias: modelar as
+  Reactions escondidas do oponente (mana aberta) na busca; usar o tempo do Difícil em amostragem da mão do oponente.
