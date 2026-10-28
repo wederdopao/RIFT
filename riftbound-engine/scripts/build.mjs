@@ -2,7 +2,7 @@
 //   dist/index.html            página do artifact (motor, cartas, interface e CSS embutidos)
 //   dist/art/<pacote>.json     artes oficiais (webp em base64), em pacotes de até 40 cartas, baixados sob demanda
 //   dist/riftbound-mesa.html   versão para abrir direto no navegador, com as artes dos decks embutidas
-//   dist/site/                 site para hospedar (index.html + art/<código>.webp + voice/ + music/), com jogo online
+//   dist/site/                 site para hospedar (index.html + art/<código>.webp + voice/ + music/ + mats/), com jogo online
 import { build } from 'esbuild';
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, rmSync, cpSync, existsSync } from 'node:fs';
 
@@ -80,6 +80,8 @@ cpSync(ART_DIR, 'dist/site/art', { recursive: true });
 if (existsSync('assets/voice/index.json')) cpSync('assets/voice', 'dist/site/voice', { recursive: true });
 // músicas dos tabuleiros (scripts/lor_music.py): cada uma só baixa quando toca
 if (existsSync('assets/music/index.json')) cpSync('assets/music', 'dist/site/music', { recursive: true });
+// tapetes da mesa (scripts/lor_mats.py): ilustrações dos tabuleiros do LoR, só baixam quando escolhidas
+if (existsSync('assets/mats/index.json')) cpSync('assets/mats', 'dist/site/mats', { recursive: true });
 const packSize = Object.keys(packs).map((n) => readFileSync(`dist/art/${n}.json`).length).reduce((a, b) => a + b, 0);
 console.log(
   `dist/index.html ${(html.length / 1024).toFixed(0)} KB · ${Object.keys(packs).length} pacotes de arte (${(packSize / 1e6).toFixed(1)} MB, ${files.length} cartas) · offline ${(offline.length / 1e6).toFixed(1)} MB`,

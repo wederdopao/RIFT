@@ -13,7 +13,8 @@ import { artUrl, ensureArt } from './art';
 import { cycleSound, sfx, soundFromLog, soundIcon } from './sound';
 import { canLink, codeFromText, decodeReplay, encodeReplay, linkFor, prepareReplay } from './replaylink';
 import { copyText, showCopyBox } from './copy';
-import { cycleMusic, loadMusic, musicBoards, musicIcon, musicScene, stopPreview } from './music';
+import { cycleMusic, deckTrack, loadMusic, musicBoards, musicIcon, musicScene, stopPreview } from './music';
+import { FELTS, currentMat, loadMats, lorMats, matAttrs, matChoice, setMat } from './mats';
 import * as acc from './account';
 import { RUNE_CODES, coverArt, db as dbState, deckbuilderHtml, mountDb, onDbClick, onDbContext, onDbHover, onDbInput, poolCodes, refreshDbPeek, setHooks } from './deckbuilder';
 import * as hist from './history';
@@ -1623,6 +1624,24 @@ function syncMusic() {
   // a partida pode pedir a própria trilha (cfg.music, ex.: degrau da escada); senão vale a escolha do deck
   musicScene({ kind: 'game', choice: acc.savedDeckOf(settings.decks[0])?.music, track: (game.cfg as { music?: string }).music, seed: game.cfg.seed });
 }
+/** O tabuleiro (id) da música desta partida, mesmo com a música desligada: o tapete 'auto' acompanha. */
+function gameTrackId(): string | undefined {
+  if (!game) return undefined;
+  const t = (game.cfg as { music?: string }).music;
+  if (t && musicBoards().some((b) => b.id === t)) return t;
+  return deckTrack(acc.savedDeckOf(settings.decks[0])?.music, game.cfg.seed)?.id;
+}
+/** Escolha do tapete: automático (o da música), os feltros e, no site, as ilustrações do LoR. Todos liberados. */
+function matPickHtml(): string {
+  const cur = matChoice();
+  const btn = (id: string, name: string, src?: string) =>
+    `<button type="button" data-act="mat" data-id="${esc(id)}" class="${src ? '' : `mat-${esc(id)}`}${cur === id ? ' on' : ''}"${src ? ` style="background-image:url('${esc(src)}')"` : ''} title="${esc(name)}"><span>${esc(name)}</span></button>`;
+  const lor = lorMats();
+  return `<div class="tt-matpick">
+    <h4>Feltro</h4>${btn('auto', 'Automático (o do tabuleiro da música)')}${FELTS.map((m) => btn(m.id, m.name)).join('')}
+    ${lor.length ? `<h4>Tabuleiros do Legends of Runeterra</h4>${lor.map((m) => btn(m.id, m.name, m.src)).join('')}` : location.protocol === 'file:' ? '<p class="note">As ilustrações dos tabuleiros só aparecem no site.</p>' : ''}
+  </div>`;
+}
 /** Sons das linhas novas do registro (no replay, só acompanha a leitura). */
 function playSounds(eng: Engine) {
   if (!game) return;
@@ -1986,6 +2005,7 @@ function sideHtml(eng: Engine, d: Decision | null): string {
         <button data-act="guide" title="Como funciona (?)">Como funciona</button>
         <button data-act="sound" class="tt-sound" title="Volume dos sons (M)">${soundIcon()}</button>
         <button data-act="music" class="tt-sound" title="Volume da música (N); a trilha de cada deck se escolhe no deckbuilder">${musicIcon()}</button>
+        <button data-act="matpick" title="Trocar o tapete da mesa (T)">Tapete</button>
         ${replay ? '' : '<button data-act="report" title="Guardar esta partida para mostrar um problema">Relatar problema</button>'}
         ${online() ? '<button data-act="leave">Sair da sala</button>' : '<button data-act="setup">Menu</button>'}
       </div>
@@ -2808,8 +2828,9 @@ function gameHtml(): string {
   const d = game!.current;
   const top: P = (1 - view) as P;
   frame = computeFrame(eng, d);
+  const mat = matAttrs(currentMat(gameTrackId()));
   return `<div class="tt${isOtherTurn() ? ' waiting' : ''}${moveSel.length ? ' moving' : ''}${sideOpen ? ' sideopen' : ''}">
-    <main class="tt-mat">
+    <main class="tt-mat${mat.cls}"${mat.style ? ` style="${mat.style}"` : ''}>
       ${railHtml(eng, view, 'left')}${railHtml(eng, top, 'right')}
       ${handRowHtml(eng, top, true)}
       ${homeRowHtml(eng, top, true)}
@@ -3538,6 +3559,21 @@ function onClick(ev: MouseEvent) {
     }
     if (a === 'sound') {
       cycleSound();
+      render();
+      return;
+    }
+    if (a === 'matpick') {
+      loadMats(() => {
+        if (modal?.title === 'Tapete da mesa') modal.html = matPickHtml();
+        render();
+      });
+      modal = { title: 'Tapete da mesa', html: matPickHtml() };
+      render();
+      return;
+    }
+    if (a === 'mat') {
+      setMat(act.dataset.id || 'auto');
+      modal = null;
       render();
       return;
     }
@@ -4312,6 +4348,7 @@ function onKey(ev: KeyboardEvent) {
   else if (ev.key === 'm' || ev.key === 'M') document.querySelector<HTMLElement>('[data-act=sound]')?.click();
   else if (ev.key === 'n' || ev.key === 'N') document.querySelector<HTMLElement>('[data-act=music]')?.click();
   else if (ev.key === 'e' || ev.key === 'E') document.querySelector<HTMLElement>('[data-act=emotetog]')?.click();
+  else if (ev.key === 't' || ev.key === 'T') document.querySelector<HTMLElement>('[data-act=matpick]')?.click();
 }
 
 /** Fim de partida: guarda no histórico da conta e conta nas estatísticas do deck (uma vez por partida). */
