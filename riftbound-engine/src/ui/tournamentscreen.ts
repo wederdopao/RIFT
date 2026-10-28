@@ -240,7 +240,7 @@ function resultsHtml(t: Tournament): string {
             .map((g, i) => {
               const rp = g.rp || hasReplay(g.seed);
               const who = playerName(t, g.w === 0 ? m.a : m.b);
-              return `<span class="tour-g">${t.bestOf === 3 ? `Jogo ${i + 1}: ` : ''}<b>${esc(who)}</b> ${g.pts[0]} × ${g.pts[1]}${g.turns ? ` · ${g.turns} turnos` : ''}${g.how === 'fix' ? ' <small class="muted">(lançado pelo organizador)</small>' : ''}${rp ? ` <button type="button" class="tour-rp" data-act="trp" data-seed="${g.seed}">${wait === g.seed ? 'Buscando…' : 'Replay'}</button>` : ''}</span>`;
+              return `<span class="tour-g">${t.bestOf === 3 ? `Jogo ${i + 1}: ` : ''}<b>${esc(who)}</b> ${g.pts[g.w]} × ${g.pts[1 - g.w]}${g.turns ? ` · ${g.turns} turnos` : ''}${g.how === 'fix' ? ' <small class="muted">(lançado pelo organizador)</small>' : ''}${rp ? ` <button type="button" class="tour-rp" data-act="trp" data-seed="${g.seed}">${wait === g.seed ? 'Buscando…' : 'Replay'}</button>` : ''}</span>`;
             })
             .join('');
       return `<li><span class="tour-nr">${roundName(t, m.round)}</span><span class="tour-vs">${esc(playerName(t, m.a))} × ${esc(playerName(t, m.b))} · venceu <b>${esc(playerName(t, w))}</b></span><span class="tour-gs">${games}</span></li>`;
@@ -265,7 +265,7 @@ function meHtml(e: TourEntry, t: Tournament): string {
   const lobby = t.status === 'lobby';
   const canDeck = lobby || (t.status === 'running' && t.deckChange && !!mine);
   const pend = e.pending.length ? `<p class="tour-pend">${e.pending.length === 1 ? 'Um resultado seu está' : `${e.pending.length} resultados seus estão`} esperando o organizador confirmar (vai sozinho quando ele estiver conectado).</p>` : '';
-  if (!lobby && !mine) return pend + (e.note ? `<p class="muted">${esc(e.note)}</p>` : '');
+  if ((!lobby && !mine) || t.status === 'done') return pend + (e.note ? `<p class="muted">${esc(e.note)}</p>` : '');
   const deck = mine?.deck ?? (e.deck ? { name: e.deck.name, legend: e.deck.legend, champion: e.deck.champion } : null);
   const sel = canDeck ? `<div class="tour-row"><label for="tmydeck">${mine ? 'Trocar de deck' : 'Seu deck'}</label>${deckSelect('tmydeck', e.deckId, t.cards)}</div>` : '';
   let action = '';
