@@ -17,7 +17,7 @@ registerCard({
         self.data = { ...(self.data || {}), mordTurn: g.turn };
         yield* g.killG(v);
         dying.damage = 0;
-        dying.exhausted = true;
+        g.exhaust(dying); // evento 'exhaust' (como Soraka, Wanderer), não só a flag
         g.recall(dying);
         g.say(`${g.name(dying)} escapa da morte e volta exausto para a base.`, self.controller);
         return true;

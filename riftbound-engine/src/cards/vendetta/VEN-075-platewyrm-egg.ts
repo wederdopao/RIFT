@@ -1,9 +1,8 @@
 import { registerCard } from '../../engine/script';
-import { E, T, atBf, chooseDestination, chooseTokenLoc } from '../helpers';
-import { NO_COST } from '../../engine/types';
-import type { Obj, P } from '../../engine/types';
-import { empowerAct, hasDomain } from './_bh';
+import { E } from '../helpers';
 
+// Platewyrm Egg — "This enters exhausted. [Empower] — [1], [Tap]. [Reaction] [Tap]: [Add] [1]. If this is Empowered,
+// [Add] [2] instead." O [Add] depende do estado (addsFor), também no pagamento automático (429.3).
 registerCard({
   code: 'VEN-075',
   entersReady: () => false,
@@ -14,10 +13,8 @@ registerCard({
       timing: 'reaction',
       isAdd: true,
       exhaustSelf: true,
-      adds: { energy: 1 },
-      resolve: function* (c) {
-        if (c.self.empowered) c.g.addResources(c.p, 1, []);
-      },
+      addsFor: (_g, self) => ({ energy: self.empowered ? 2 : 1 }),
+      resolve: function* () {},
     },
   ],
 });

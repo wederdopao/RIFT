@@ -98,6 +98,7 @@ export interface Obj {
   prevent: number; // dano a prevenir neste turno
   enteredTurn?: number;
   zoneVersion: number; // muda a cada troca de zona (para checar alvos)
+  playedFrom?: Zone; // novo (revisão VEN): zona de onde a carta foi jogada pela última vez (evento cardPlayed.from)
   noMoveTurn?: number; // "não pode se mover neste turno"
   noMoveBy?: P; // novo (UNL chaos): com noMoveTurn, só este jogador não pode movê-la ("They can't move it this turn", Vex, Apathetic)
   attackedThisCombat?: boolean;

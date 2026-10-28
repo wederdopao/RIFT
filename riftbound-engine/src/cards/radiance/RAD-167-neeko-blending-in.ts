@@ -1,7 +1,8 @@
 import { registerCard } from '../../engine/script';
 // RAD-167 Neeko, Blending In
-// "If Neeko is in your deck, choose 3 different legends in addition to your starting legend." — DeckList.extraLegends
-// (deckcheck, deckbuilder, código de deck). "When you play me, choose one of those legends and add it to your Legend Zone
+// "If Neeko is in your deck, choose up to 3 different legends in addition to your starting legend." (errata de 09/10/2026,
+// Radiance Errata Updates: de 0 a 3) — DeckList.extraLegends (deckcheck, deckbuilder, código de deck). Lenda já na Legend
+// Zone não pode ser escolhida de novo (extraLegendsOut). "When you play me, choose one of those legends and add it to your Legend Zone
 // while I'm on the board." — g.addLegendWhile: as habilidades dela ficam ativas como as da lenda inicial; sai quando
 // Neeko sai do tabuleiro.
 registerCard({

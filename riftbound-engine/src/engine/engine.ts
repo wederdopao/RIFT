@@ -3,7 +3,7 @@
 import { cardData, kindOf, isChampionCard, allCards } from './db';
 import { TOKENS } from './tokens'; // novo (UNL): nomear tags (763)
 import { Rng } from './rng';
-import { getScript } from './script';
+import { getScript, empowerSpecs } from './script';
 import type { AbilityDef, ActivatedDef, Aura, CardScript, CostMod, Ctx, EffectText, EventType, OptionalCost, PayUse, TargetSpec, TriggerDef } from './script';
 import {
   DOMAINS,
@@ -179,6 +179,8 @@ export interface TempEffect {
   grantAct?: { code: string; index: number };
   /** Novo (VEN): [Flow] concedido a uma carta no descarte enquanto durar (Kennen, Storm of Shuriken): custo de Flow. */
   grantFlow?: Cost;
+  /** Novo (RAD-147): o alvo tem, enquanto durar, as palavras-chave calculadas por CardScript.grantedKw do código dado. */
+  kwFrom?: string;
 }
 
 /**
@@ -474,8 +476,14 @@ export class Engine {
   isUnitGear(o: Obj): boolean {
     if (this.kind(o) !== 'gear') return false;
     if (/unit gear/i.test(this.data(o).type)) return true;
+    if (this.lookbackUnit === o.id) return true; // novo (revisão RAD): gatilhos de morte olham para trás (ver emit)
     return o.zone === 'board' && this.effects.some((e) => e.target === o.id && e.flag === 'unitGear');
   }
+  /**
+   * Novo (revisão RAD): id do gear que era unidade por efeito (Lady of Clockwork) enquanto os gatilhos da morte dele são
+   * conferidos: o gatilho vê a permanente como ela era ao morrer (323.4, 428.1.a.1.b: localização e atributos anotados).
+   */
+  lookbackUnit?: string;
   /** Novo: o objeto é do tipo `k`? 'unit' conta o unit gear (isUnit); os outros pelo tipo da carta. */
   isKind(o: Obj, k: Kind): boolean {
     return k === 'unit' ? this.isUnit(o) : this.kind(o) === k;
@@ -492,6 +500,22 @@ export class Engine {
    * combate; num campo, a próxima limpeza o chama de volta (149.3) se não tiver Deploy.
    */
   makeUnitGear(gear: Obj, src: Obj, might = this.data(gear).energy) {
+    this.endUnitGear(src);
+    if (gear.zone !== 'board' || !this.isGear(gear)) return;
+    if (gear.attachedTo) this.detach(gear, src.controller);
+    this.addEffect({ target: gear.id, flag: 'unitGear', baseMight: might, until: 'perm', source: src.id });
+    this.say(`${this.name(gear)} vira um unit gear com ${might} de Might.`);
+    // novo (revisão RAD): virou unidade num campo que o controlador não controla: o campo fica disputado (patch notes
+    // das Core Rules do Radiance, Lady of Clockwork)
+    const l = this.locOf(gear);
+    if (l?.t === 'bf') this.applyContested(l.i, gear.controller);
+  }
+  /**
+   * Novo (revisão RAD): acaba o "vira unit gear" dado por `src` (o gear anterior deixa de ser unidade). A Lady of Clockwork
+   * chama ao finalizar o gatilho, quando escolhe o gear novo (patch notes do Radiance: entre finalizar e resolver,
+   * nenhum dos dois é unidade).
+   */
+  endUnitGear(src: Obj) {
     const old = this.effects.filter((e) => e.flag === 'unitGear' && e.source === src.id);
     this.effects = this.effects.filter((e) => !old.includes(e));
     for (const e of old) {
@@ -502,10 +526,6 @@ export class Engine {
         this.say(`${this.name(o)} deixa de ser unidade.`);
       }
     }
-    if (gear.zone !== 'board' || !this.isGear(gear)) return;
-    if (gear.attachedTo) this.detach(gear, src.controller);
-    this.addEffect({ target: gear.id, flag: 'unitGear', baseMight: might, until: 'perm', source: src.id });
-    this.say(`${this.name(gear)} vira um unit gear com ${might} de Might.`);
   }
   newObj(code: string, owner: P, zone: Zone, token = false): Obj {
     const o: Obj = {
@@ -680,7 +700,7 @@ export class Engine {
   /** p consegue pagar o Equip (recursos + parte não de recursos) de `gear` em `unit`? `cost` = custo já calculado. */
   canPayEquip(p: P, gear: Obj, unit: Obj, cost = this.equipCostFor(gear, unit, p), gearAbility = true): boolean {
     const ex = this.baseScript(gear).equipExtra;
-    if (ex && !ex.canPay(this, gear, p)) return false;
+    if (ex && !ex.canPay(this, gear, p, !gearAbility)) return false; // novo (RAD-150): 4º arg = pago pelo Weaponmaster
     return this.asPayFor(gearAbility ? 'gearAbility' : undefined, () => this.canPay(p, cost));
   }
   /** Unidades em que p pode ativar o Equip de `gear` agora (alvo: unidade que p controla, 818.1.c.2). */
@@ -795,6 +815,9 @@ export class Engine {
         if (onBoard && a.keywords) this.mergeKw(k, a.keywords(this, src, o));
         if (a.keywordsAnywhere) this.mergeKw(k, a.keywordsAnywhere(this, src, o)); // novo: em qualquer zona (Jax, Unmatched)
       }
+    // novo (RAD-147): habilidade dada por efeito que calcula palavras-chave ("I have [Assault] equal to my [Shield]" neste
+    // turno): TempEffect.kwFrom = código cujo CardScript.grantedKw recebe as palavras-chave já somadas (sem recursão)
+    if (onBoard) for (const e of this.effects) if (e.target === o.id && e.kwFrom) this.mergeKw(k, getScript(e.kwFrom)?.grantedKw?.(this, o, { ...k }));
     return k;
   }
   /**
@@ -951,7 +974,20 @@ export class Engine {
   toZone(o: Obj, zone: Zone, opts: { bottom?: boolean; player?: P } = {}) {
     // novo (Vendetta): substituição de ir para o descarte (Aura.trashReplace: Endless Riches, "If a card would go to your
     // trash from anywhere other than your Main Deck, banish it instead")
-    if (zone === 'trash' && !o.token && this.kind(o) !== 'rune' && this.trashReplaced(o)) zone = 'banish';
+    // revisão VEN-126..145: quem bane (evento 'banish', Zed: "when you banish"): o controlador do item que resolve; a
+    // substituição de descarte e o Flow são do dono / de quem jogou
+    let banishBy: P | undefined;
+    if (zone === 'trash' && !o.token && this.kind(o) !== 'rune' && this.trashReplaced(o)) {
+      zone = 'banish';
+      banishBy = o.owner;
+    }
+    // revisão VEN-126..145: spell jogado por Flow é banido sempre que sai da pilha, anulado inclusive (829.1.b; FAQ
+    // oficial do Vendetta: substituição atrasada, vale até contra "devolva à mão")
+    if (o.zone === 'chain' && zone !== 'chain' && o.data?.flowBy !== undefined) {
+      banishBy = o.data.flowBy;
+      delete o.data.flowBy;
+      zone = 'banish';
+    }
     const wasBoard = o.zone === 'board';
     const lastLoc = this.locOf(o);
     // novo: evento genérico de saída do tabuleiro (morrer, voltar à mão, banir, reciclar...); attached = o que estava
@@ -987,6 +1023,7 @@ export class Engine {
       // novo (124.1): o objeto novo também não herda "não pode se mover neste turno" (Vex, Apathetic)
       o.noMoveTurn = undefined;
       o.noMoveBy = undefined; // novo (UNL chaos)
+      o.damagedTurn = undefined; // novo (revisão VEN): objeto novo não "recebeu dano neste turno" (124; Affectionate Poro)
       o.controller = o.owner;
       this.effects = this.effects.filter((e) => e.target !== o.id);
       this.endControlUntilLeaves(o); // novo: controle "até eu sair do tabuleiro" acaba na hora (Akshan, Mischievous)
@@ -1017,7 +1054,7 @@ export class Engine {
     else if (zone === 'runeDeck') opts.bottom ? s.runeDeck.push(o.id) : s.runeDeck.unshift(o.id);
     if (leaveEv) this.emitLeave(leaveEv);
     for (const ev of detachEvs) this.emitLeave(ev);
-    if (zone === 'banish' && this.kind(o) !== 'rune') this.emit({ type: 'banish', obj: o, player: o.owner }); // novo (Vendetta): Zed, Master of Shadows
+    if (zone === 'banish' && this.kind(o) !== 'rune') this.emit({ type: 'banish', obj: o, player: o.owner, by: banishBy ?? (this.resolving > 0 && this.resolvingBy !== null ? this.resolvingBy : o.owner) }); // novo (Vendetta): Zed, Master of Shadows
   }
   /** Novo (Vendetta): o item da pilha escolheu `o` (alvo da jogada ou de uma execução do Repeat)? */
   itemChose(item: ChainItem | undefined, o: Obj): boolean {
@@ -1234,6 +1271,7 @@ export class Engine {
   // ───────────────────────────── ações de jogo ─────────────────────────────
   *draw(p: P, n = 1): Gen {
     let burns = 0; // novo: Burn Outs desta sequência (431.3.b)
+    const batch = {}; // novo (revisão RAD): mesma ação de comprar ("when you draw 1 or more cards", Zero Point Inflection)
     for (let i = 0; i < n; i++) {
       const s = this.pl[p];
       if (s.mainDeck.length === 0) {
@@ -1246,7 +1284,7 @@ export class Engine {
       o.zone = 'hand';
       o.zoneVersion++;
       s.hand.push(id);
-      this.emit({ type: 'draw', player: p, obj: o });
+      this.emit({ type: 'draw', player: p, obj: o, batch });
     }
     if (n > 0) this.say(`${this.pname(p)} compra ${n}.`, p);
   }
@@ -1315,13 +1353,14 @@ export class Engine {
     // novo (RAD): Aura.channelExtra (Seraphic Wyvern): canalizar N runas = N + extra runas exauridas
     let extra = 0;
     if (n > 0) for (const src of this.auraSources()) for (const a of this.script(src).auras || []) extra += a.channelExtra?.(this, src, p) || 0;
-    for (let i = 0; i < extra && s.runeDeck.length; i++) {
-      this.putOnBoard(this.objs[s.runeDeck.shift()!], { t: 'base', p }, false);
-      c++;
-    }
     for (let i = 0; i < n && s.runeDeck.length; i++) {
       const o = this.objs[s.runeDeck.shift()!];
       this.putOnBoard(o, { t: 'base', p }, !exhausted);
+      c++;
+    }
+    // "that many runes plus 1 exhausted rune": as runas a mais vêm depois das N (com o deck de runas curto, 430.3)
+    for (let i = 0; i < extra && s.runeDeck.length; i++) {
+      this.putOnBoard(this.objs[s.runeDeck.shift()!], { t: 'base', p }, false);
       c++;
     }
     if (c) this.say(`${this.pname(p)} canaliza ${c} runa(s)${exhausted ? ' exauridas' : ''}.`, p);
@@ -1650,9 +1689,13 @@ export class Engine {
       // mortes simultâneas contam como uma só "vez" (383.1.b): priorDeaths = mortes do controlador antes do lote
       const priorDeaths = this.pl[o.controller].unitDeaths || 0;
       const attached = o.attached ? [...o.attached] : undefined; // novo: texto de efeito que a unidade tinha (olhar para trás)
+      const wasUnit = this.isUnit(o); // novo (revisão RAD): era unidade ao morrer (unit gear por efeito; ver emit)
       const might = this.isUnit(o) ? this.might(o) : undefined; // novo: Might ao morrer (808.1.d.3; "se eu era Mighty", Unsung Hero)
       const alone = this.isUnit(o) && this.isAlone(o); // novo (SFD calm): "se eu morri sozinha", com as que morrem junto (FAQ #10890)
-      return { o, loc, snap, ctrl: o.controller, wasBuffed: o.buffs > 0, killer, killedBy, dkExtra, priorDeaths, attached, alone, might };
+      // novo (revisão VEN): substituição de ir para o descarte (Aura.trashReplace, Endless Riches) vista antes de qualquer
+      // uma sair: vale também para as que morrem junto com a fonte e para a própria fonte (370.4)
+      const banished = !o.token && this.kind(o) !== 'rune' && this.trashReplaced(o);
+      return { o, loc, snap, ctrl: o.controller, wasBuffed: o.buffs > 0, killer, killedBy, dkExtra, priorDeaths, attached, alone, might, banished, wasUnit };
     });
     const prevBuf = this.leaveBuf;
     const leaves: GameEvent[] = [];
@@ -1660,14 +1703,21 @@ export class Engine {
     const evs: GameEvent[] = [];
     // novo (SFD): mortes desta ação, para gatilhos "quando uma ou mais ... morrem" (Sivir): batch + lista
     const batch = ++this.dieBatch;
-    const dyingList = infos.map((x) => ({ id: x.o.id, controller: x.ctrl, unit: this.isUnit(x.o) }));
+    const dyingList = infos.filter((x) => !x.banished).map((x) => ({ id: x.o.id, controller: x.ctrl, unit: this.isUnit(x.o) }));
     for (const x of infos) {
+      // novo (revisão VEN): banida em vez de ir para o descarte = não foi morta (428.1: matar é ir do tabuleiro para o
+      // descarte); sem gatilhos de morte nem Deathknell (808.1.d.1; RiftJudge #11055; riftboundfaq, Mordekaiser × Endless Riches)
+      if (x.banished) {
+        this.toZone(x.o, 'banish');
+        this.say(`${this.name(x.o)} é banida em vez de ir para o descarte.`);
+        continue;
+      }
       if (this.isUnit(x.o)) this.pl[x.ctrl].unitDeaths = (this.pl[x.ctrl].unitDeaths || 0) + 1; // Spoils of War
       if (this.isGear(x.o)) this.pl[x.ctrl].gearDeaths = (this.pl[x.ctrl].gearDeaths || 0) + 1; // novo (RAD); unit gear conta como unidade e como gear
       if (this.isUnit(x.o) && this.phase === 'beginning') this.pl[x.ctrl].beginDeathTurn = this.turn; // novo (UNL calm): Shadow Watcher
       this.toZone(x.o, 'trash');
       this.say(`${this.name(x.o)} ${reason}.`);
-      evs.push({ type: 'die', obj: x.o, snap: x.snap, loc: x.loc, controller: x.ctrl, wasBuffed: x.wasBuffed, killer: x.killer, killedBy: x.killedBy, dkExtra: x.dkExtra, priorDeaths: x.priorDeaths, attached: x.attached, batch, dying: dyingList, alone: x.alone, might: x.might });
+      evs.push({ type: 'die', obj: x.o, snap: x.snap, loc: x.loc, controller: x.ctrl, wasBuffed: x.wasBuffed, killer: x.killer, killedBy: x.killedBy, dkExtra: x.dkExtra, priorDeaths: x.priorDeaths, attached: x.attached, batch, dying: dyingList, alone: x.alone, might: x.might, wasUnit: x.wasUnit });
     }
     this.leaveBuf = prevBuf;
     for (const ev of [...evs, ...leaves]) {
@@ -2161,7 +2211,7 @@ export class Engine {
     opts: { viaEquip?: boolean } = {},
   ): boolean {
     if (gear.zone !== 'board' || unit.zone !== 'board' || !this.isUnit(unit) || gear.id === unit.id || unit.attachedTo) return false;
-    if (this.isUnit(gear)) return false; // novo: unit gear é unidade, não se anexa (decisão sem ruling; ver makeUnitGear)
+    if (this.isUnit(gear)) return false; // novo: unit gear é unidade, não se anexa (patch notes das Core Rules do Radiance: "Units can't be attached to other game objects")
     if (gear.attachedTo === unit.id) return false; // 434.1.g: nada acontece
     const prev = this.topMost(gear);
     if (prev) {
@@ -2345,7 +2395,7 @@ export class Engine {
     owners.push(...this.legendsOf(p)); // novo (Neeko): lendas acrescentadas
     for (const o of owners) {
       for (const a of this.script(o).activated || []) {
-        const adds = this.addsOf(a);
+        const adds = this.addsOf(a, o);
         if (!adds || a.notAutoPay) continue; // novo: Gold entra pelo caminho próprio do pagamento
         // restrição de uso ("Use only to play spells", Ornn "only to play gear or use gear abilities", Renekton, Butcher...)
         if (!this.usesAllow(this.addUses(adds), forSpell)) continue;
@@ -2443,8 +2493,9 @@ export class Engine {
     return { energy, power };
   }
   /** O que uma habilidade de [Add] adiciona (adds, ou addPower dos Seals); undefined se não for [Add]. */
-  addsOf(a: ActivatedDef): NonNullable<ActivatedDef['adds']> | undefined {
+  addsOf(a: ActivatedDef, src?: Obj): NonNullable<ActivatedDef['adds']> | undefined {
     if (!a.isAdd) return undefined;
+    if (a.addsFor && src) return a.addsFor(this, src); // novo (revisão VEN-075): o que adiciona depende do estado da fonte
     if (a.adds) return a.adds;
     if (a.addPower) return { power: [Array.isArray(a.addPower) ? a.addPower : [a.addPower]] };
     return undefined;
@@ -3236,11 +3287,14 @@ export class Engine {
   }
   deflectCost(ids: string[][], p: P): Cost {
     if (this.ignoreDeflectNow) return { energy: 0, power: [] };
+    // revisão VEN: escolher algo no Heisho ignora TODO o Deflect desse spell/habilidade, também de alvos em outro lugar
+    // (FAQ oficial do Vendetta; RiftJudge #11769)
+    if (ids.some((grp) => grp.some((id) => this.objs[id]?.zone === 'board' && this.ignoresDeflect(this.objs[id])))) return { energy: 0, power: [] };
     let n = 0;
     for (const grp of ids)
       for (const id of grp) {
         const o = this.objs[id];
-        if (o && o.zone === 'board' && o.controller !== p && !this.ignoresDeflect(o)) n += this.activeKw(o).deflect || 0;
+        if (o && o.zone === 'board' && o.controller !== p) n += this.activeKw(o).deflect || 0;
       }
     return { energy: 0, power: Array.from({ length: n }, () => [...DOMAINS]) };
   }
@@ -3267,6 +3321,17 @@ export class Engine {
 
   // ───────────────────────────── gatilhos ─────────────────────────────
   emit(ev: GameEvent) {
+    // novo (revisão RAD): gear que era unidade por efeito e morreu é visto como unidade pelos gatilhos dessa morte
+    // ("quando uma unidade morre"): 323.4 e 428.1.a.1.b anotam os atributos do momento da morte
+    if (ev.type === 'die' && ev.wasUnit && ev.obj && this.lookbackUnit !== ev.obj.id && !this.isUnit(ev.obj)) {
+      const prev = this.lookbackUnit;
+      this.lookbackUnit = ev.obj.id;
+      try {
+        return this.emit(ev);
+      } finally {
+        this.lookbackUnit = prev;
+      }
+    }
     // novo (RAD): "jogou uma unidade ou gear para um campo de batalha neste turno" (Hold 'Em): vale mesmo que a carta já tenha saído
     if (ev.type === 'play' && !ev.spell && ev.player !== undefined && ev.loc?.t === 'bf' && ev.obj && (this.isUnit(ev.obj) || this.isGear(ev.obj))) {
       const s = this.pl[ev.player as P];
@@ -3803,6 +3868,18 @@ export class Engine {
           }
         }
       });
+      // novo (RAD, 107.3.b.2): a lotação da zona de cartas escondidas diminuiu (saiu o Bushwhack Trap, Aura.hideExtra):
+      // o controlador do campo põe o excesso no descarte, à escolha dele
+      for (let i = 0; i < this.bfs.length; i++) {
+        const b = this.bfs[i];
+        if (b.controller === null) continue;
+        const over = b.facedown.length - (b.capacity + this.hideExtra(i, b.controller));
+        if (over <= 0) continue;
+        const ids = yield* this.ask(b.controller, 'choose', `Só cabem ${b.facedown.length - over} carta(s) escondida(s) em ${this.name(b.objId)}: quais vão para o descarte?`, b.facedown.map((id) => ({ id, label: this.name(id), obj: id })), over, over);
+        for (const id of ids) this.toZone(this.objs[id], 'trash');
+        this.say(`${this.pname(b.controller)} põe ${over} carta(s) escondida(s) de ${this.name(b.objId)} no descarte.`);
+        changed = true;
+      }
       // 8. status de disputa
       this.bfs.forEach((b, i) => {
         const inSd = this.showdown && this.showdown.bf === i;
@@ -4266,13 +4343,16 @@ export class Engine {
     yield* this.drain();
     if (this.winner !== null) return;
     this.showdown = null;
+    // novo (revisão VEN): unidades que estiveram neste combate (atacante/defensora em algum momento) e continuam no
+    // tabuleiro, mesmo se chamadas de volta no empate: "When a combat that I was in ends" (Affectionate Poro, Mournful Witness)
+    const was = this.units().filter((u) => u.attackedThisCombat || u.defendedThisCombat).map((u) => u.id);
     for (const u of this.units()) {
       u.role = undefined;
       u.attackedThisCombat = false;
       u.defendedThisCombat = false;
     }
     this.effects = this.effects.filter((e) => e.until !== 'combat');
-    this.emit({ type: 'combatEnd', bf: i, units: remaining });
+    this.emit({ type: 'combatEnd', bf: i, units: remaining, was });
   }
 
   // ───────────────────────────── opções de ação ─────────────────────────────
@@ -4302,7 +4382,9 @@ export class Engine {
     // novo (RAD): cartas banidas que podem ser jogadas "até o seu próximo Ending Phase" (Akali, Brash; Runeblade Anvil)
     for (const id of s.banish) {
       const d = this.objs[id]?.data;
-      if (d && d.playBy === p && d.playUntil !== undefined && this.turn <= d.playUntil) playable.push({ o: this.objs[id], via: 'banished' });
+      // revisão RAD: "until your next Ending Phase" acaba quando esse Ending Phase começa; playVer = o mesmo objeto (124.1)
+      const live = d && d.playUntil !== undefined && (this.turn < d.playUntil || (this.turn === d.playUntil && this.phase !== 'ending'));
+      if (d && d.playBy === p && live && (d.playVer === undefined || d.playVer === this.objs[id].zoneVersion)) playable.push({ o: this.objs[id], via: 'banished' });
     }
     for (const { o, via } of playable) {
       if (this.canPlayCard(p, o, via, timing))
@@ -4518,6 +4600,9 @@ export class Engine {
   }
   /** Novo (UNL mind): custo alternativo da própria carta (CardScript.altCost) ao jogá-la da mão ou da zona de campeão. */
   altCostFor(p: P, o: Obj, via: string): Cost | undefined {
+    // revisão VEN-113: spell com [Flow] impresso que ganhou outro [Flow] por efeito (Kennen) tem as duas instâncias; o
+    // jogador escolhe por qual joga (a impressa é o custo base, a dada é a alternativa)
+    if (via === 'flow') return this.script(o).flow ? this.grantedFlow(o) : undefined;
     if (via !== 'hand' && via !== 'champion') return undefined;
     return this.script(o).altCost?.(this, o, p);
   }
@@ -4690,8 +4775,10 @@ export class Engine {
     this.addEffect({ target: o.id, grantAct: { code, index }, until });
   }
   /** Novo (Vendetta): "empower it" (fica Empowered se não estiver; com `max`, conta até N vezes — Kayle, Justified). */
-  empowerObj(o: Obj, p: P, max = 1): boolean {
-    const n = (o as any).empowerCount ?? (o.empowered ? 1 : 0);
+  empowerObj(o: Obj, p: P, max = this.empowerMax(o)): boolean {
+    // revisão VEN-082/VEN-134: a permissão "até N vezes" (Kayle, Justified: EmpowerSpec.max) vale para qualquer
+    // instrução de Empower, não só a da própria habilidade (441.1.c.1)
+    const n = o.empowered ? Math.max(1, (o as any).empowerCount ?? 1) : 0;
     if (n >= max) return false;
     (o as any).empowerCount = n + 1;
     o.empowered = true;
@@ -4702,10 +4789,17 @@ export class Engine {
   /** Novo (Vendetta): "disempower it". */
   disempower(o: Obj): boolean {
     if (!o.empowered) return false;
-    o.empowered = false;
-    (o as any).empowerCount = 0;
-    this.say(`${this.name(o)} deixa de estar Empowered.`);
+    // revisão VEN-082/VEN-134: quem pode ficar Empowered várias vezes perde só um status por Disempower (FAQ oficial do
+    // Vendetta, Kayle, Justified; RiftJudge #11752); nos outros o status é binário (441.1.a)
+    const left = Math.max(1, (o as any).empowerCount ?? 1) - 1;
+    o.empowered = left > 0;
+    (o as any).empowerCount = left;
+    this.say(left > 0 ? `${this.name(o)} perde um status de Empowered (fica com ${left}).` : `${this.name(o)} deixa de estar Empowered.`);
     return true;
+  }
+  /** Novo (revisão VEN-082): quantas vezes `o` pode ficar Empowered ("up to three times", Kayle: EmpowerSpec.max; padrão 1). */
+  empowerMax(o: Obj): number {
+    return Math.max(1, ...empowerSpecs(this.script(o)).map((s) => s.max ?? 1));
   }
   /** Vezes que está Empowered (Kayle, Justified). */
   empowerCount(o: Obj): number {
@@ -4813,9 +4907,10 @@ export class Engine {
     if (a.extraCost && !(yield* a.extraCost(c))) throw new IllegalAction('Custo não pago.');
     this.say(`${this.name(o)}: ${a.label}.`, p);
     // novo: [Add] declarado em `adds` (Energy Conduit, Kai'Sa, Lux...): o motor põe no pool (com a marca "só para spells")
-    if (a.adds) {
+    const ad = a.addsFor ? a.addsFor(this, o) : a.adds; // novo (revisão VEN-075): addsFor
+    if (ad) {
       const pw: (Domain | 'any')[] = [];
-      for (const pip of a.adds.power || []) {
+      for (const pip of ad.power || []) {
         if (pip.length >= DOMAINS.length) pw.push('any');
         else if (pip.length === 1) pw.push(pip[0]);
         else {
@@ -4823,7 +4918,7 @@ export class Engine {
           pw.push(d as Domain);
         }
       }
-      this.addResources(p, a.adds.energy || 0, pw, !!a.adds.onlySpells, !!a.adds.onlyGear, !!a.adds.onlyShowdown, a.adds.only);
+      this.addResources(p, ad.energy || 0, pw, !!ad.onlySpells, !!ad.onlyGear, !!ad.onlyShowdown, ad.only);
     }
     yield* a.resolve(c);
     if (this.showdown && !this.chain.length) this.showdown.flipAfterChain = false;
@@ -5146,6 +5241,7 @@ export class Engine {
     if (k === 'spell') this.noteSpellSpend(p, cost); // novo (UNL mind): Jhin, Meticulous Killer
     if (k === 'spell') this.noteSpellEnergy(o, cost.energy); // novo (UNL fury): Revna
     // 5-6. finalizar
+    o.playedFrom = o.zone; // novo (revisão VEN): zona de onde a carta é jogada (Kennen, Heart of the Tempest)
     this.removeFromArrays(o);
     o.controller = p;
     o.zone = 'chain';
@@ -5189,6 +5285,7 @@ export class Engine {
         spentE: cost.energy, // novo (revisão UNL fury)
       };
       c.item = item;
+      if (via === 'flow') (o.data ||= {}).flowBy = p; // revisão VEN-126..145: banir ao sair da pilha (toZone)
       this.pushChain(item);
     }
     // gatilhos de "jogar" (Darius, Trifarian): unidade/gear agora; spell ao terminar de resolver (419.4.a)
@@ -5210,7 +5307,7 @@ export class Engine {
   emitCardPlayed(o: Obj, p: P, via?: string) {
     const s = this.pl[p];
     s.completed = (s.completed || 0) + 1;
-    this.emit({ type: 'cardPlayed', obj: o, player: p, via, nth: s.completed });
+    this.emit({ type: 'cardPlayed', obj: o, player: p, via, nth: s.completed, from: o.playedFrom }); // from (novo, revisão VEN): zona de origem
   }
   /**
    * Jogar uma carta por efeito (ex.: Flame Chompers do descarte). `cost` é o custo base que o efeito dá ("ignorando o
@@ -5277,6 +5374,7 @@ export class Engine {
     yield* this.asPayForG(use, this.payG(p, total));
     this.notePaid(p, o); // novo (Vendetta): Aura.onPaid
     this.playingLoc = undefined;
+    o.playedFrom = o.zone; // novo (revisão VEN): zona de onde a carta é jogada (Kennen, Heart of the Tempest)
     this.removeFromArrays(o);
     o.controller = p;
     o.zone = 'chain';
@@ -5332,6 +5430,7 @@ export class Engine {
     this.notePaid(p, o); // novo (Vendetta): Aura.onPaid
     this.noteSpellSpend(p, total); // novo (UNL mind): Jhin, Meticulous Killer
     this.noteSpellEnergy(o, total.energy); // novo (UNL fury): Revna
+    o.playedFrom = o.zone; // novo (revisão VEN): zona de onde a carta é jogada (Kennen, Heart of the Tempest)
     this.removeFromArrays(o);
     o.controller = p;
     o.zone = 'chain';
@@ -5686,7 +5785,7 @@ const WEAPONMASTER: AbilityDef = {
     const ex = g.baseScript(eq).equipExtra;
     if (ex) {
       g.payingFor = { src: eq, p: c.p };
-      const ok = yield* ex.pay(g.ctx(eq, c.p, { data: { equipUnit: u.id } }));
+      const ok = yield* ex.pay(g.ctx(eq, c.p, { data: { equipUnit: u.id, weaponmaster: true } })); // novo (RAD-150): parte em [Rune] com [A] a menos
       g.payingFor = undefined;
       if (!ok) return;
     }

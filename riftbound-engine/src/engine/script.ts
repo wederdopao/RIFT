@@ -116,7 +116,7 @@ export type EventType =
   | 'gainXp' // jogador ganhou XP (730.1): { player, amount, source? } — "se você ganhou XP neste turno": g.gainedXpThisTurn(p)
   | 'spendXp' // jogador gastou XP (730.2), como custo ou não: { player, amount, source? }
   | 'replace' // objeto substituído por uma ficha ou trocado de volta (438): { obj (mesmo id), from, to = códigos, player, swapBack? }
-  | 'banish' // novo (Vendetta): carta banida: { obj, player = dono } (Zed, Master of Shadows)
+  | 'banish' // novo (Vendetta): carta banida: { obj, player = dono, by = quem baniu } (Zed, Master of Shadows)
   | 'mightReduce' // novo (RAD): Might de uma unidade reduzido por efeito: { unit, amount (<0), by = controlador do efeito }
   | 'exhaust' // novo (RAD): permanente ficou exaurido: { obj, player = controlador, units = os que exauriram juntos }
   | 'hide'; // novo (UNL fury): carta escondida (Hidden): { obj, player = quem escondeu, bf } (Katarina, Reckless)
@@ -166,6 +166,9 @@ export interface ActivatedDef extends AbilityDef {
   // energia para adicionar esse tanto de [A]" (Ancient Henge: energyToPower) ou o contrário (Hextech Anomaly:
   // powerToEnergy): o pagamento automático escolhe a quantidade e paga a conversão junto; a ativação manual continua
   // pela própria habilidade (prepare/cost/resolve da carta).
+  /** Novo (revisão VEN-075): `adds` que depende do estado da fonte ("[Add] [1]. If this is Empowered, [Add] [2] instead",
+   *  Platewyrm Egg); vale no pagamento automático e na ativação manual (tem prioridade sobre `adds`). */
+  addsFor?: (g: Engine, self: Obj) => NonNullable<ActivatedDef['adds']>;
   condition?: (g: Engine, self: Obj) => boolean;
   /** Resolve na hora, sem passar pela pilha (habilidades de Add, ex.: Lux, Crownguard). */
   immediate?: boolean;
@@ -201,7 +204,7 @@ export interface EmpowerSpec {
   exhaustSelf?: boolean;
   /** Custo não de recursos (Discard 1, matar uma unidade aliada, descartar um spell). */
   extra?: { label: string; canPay: (c: Ctx) => boolean; pay: (c: Ctx) => Gen<boolean> };
-  /** "I can be Empowered up to three times" (Kayle, Justified): pode ativar enquanto empowerCount < max. */
+  /** "I can be Empowered up to three times" (Kayle, Justified): vale para toda instrução de Empower (Engine.empowerObj). */
   max?: number;
   /** Timing alterado pelo texto (827.1.c.4). */
   timing?: 'main' | 'action' | 'reaction';
@@ -398,6 +401,12 @@ export interface CardScript {
   code: string;
   keywords?: Keywords;
   kwMod?: (g: Engine, self: Obj) => Keywords | undefined;
+  /**
+   * Novo (RAD-147): palavras-chave de uma habilidade que esta carta DÁ a outra unidade por efeito ("give a friendly unit
+   * 'I have [Assault] equal to my [Shield]' this turn"): `g.addEffect({ target, kwFrom: code, until })`. `soFar` = as
+   * palavras-chave da unidade já somadas (sem esta), para calcular sem recursão.
+   */
+  grantedKw?: (g: Engine, unit: Obj, soFar: Keywords) => Keywords | undefined;
   mightMod?: (g: Engine, self: Obj) => number;
   /** Equip [custo] (818): custo de recursos. "Equip — [C], Recycle 2..." usa também `equipExtra`. */
   equipCost?: Cost;
@@ -405,7 +414,9 @@ export interface CardScript {
   equipFor?: (g: Engine, gear: Obj, unit: Obj, p: P) => Cost;
   /** Novo: parte não de recursos do custo de Equip (Last Rites: reciclar 2; Blade of the Ruined King: matar uma unidade
    *  aliada). Weaponmaster não reduz esta parte (RiftJudge #10704). `pay` recebe c.self = gear, c.data.equipUnit = unidade. */
-  equipExtra?: { label: string; canPay: (g: Engine, gear: Obj, p: P) => boolean; pay: (c: Ctx) => Gen<boolean> };
+  /** Novo (RAD-150): `canPay` recebe `wm` = true e `pay` recebe c.data.weaponmaster quando o custo é pago pelo Weaponmaster
+   *  (821.1.c: [A] a menos), para custos com alternativa em power ("[Rune] or exhaust a friendly unit", Blade of the Exile). */
+  equipExtra?: { label: string; canPay: (g: Engine, gear: Obj, p: P, wm?: boolean) => boolean; pay: (c: Ctx) => Gen<boolean> };
   /** Novo: texto que muda o timing do Equip (818.1.c.5). Padrão: fase principal do seu turno, estado neutro aberto. */
   equipTiming?: 'action' | 'reaction';
   /**
@@ -604,7 +615,9 @@ export function empowerAbilityOf(spec: EmpowerSpec): ActivatedDef {
     baseCost: base,
     canPayExtra: spec.extra ? (c) => spec.extra!.canPay(c) : undefined,
     extraCost: spec.extra ? (c) => spec.extra!.pay(c) : undefined,
-    condition: (g, self) => g.empowerCount(self) < max,
+    // revisão VEN-126..145: com a permissão de várias vezes o "Use only if not Empowered" não existe: ativa sempre e, já no
+    // máximo, resolve sem efeito (FAQ oficial do Vendetta, Kayle, Justified)
+    condition: max > 1 ? undefined : (g, self) => g.empowerCount(self) < max,
     resolve: function* (c) {
       if (c.self.zone === 'board' || c.self.zone === 'legend') c.g.empowerObj(c.self, c.p, max);
     },

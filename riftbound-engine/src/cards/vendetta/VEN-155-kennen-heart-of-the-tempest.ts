@@ -1,14 +1,16 @@
 import { registerCard } from '../../engine/script';
-import { E } from '../helpers';
-import { exhaustMe, disempowerMe, moveFriendlyUnit, chooseBf } from '../vendetta/leg-helpers';
-// VEN-155 Kennen, Heart of the Tempest
+import { disempowerMe } from '../vendetta/leg-helpers';
+// VEN-155 Kennen, Heart of the Tempest — "When you play a card from anywhere other than your hand, empower me." Olha a zona
+// de onde a carta saiu (evento cardPlayed.from): descarte (Flow, Endless Riches), escondida, zona de campeão, banidas...;
+// uma carta jogada por efeito a partir da mão não conta. O gatilho vai para a pilha mesmo com o Kennen já Empowered (o
+// estado dele não faz parte da condição; 441.1.c: nada acontece a mais).
 registerCard({
   code: 'VEN-155',
   triggers: [
     {
       on: 'cardPlayed',
       label: 'Empower em mim',
-      cond: (c, ev) => ev.player === c.p && !!ev.via && ev.via !== 'hand' && !c.self.empowered,
+      cond: (c, ev) => ev.player === c.p && !!ev.from && ev.from !== 'hand',
       resolve: function* (c) {
         c.g.empowerObj(c.self, c.p);
       },

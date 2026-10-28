@@ -1,8 +1,8 @@
 import { registerCard } from '../../engine/script';
-import { E, T, playBomb, showOff, showedOff, chooseDestination, chooseTokenLoc } from '../helpers';
-import { NO_COST } from '../../engine/types';
-import type { Obj } from '../../engine/types';
 
+// "[Deathknell] You may kill a unit or gear here." O "you may" no início do efeito é decidido ao finalizar o gatilho
+// (383.3.a) e a unidade/gear é alvo, escolhido nessa hora (355.10, 355.12: Deflect e "não pode ser escolhida" valem).
+// "here" = o local onde eu estava ao morrer.
 registerCard({
   code: 'RAD-126',
   triggers: [
@@ -10,14 +10,18 @@ registerCard({
       on: 'die',
       zone: 'self',
       label: 'Deathknell: matar uma unidade ou gear aqui',
+      optional: 'Matar uma unidade ou gear onde Mournful Spirit estava?',
       cond: (c, ev) => ev.obj?.id === c.self.id && !!ev.loc,
+      targets: [
+        {
+          prompt: 'Mournful Spirit: matar qual unidade ou gear aqui?',
+          kind: 'permanent',
+          filter: (c, o) => o.id !== c.self.id && !!c.ev?.loc && c.g.locEq(c.g.locOf(o), c.ev.loc),
+        },
+      ],
       resolve: function* (c) {
-        const g = c.g;
-        const loc = c.ev?.loc;
-        const cands = g.board().filter((o) => (g.isUnit(o) || g.isGear(o)) && o.id !== c.self.id && g.locEq(g.locOf(o), loc));
-        if (!cands.length) return;
-        const [o] = yield* g.chooseObj(c.p, 'Mournful Spirit: matar qual unidade ou gear aqui? (opcional)', cands, 0, 1);
-        if (o && o.zone === 'board') yield* g.killG(o);
+        const o = c.targets[0][0];
+        if (o && o.zone === 'board') yield* c.g.killG(o);
       },
     },
   ],

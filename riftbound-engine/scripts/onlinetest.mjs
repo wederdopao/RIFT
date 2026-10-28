@@ -392,10 +392,11 @@ async function settle(ms = 8000) {
 async function undoRequest(from, to, accept) {
   if (!(await settle())) return null;
   if (await from.$('.tt-undoask')) return null;
-  const btn = await from.$('[data-act=undo]:not([disabled])');
-  if (!btn) return null;
+  // localizador, não ElementHandle: a mesa redesenha o botão a cada mensagem e um handle velho fica solto do DOM
+  const btn = from.locator('[data-act=undo]:not([disabled])').first();
+  if (!(await btn.count())) return null;
   const before = await nAns(from);
-  await btn.click();
+  if (!(await btn.click({ timeout: 4000 }).then(() => true, () => false))) return null;
   const asked = await to.waitForSelector('.tt-undoask', { timeout: 4000 }).catch(() => null);
   if (!asked) return null; // foi desfeito direto (a jogada era só dele): não é o caso do pedido
   ok(!(await C.$('.tt-undoask')), 'espectador não vê o pedido de desfazer');

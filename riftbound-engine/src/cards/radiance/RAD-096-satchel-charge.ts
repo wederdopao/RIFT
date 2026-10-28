@@ -9,6 +9,8 @@ registerCard({
   spell: {
     label: 'Satchel Charge',
     targets: [T.friendlyUnit('Satchel Charge: mover qual unidade aliada?')],
+    // a Bomb não depende do alvo: com o alvo inválido o spell ainda resolve e joga a Bomb (359.3.e.1, 359.3.e.6)
+    alwaysResolve: true,
     // o destino do movimento é escolhido ao jogar, junto com o alvo (355.4)
     choose: function* (c, ids) {
       const g = c.g;

@@ -6488,7 +6488,6 @@
 "might": 3,
 "mightBonus": 0,
 "tags": [
-"Unit",
 "Ionia"
 ],
 "text": "When I attack, ready another friendly unit.",
@@ -8671,9 +8670,7 @@
 "power": 0,
 "might": 0,
 "mightBonus": 0,
-"tags": [
-"Gear"
-],
+"tags": [],
 "text": "[empower][2] ([2]: Empower this. Use only if not Empowered.)\n[tap]: Give a unit +2[might] this turn. If this is [empowered], give that unit +4[might] this turn instead.",
 "effectText": "",
 "errata": false
@@ -17119,9 +17116,7 @@
 "power": 1,
 "might": 0,
 "mightBonus": 0,
-"tags": [
-"Spell"
-],
+"tags": [],
 "text": "[action] (Play on your turn or in showdowns.)\nThis can't be countered.\nDeal 4 to an enemy Calm ([calm]) unit.",
 "effectText": "",
 "errata": false
@@ -18440,9 +18435,9 @@
 "might": 0,
 "mightBonus": 0,
 "tags": [],
-"text": "Ready a unit.\nWhen you play a card with Energy cost [7] or more, you may play this from your trash for [1][Fury][Fury]. Banish this.",
+"text": "Ready a unit.\nWhen you play a card with Energy cost [7] or more, you may play this from your trash for [1][Fury][Fury]. Then banish this.",
 "effectText": "",
-"errata": false
+"errata": true
 },
 "RAD-011": {
 "code": "RAD-011",
@@ -19833,9 +19828,9 @@
 "tags": [
 "Freljord"
 ],
-"text": "[Hidden] (Hide now for [Rune] to react with later for [0].)\nWhen you play me, give another friendly unit +3 [Might] this turn, then recycle me if I was played from face down.",
+"text": "[Hidden] (Hide now for [Rune] to react with later for [0].)\nWhen you play me, give a friendly unit +3 [Might] this turn, then recycle me if I was played from face down.",
 "effectText": "",
-"errata": false
+"errata": true
 },
 "RAD-082": {
 "code": "RAD-082",
@@ -21497,8 +21492,8 @@
 "Neeko",
 "Ixtal"
 ],
-"text": "(Neutral cards can go in decks of any Domain.)\nIf Neeko is in your deck, choose 3 different legends in addition to your starting legend. (Different means none match names.)\nWhen you play me, choose one of those legends and add it to your Legend Zone while I'm on the board.",
+"text": "(Neutral cards can go in decks of any Domain.)\nIf Neeko is in your deck, choose up to 3 different legends in addition to your starting legend. (Different means none match names.)\nWhen you play me, choose one of those legends and add it to your Legend Zone while I'm on the board.",
 "effectText": "",
-"errata": false
+"errata": true
 }
 }

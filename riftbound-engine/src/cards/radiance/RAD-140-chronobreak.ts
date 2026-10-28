@@ -3,7 +3,7 @@ import { E } from '../helpers';
 import { exhaustMe, disempowerMe, moveFriendlyUnit, chooseBf } from '../vendetta/leg-helpers';
 // RAD-140 Chronobreak
 import { NO_COST } from '../../engine/types';
-import type { Loc } from '../../engine/types';
+import type { Loc, P } from '../../engine/types';
 registerCard({
   code: 'RAD-140',
   mandatoryCost: {
@@ -31,15 +31,33 @@ registerCard({
       const mine = g.units().filter((u) => u.controller === c.p);
       if (!x || !mine.length) return;
       const picks = yield* g.chooseObj(c.p, `Chronobreak: banir ${Math.min(x, mine.length)} unidade(s) sua(s)`, mine, Math.min(x, mine.length), Math.min(x, mine.length));
-      const back: { o: typeof picks[0]; loc: Loc }[] = [];
+      const back: { id: string; ver: number; loc: Loc; owner: P }[] = [];
       for (const u of picks) {
         const loc = g.locOf(u) as Loc;
-        back.push({ o: u, loc });
         g.banishObj(u);
+        if (!u.token && u.zone === 'banish') back.push({ id: u.id, ver: u.zoneVersion, loc, owner: u.owner }); // ficha: deixou de existir
       }
-      for (const { o, loc } of back) {
-        if (o.token || o.zone !== 'banish') continue;
-        yield* g.playFromEffect(o.owner, o, NO_COST, loc.t === 'bf' ? loc : { t: 'base', p: o.owner }, { allFree: true });
+      // "(You choose the order.)": quem joga Chronobreak escolhe a ordem; "its owner plays that unit back to the same
+      // location or to their base": o dono escolhe entre o mesmo local e a base dele (356.1.b.1: custo base [0]).
+      while (back.length) {
+        let k = 0;
+        if (back.length > 1) {
+          const [o] = yield* g.chooseObj(c.p, 'Chronobreak: qual unidade volta agora?', back.map((b) => g.objs[b.id]));
+          k = Math.max(0, back.findIndex((b) => b.id === o?.id));
+        }
+        const [b] = back.splice(k, 1);
+        const o = g.objs[b.id];
+        if (o.zone !== 'banish' || o.zoneVersion !== b.ver) continue;
+        const home: Loc = { t: 'base', p: b.owner };
+        let to: Loc = home;
+        if (b.loc.t === 'bf' && g.playLocOk(b.owner, o, b.loc)) {
+          const [w] = yield* g.ask(b.owner, 'choose', `Chronobreak: jogar ${g.name(o)} de volta onde?`, [
+            { id: 'same', label: g.locName(b.loc), obj: g.bfs[b.loc.i].objId },
+            { id: 'base', label: g.locName(home) },
+          ]);
+          if (w === 'same') to = b.loc;
+        }
+        yield* g.playFromEffect(b.owner, o, NO_COST, to);
       }
     },
   },

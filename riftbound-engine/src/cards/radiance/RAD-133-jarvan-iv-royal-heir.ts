@@ -16,7 +16,8 @@ registerCard({
       resolve: function* (c) {
         const u = c.targets[0][0];
         const i = c.g.bfIndex(c.self);
-        if (u && u.zone === 'board' && i >= 0) c.g.moveUnits([u], { t: 'bf', i }, c.p);
+        // custo aplicado ao movimento: quem move escolhe pagar (204.4.c)
+        if (u && u.zone === 'board' && i >= 0) yield* c.g.moveUnitsG([u], { t: 'bf', i }, c.p);
       },
     },
   ],

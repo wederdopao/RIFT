@@ -1,20 +1,21 @@
 import { registerCard } from '../../engine/script';
-import { E } from '../helpers';
-import { exhaustMe, disempowerMe, moveFriendlyUnit, chooseBf } from '../vendetta/leg-helpers';
-// VEN-150 Acceleration Gate
+// VEN-150 Acceleration Gate — "Ready up to 4 units, gear and/or runes." São alvos escolhidos ao jogar (355.5, 355.13: "up
+// to" permite zero), no tabuleiro e de qualquer jogador (355.9.a.1).
 registerCard({
   code: 'VEN-150',
   spell: {
     label: 'Acceleration Gate',
+    targets: [
+      {
+        prompt: 'Acceleration Gate: preparar até 4 (unidades, gear e/ou runas)',
+        kind: 'permanent',
+        cands: (c) => c.g.board().filter((o) => c.g.isUnit(o) || c.g.isGear(o) || c.g.kind(o) === 'rune'),
+        min: 0,
+        max: 4,
+      },
+    ],
     resolve: function* (c) {
-      const g = c.g;
-      const cands = [
-        ...g.board().filter((o) => o.controller === c.p && o.exhausted && (g.isUnit(o) || g.isGear(o))),
-        ...g.runesOf(c.p).filter((r) => r.exhausted),
-      ];
-      if (!cands.length) return;
-      const picks = yield* g.chooseObj(c.p, 'Acceleration Gate: preparar até 4 (unidades, gear e/ou runas)', cands, 0, 4);
-      for (const o of picks) g.ready(o, c.p);
+      for (const o of c.targets[0]) c.g.ready(o, c.p);
     },
   },
 });

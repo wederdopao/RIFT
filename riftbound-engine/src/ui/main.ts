@@ -1,7 +1,7 @@
 // Interface de mesa (passa-e-joga) para o motor de Riftbound.
 import '../cards';
 import { Game } from '../engine/game';
-import { cardData, hasCard, kindOf } from '../engine/db';
+import { cardData, hasCard, isChampionCard, kindOf } from '../engine/db';
 import { isImplemented } from '../engine/script';
 import { checkDeck } from '../engine/deckcheck';
 import { DECKS, deckSize } from '../decks/origins';
@@ -10,6 +10,7 @@ import type { Decision, Domain, Loc, Obj, Option, P } from '../engine/types';
 import { DOMAIN_COLOR, DOMAIN_PT, esc, rulesHtml } from './text';
 import { AiPlayer, quickPick, AI_LEVELS, isAiLevel, type AiLevel } from '../ai/ai';
 import { artUrl, ensureArt } from './art';
+import { cycleSound, sfx, soundFromLog, soundIcon } from './sound';
 import * as acc from './account';
 import { RUNE_CODES, coverArt, db as dbState, deckbuilderHtml, mountDb, onDbClick, onDbContext, onDbHover, onDbInput, poolCodes, refreshDbPeek, setHooks } from './deckbuilder';
 import * as hist from './history';
@@ -1139,17 +1140,25 @@ function kwChips(eng: Engine, o: Obj): string {
   return out.join('');
 }
 
-/** Palavras-chave ganhas em jogo (diferentes das impressas na carta). */
-function gainedKw(eng: Engine, o: Obj): string {
+/**
+ * Palavras-chave de combate da unidade na mesa, legíveis sobre a arte (o texto impresso fica pequeno demais na mesa).
+ * As ganhas em jogo (diferentes das impressas) ficam douradas.
+ */
+function boardKw(eng: Engine, o: Obj): string {
   const k = eng.kw(o) as any;
   const base = eng.baseKeywords(o) as any;
   const names: [string, string][] = [
     ['tank', 'Tank'], ['shield', 'Shield'], ['assault', 'Assault'], ['deflect', 'Deflect'], ['ganking', 'Ganking'],
-    ['backline', 'Backline'], ['temporary', 'Temporary'], ['hunt', 'Hunt'],
+    ['backline', 'Backline'], ['temporary', 'Temp'], ['hunt', 'Hunt'],
   ];
   return names
-    .filter(([key]) => k[key] && k[key] !== base[key])
-    .map(([key, label]) => `<span class="chip gain" title="Ganho em jogo">${label}${typeof k[key] === 'number' ? ' ' + k[key] : ''}</span>`)
+    .filter(([key]) => k[key])
+    .map(([key, label]) => {
+      const gain = k[key] !== base[key];
+      // número junto (Shield 2, Assault 3); Deflect 1 é só "Deflect"
+      const n = typeof k[key] === 'number' && !(key === 'deflect' && k[key] === 1) ? ' ' + k[key] : '';
+      return `<span class="chip${gain ? ' gain' : ''}"${gain ? ' title="Ganho em jogo"' : ''}>${label}${n}</span>`;
+    })
     .join('');
 }
 
@@ -1223,7 +1232,7 @@ function cardHtml(eng: Engine, o: Obj, mode: 'hand' | 'board' | 'small' | 'thumb
     const e2 = Math.max(0, d.energy + eng.energyDiscount(o, o.controller));
     if (e2 !== d.energy) costBadge = `<span class="costmod" title="Custo atual de energia">custa ${e2}</span>`;
   }
-  const gained = onBoard && k === 'unit' ? gainedKw(eng, o) : '';
+  const gained = onBoard && k === 'unit' ? boardKw(eng, o) : '';
   const om = frame.oracle?.might.get(o.id);
   const od = frame.oracle?.dmg.get(o.id);
   const pred = onBoard && (om !== undefined || od !== undefined) && !frame.doomed.has(o.id) && !frame.maybeDoomed.has(o.id) ? `<span class="tt-pred" title="Previsão se todos passarem">${om !== undefined ? `Might → ${om}` : ''}${od !== undefined ? `${om !== undefined ? ' · ' : ''}dano → ${od}` : ''}</span>` : '';
@@ -1379,8 +1388,8 @@ function zoomHtml(eng: Engine): string {
   const btns = opts.map((x) => `<button class="opt" data-opt="${esc(x.id)}"><span>${esc(x.label)}</span></button>`).join('');
   return `<div class="modal zoom" data-act="closezoom"><div class="mbox" role="dialog" aria-label="${esc(cardData(o.code).name)}">
     ${cardDetail(eng, o)}
-    ${btns ? `<div class="opts">${btns}</div>` : ''}
-    <div class="btns"><button data-act="closezoom">Fechar</button></div></div></div>`;
+    <div class="zfoot">${btns ? `<div class="opts">${btns}</div>` : ''}
+    <div class="btns"><button data-act="closezoom">Fechar</button></div></div></div></div>`;
 }
 
 function netChip(): string {
@@ -1569,6 +1578,24 @@ function histHtml(eng: Engine): string {
     })
     .join('');
   return items ? `<div class="tt-hist" aria-label="Últimas coisas que resolveram (mais nova em cima)"><span class="tt-histl">Últimas</span>${items}</div>` : '<div class="tt-hist"></div>';
+}
+/** Sons das linhas novas do registro (no replay, só acompanha a leitura). */
+function playSounds(eng: Engine) {
+  if (!game) return;
+  const champs = Object.values(eng.objs)
+    .filter((o) => isChampionCard(o.code))
+    .map((o) => cardData(o.code).name);
+  soundFromLog(game, eng, view, !!replay, {
+    champIn: (text) => champs.find((n) => text.includes(n)) ?? null,
+    champAt: (bf, player) => {
+      const p = eng.pl.findIndex((x) => eng.pname(eng.pl.indexOf(x) as P) === player);
+      const i = eng.bfs.findIndex((b) => eng.name(eng.objs[b.objId]) === bf);
+      const u = p < 0 || i < 0 ? undefined : eng.unitsAtBf(i, p as P).find((x) => isChampionCard(x.code));
+      return u ? cardData(u.code).name : null;
+    },
+    legend: (p) => cardData(eng.legendOf(p as P).code).name,
+    meName: eng.pname(view),
+  });
 }
 let toastSeen: { game: Game | null; n: number } = { game: null, n: 0 };
 let toasts: { line: LogLine; until: number; at: number }[] = [];
@@ -1814,7 +1841,7 @@ function peekHtml(eng: Engine, id: string | null): string {
     if (gear.length) live.push(`⚙ ${gear.join(', ')}`);
   }
   const why = whyNot(eng, o);
-  const text = `<div class="tt-peektext"><b>${esc(d.name)}</b>${live.length ? `<p class="live">${live.join(' · ')}</p>` : ''}${why ? `<p class="tt-why">${why}</p>` : ''}${d.errata || !url ? `<p>${rulesHtml(d.text)}</p>` : ''}${d.effectText && (d.errata || !url) ? `<p><b>Quando equipado:</b> ${rulesHtml(d.effectText)}</p>` : ''}${d.errata ? '<p class="note">Texto com errata.</p>' : ''}${keywordHelpHtml(eng, o)}</div>`;
+  const text = `<div class="tt-peektext"><b>${esc(d.name)}</b>${live.length ? `<p class="live">${live.join(' · ')}</p>` : ''}${why ? `<p class="tt-why">${why}</p>` : ''}${d.text ? `<p class="tt-ptx">${rulesHtml(d.text)}</p>` : ''}${d.effectText ? `<p><b>Quando equipado:</b> ${rulesHtml(d.effectText)}</p>` : ''}${d.errata ? '<p class="note">Texto com errata.</p>' : ''}${keywordHelpHtml(eng, o)}</div>`;
   return `<div class="tt-peekin${k === 'battlefield' ? ' land' : ''}">${url ? `<img src="${url}" alt="" draggable="false">` : ''}${text}</div>`;
 }
 
@@ -1841,6 +1868,7 @@ function sideHtml(eng: Engine, d: Decision | null): string {
         <button class="tt-logtog" data-act="sidetoggle">${sideOpen ? 'Fechar registro' : 'Registro'}</button>
         ${online() ? netChip() : vsAi() ? '' : `<label class="tog"><input type="checkbox" id="privacy" ${settings.privacy ? 'checked' : ''}> esconder mãos</label><button data-act="flip" title="Ver a mesa do outro lado">Girar</button>`}
         <button data-act="guide" title="Como funciona (?)">Como funciona</button>
+        <button data-act="sound" class="tt-sound" title="Volume dos sons (M)">${soundIcon()}</button>
         ${replay ? '' : '<button data-act="report" title="Guardar esta partida para mostrar um problema">Relatar problema</button>'}
         ${online() ? '<button data-act="leave">Sair da sala</button>' : '<button data-act="setup">Menu</button>'}
       </div>
@@ -2648,7 +2676,7 @@ function gameHtml(): string {
       ${railHtml(eng, view, 'left')}${railHtml(eng, top, 'right')}
       ${handRowHtml(eng, top, true)}
       ${homeRowHtml(eng, top, true)}
-      <section class="tt-bfs" style="--nbf:${eng.bfs.length}">${eng.bfs.map((_, i) => bfZoneHtml(eng, i)).join('')}${(updateToasts(eng), toastsHtml(eng))}${turnBannerHtml(eng)}</section>
+      <section class="tt-bfs" style="--nbf:${eng.bfs.length}">${eng.bfs.map((_, i) => bfZoneHtml(eng, i)).join('')}${(updateToasts(eng), playSounds(eng), toastsHtml(eng))}${turnBannerHtml(eng)}</section>
       ${dockHtml(eng, d)}
       ${homeRowHtml(eng, view, false)}
       ${handRowHtml(eng, view, false)}
@@ -3002,8 +3030,9 @@ function scheduleRender() {
     render();
   });
 }
-/** Tela de toque ou estreita: tocar numa carta abre o zoom em vez de agir direto. */
-const touchUi = () => matchMedia('(max-width: 980px), (hover: none)').matches;
+/** Tela de toque: tocar numa carta abre o zoom em vez de agir direto. Vai pelo tipo de ponteiro, não pela largura:
+ * notebook com zoom do sistema (125%/150%) ou janela estreita continua com mouse e precisa do clique normal. */
+const touchUi = () => matchMedia('(hover: none), (pointer: coarse)').matches;
 
 function render() {
   const app = $app();
@@ -3316,6 +3345,11 @@ function onClick(ev: MouseEvent) {
     if (a === 'rgo') return replayGo(Number(act.dataset.to));
     if (a === 'rplay') return exitReplay(act.dataset.mode as 'human' | 'ai');
     if (a === 'rexit') return exitReplay();
+    if (a === 'sound') {
+      cycleSound();
+      render();
+      return;
+    }
     if (a === 'guide') {
       modal = { title: 'Como funciona', html: guideHtml() };
       render();
@@ -3345,7 +3379,8 @@ function onClick(ev: MouseEvent) {
     }
     if (a === 'closemodal') return;
     if (a === 'closezoom') {
-      if (t === act || t.tagName === 'BUTTON') {
+      // tocar de novo na carta grande também fecha
+      if (t === act || t.tagName === 'BUTTON' || t.matches('img.big')) {
         zoom = null;
         render();
       }
@@ -3974,6 +4009,7 @@ function yourTurnCue() {
   if (mineNow && !wasMine) {
     const el = document.querySelector('.decision');
     el?.classList.add('yourturn');
+    sfx('turn');
   }
   wasMine = mineNow || !(vsAi() || online());
   document.title = mineNow && document.hidden ? '● Sua vez · Riftbound Mesa' : 'Riftbound Mesa';
@@ -3982,7 +4018,7 @@ document.addEventListener('visibilitychange', () => {
   if (!document.hidden) document.title = 'Riftbound Mesa';
 });
 
-/** Atalhos: Espaço = passar/encerrar o turno, Enter = confirmar, Esc = cancelar/fechar, Z = desfazer. */
+/** Atalhos: Espaço = passar/encerrar o turno, Enter = confirmar, Esc = cancelar/fechar, Z = desfazer, M = volume. */
 function onKey(ev: KeyboardEvent) {
   const t = ev.target as HTMLElement;
   if (t?.id === 'chatin' && (ev.key === 'Enter' || ev.key === 'Escape')) {
@@ -4061,6 +4097,7 @@ function onKey(ev: KeyboardEvent) {
   } else if (ev.key === '?') document.querySelector<HTMLElement>('[data-act=guide]')?.click();
   else if (ev.key === 'v' || ev.key === 'V') document.querySelector<HTMLElement>('[data-act=oracle]')?.click();
   else if (ev.key === 'z' || ev.key === 'Z') document.querySelector<HTMLElement>('.decision [data-act=undo]:not([disabled])')?.click();
+  else if (ev.key === 'm' || ev.key === 'M') document.querySelector<HTMLElement>('[data-act=sound]')?.click();
 }
 
 /** Fim de partida: guarda no histórico da conta e conta nas estatísticas do deck (uma vez por partida). */

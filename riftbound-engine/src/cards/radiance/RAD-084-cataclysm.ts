@@ -5,6 +5,7 @@ import type { Obj } from '../../engine/types';
 
 // Oponentes não podem jogar spells neste turno. Mova uma unidade aliada para um campo inimigo ocupado.
 // A unidade e o campo são escolhidos ao jogar (355.4); a primeira frase vale mesmo que o movimento não aconteça.
+// "Occupied enemy battlefield" = controlado por um oponente e com unidade presente (170.11.a).
 registerCard({
   code: 'RAD-084',
   spell: {
@@ -28,6 +29,9 @@ registerCard({
       const to = c.data.dest as number | undefined;
       if (!u || u.zone !== 'board' || to === undefined) return;
       if (u.loc?.t === 'bf' && u.loc.i === to) return;
+      // o campo é restrição do destino, não alvo: se na resolução não é mais um campo inimigo ocupado (170.11.a: com
+      // unidade presente), a unidade não se move (riftboundfaq.com/cards/cataclysm; "inimigo" conferido na execução, 359.3.f.4)
+      if (g.bfs[to]?.controller !== ((1 - c.p) as any) || g.unitsAtBf(to).length === 0) return;
       g.moveUnits([u], { t: 'bf', i: to }, c.p);
     },
   },

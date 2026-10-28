@@ -10,12 +10,13 @@ registerCard({
       on: 'cardPlayed',
       zone: 'trash',
       label: 'Jogar do descarte por [Order]',
+      // "you may" no início do efeito: decidido ao finalizar o gatilho (383.3.a); [Order] é o custo da jogada, pago na resolução
+      optional: 'Jogar Meticulous Restorationist do descarte por [Order]?',
       cond: (c, ev) => ev.player === c.p && ev.obj?.id !== c.self.id && !!ev.obj && c.g.data(ev.obj).energy >= 7,
+      possible: (c) => c.self.zone === 'trash',
       resolve: function* (c) {
-        const g = c.g;
-        if (c.self.zone !== 'trash' || !g.canPay(c.p, E(0, 'Order'))) return;
-        if (!(yield* g.yesNo(c.p, 'Pagar [Order] para jogar Meticulous Restorationist do descarte?'))) return;
-        yield* g.playFromEffect(c.p, c.self, E(0, 'Order'));
+        if (c.self.zone !== 'trash') return;
+        yield* c.g.playFromEffect(c.p, c.self, E(0, 'Order'));
       },
     },
   ],

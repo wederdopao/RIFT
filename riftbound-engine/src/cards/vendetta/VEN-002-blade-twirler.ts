@@ -1,7 +1,5 @@
 import { registerCard } from '../../engine/script';
-import { NO_COST } from '../../engine/types';
-import { E, T, chooseTokenLoc } from '../helpers';
-import { opp, runes, hasDomain, empowerAbility } from './_ha';
+import type { P } from '../../engine/types';
 
 // Blade Twirler
 registerCard({
@@ -11,13 +9,15 @@ registerCard({
       on: 'move',
       label: 'Burn 1 (escolha um jogador)',
       cond: (c, ev) => ev.unit?.id === c.self.id && c.g.movesThisTurn(c.self) === 1,
-      resolve: function* (c) {
+      // o jogador é alvo (355.9.a: "a player"), escolhido ao pôr o gatilho na pilha (355.5), como Bewitching Spirit
+      prepare: function* (c) {
         const g = c.g;
-        const [id] = yield* g.ask(c.p, 'choose', 'Blade Twirler: qual jogador faz Burn 1?', [
-          { id: '0', label: g.pname(0) },
-          { id: '1', label: g.pname(1) },
-        ]);
-        g.burn(Number(id) as 0 | 1, 1);
+        const [id] = yield* g.ask(c.p, 'choose', 'Blade Twirler: qual jogador faz Burn 1?', ([0, 1] as P[]).map((p) => ({ id: String(p), label: g.pname(p) + (p === c.p ? ' (você)' : '') })));
+        c.data.who = Number(id) as P;
+        return true;
+      },
+      resolve: function* (c) {
+        c.g.burn(c.data.who as P, 1);
       },
     },
   ],

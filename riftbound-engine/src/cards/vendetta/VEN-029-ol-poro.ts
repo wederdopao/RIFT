@@ -6,5 +6,6 @@ import { opp, runes, hasDomain, empowerAbility } from './_ha';
 // Ol' Poro
 registerCard({
   code: 'VEN-029',
-  canPlay: (g, self, p) => (g.pl[p].turns || 0) >= 4,
+  // "on your first, second or third turns": só nos turnos do próprio jogador (no turno do oponente não há restrição)
+  canPlay: (g, self, p) => g.active !== p || (g.pl[p].turns || 0) >= 4,
 });

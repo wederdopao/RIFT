@@ -79,7 +79,7 @@ test('Kayle, Justified: Empower até 3 vezes', () => {
   }
   assert.equal(s.e.empowerCount(k), 3);
   assert.equal(s.e.might(k), m0 + 6);
-  assert.ok(!has(s, 'Kayle, Justified: Empower'));
+  assert.ok(!empAbility(s, k).condition, 'com 3 ainda ativa, sem efeito (FAQ do Vendetta; revisão VEN-126..145)');
 });
 
 test('Frostcoat Mother: o texto que altera o custo de Empower conta (12 menos 1 por runa)', () => {
@@ -233,9 +233,8 @@ test('Orianna, Mechanical Marvel: uma vez por turno, gear custa [1][Rune] a meno
   const g2 = s.put(0, 'VEN-018', 'hand');
   s.runes(0, rs(RUNE.fury, 3));
   s.go();
-  const c = s.e.minCostFor(0, g1, 'hand');
-  assert.deepEqual([c.energy, c.power.length], [3, 0]);
   s.pick('Jogar Rage Amplifier');
+  s.pick('Sim'); // "you may pay [1][Rune] less": opcional (revisão RAD-a4)
   s.passAll();
   assert.equal(g1.zone, 'board', s.log());
   const c2 = s.e.minCostFor(0, g2, 'hand');

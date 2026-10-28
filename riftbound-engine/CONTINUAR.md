@@ -9,12 +9,18 @@ Cole este arquivo (ou peça para ler) junto com o zip do projeto. Ele resume tud
   mandam — nada simplificado**. Pode gastar o tempo que for. Nenhum campo `notes` / "Simplificação" nas cartas.
 - O jogo é privado, para jogar com amigos (projeto de fã, não comercial — política "Legal Jibber Jabber" da Riot).
 
+## Repositório (GitHub wederdopao/RIFT)
+- `riftbound-engine/`: o código (este arquivo, README, src, tests, scripts, docs). Prints de testes em `docs/prints/`.
+- `riftbound-mesa-site/site/`: o site pronto que o Weder arrasta no Netlify Drop para jogar online.
+- `riftbound-mesa.html`: a versão offline. As duas saem de `npm run publicar` — rode depois de mudar a interface
+  ou o motor, senão o site publicado fica na versão antiga.
+
 ## O que é
 Motor de regras de Riftbound (1x1) em TypeScript + interface de navegador: partida completa, IA adversária, online,
 deckbuilder com contas locais, registro clicável e artes oficiais. Detalhes de tudo no `README.md`.
 
-- **Sets**: Origins (OGN) e Proving Grounds (OGS) completos; Spiritforged (SFD-001..SFD-221) completo; 5 cartas de
-  Unleashed usadas em testes.
+- **Sets**: Origins (OGN), Proving Grounds (OGS), Spiritforged (SFD-001..SFD-221) e Unleashed (UNL-001..UNL-219)
+  completos; Vendetta (VEN-001..166) e Radiance (RAD-001..167) completos (seção "Vendetta e Radiance").
 - **Publicado**: artifact "Riftbound Mesa" no claude.ai — https://claude.ai/artifact/RYdL1cUq4zJLfVKp1Lo1q7
   (capability `room` com o tópico `mesa` aberto a "interact"; ao republicar, NÃO passe `capabilities`, para manter;
   as artes estão publicadas como arquivos `art/*.json` — só reenvie se mudarem). Também há o HTML offline
@@ -28,6 +34,7 @@ npm test                                  # ~930 testes de regra
 npx tsx tests/fuzz.ts --all --games 60    # decks aleatórios com todas as cartas (--codes SFD-001..SFD-030, --ai, --seed N)
 npm run sim                               # partidas aleatórias checando invariantes
 npm run build                             # dist/index.html (artifact) + dist/art/ + dist/riftbound-mesa.html + dist/site/
+npm run publicar                          # build + copia dist/site para ../riftbound-mesa-site/site e o offline para ../riftbound-mesa.html
 node scripts/uiplay.mjs <pasta> 3000      # joga uma partida clicando na interface (playwright; PW_EXE = chromium)
 node scripts/mqttbroker.cjs 8888 & node scripts/onlinetest.mjs   # teste online (MODE=room simula o app do Claude)
 ```
@@ -231,6 +238,14 @@ depois uma revisão independente por quem não escreveu. Verificação ao final:
   - Last Caress: ficha de unidade jogada conta como "a próxima unidade".
   - RAD-007/084 "occupied enemy battlefield" = controlado pelo oponente e com unidades (como OGN-161/SFD-093).
 
+## Revisão independente VEN-084..166 (27/10/2026, branch claude/revisao-ven-b)
+Testes em `tests/venrad-revisao-ven-b-{1,2,3,4}.test.ts`. Motor: `Obj.playedFrom` + `from` no `cardPlayed` (Kennen);
+`deflectCost` ignora todo o Deflect se um alvo está no Heisho; Flow dado por efeito vira custo alternativo de spell
+que já tem Flow (`altCostFor`); spell jogado por Flow é banido em qualquer saída da pilha (`data.flowBy`); evento
+`banish` com `by`; `empowerObj` usa `EmpowerSpec.max` e `disempower` tira um status (Kayle); ficha TOK-SHADOWCLONE
+com script. Casos sem ruling confirmados: Gangplank (+3 permanente), Nasus (Equip impresso), Piltovan Forge (Gold conta).
+RiftJudge/playriftbound não acessíveis no contêiner: rulings vieram de resumos de busca.
+
 ## Menu inicial e deckbuilder novos (26/10/2026)
 - Pedido do Weder: estética melhor e mais intuitivo no menu, em "Meus decks" e no deckbuilder (sem mexer na mesa).
 - Identidade: o mesmo feltro azul com grade fina e as cantoneiras douradas do tapete (classe `.mz`); capas de deck com a
@@ -396,5 +411,38 @@ depois uma revisão independente por quem não escreveu. Verificação ao final:
   a cada um a visão filtrada; Prévia (👁) desligada para o convidado; replay completo chega ao convidado no fim.
   Estava terminando quando pausou: `npm test`, uiplay e onlinetest (room e MQTT) passaram depois do merge. O anfitrião
   continua com tudo na memória (limitação aceita).
-- O `scripts/onlinetest.mjs` às vezes falha num clique do pedido de desfazer (elemento redesenhado na hora): instável,
-  passa ao rodar de novo — vale deixar o clique mais robusto.
+- ~~`scripts/onlinetest.mjs` instável no clique do pedido de desfazer~~ — resolvido (27/10): o clique usa localizador
+  em vez de ElementHandle; 3 rodadas seguidas passaram.
+
+## Retomada (27/10/2026)
+- **Mesa**: `touchUi()` agora vai pelo ponteiro (`(hover: none), (pointer: coarse)`), não pela largura — em notebook
+  com zoom do Windows (125%/150%) o clique na carta abria o zoom gigante e travava. Zoom no toque: tocar na carta fecha,
+  ações e Fechar fixos embaixo (`.zfoot`). Prévia ao apontar também no layout compacto com mouse, sempre com o texto
+  da carta legível; cartas das escolhas do centro (mulligan...) maiores.
+- **Repositório**: `npm run publicar` atualiza `../riftbound-mesa-site/site` (Netlify) e `../riftbound-mesa.html`.
+- **IA, medição** (`npx tsx tests/ai-vs.ts 128 --shard k/4`, Normal nova × antiga): **77 × 51 (60%)**.
+  Tentativa: avaliar o fim da conferência da resposta do oponente como começo do meu turno (`turnEnding: false` no
+  `evaluate` de `oppTurnValue` — hoje ele avalia como fim do meu turno, o que soa errado). Mediu 69 × 59 (54%), dentro
+  do ruído mas não melhor: revertido. Se for tentar de novo, medir com ≥256 partidas.
+- **Níveis contra a antiga** (64 partidas cada): Fácil 20 × 44 (31%, decisão média ~35 ms) — mais fraco, como deve;
+  Difícil 39 × 25 (61%, média ~250 ms, pior ~1,9 s) — **igual ao Normal**, o tempo a mais não está virando força.
+- **Experimentos de 27/10** (128 partidas cada, `--mirror`; "× Normal" = `--old new --level hard --tune` com o hard
+  igualado ao normal mudando só o item): sem a conferência da resposta do oponente 57 × 71 (**ela vale ~5 pontos
+  percentuais**, é a parte que mais rende); sem o planejamento do turno 61 × 67; Difícil × Normal 64 × 64 (empate);
+  conferência mais larga (verifyK 6, 500 ms) 66 × 62; Difícil com verifyK 8 / 900 ms 64 × 64; oponente simulado que
+  também divide as unidades entre dois campos 60 × 68 (pior: o mínimo sobre mais linhas fica pessimista demais);
+  peso de campo contestado ×1,5 65 × 63, ×0,6 60 × 68. Conclusão: mais tempo/largura de busca não vira força — o limite
+  está na avaliação e no modelo do oponente. Por estilo (256 partidas × antiga): a nova vence em todos os confrontos;
+  os decks aggro do gerador é que são fracos (aggro × ramp: 22% com a nova pilotando o aggro, 16% com a antiga).
+- **Afinação dos pesos da avaliação (27–28/10)**, num worktree com os números fixos de `evaluate` virando pesos em `W`
+  (pt, hand, rune, unit, might, bfHeld, bfOppEnd...), a IA atual congelada como adversária (`tests/ai-cur.ts`,
+  `--old cur`) e um modo rápido (`--fast`: as duas pensam ~6× menos; 512 partidas espelhadas em ~10 min; o efeito
+  conhecido "sem conferência = 45%" aparece igual nele). Controle sem mudança: 51,2%. Resultados (512 cada):
+  hand 10 → 40,6%, 3 → 52,9%, 1 → 52,7%; might 2 → 43,6%, 3,5 → 50,2%, 4 → 55,5%, 4,5 → 53,8%, 5 → 51,6%;
+  unit 1 → 36,5%, 10 → 51,4%; pt 95/150, bfHeld 35/80, bfOppEnd 60, rune 2/7 → 49–52%; bfOppEnd 150 → 46,1%.
+  Ideias do Weder: "corrida" (quem chega antes a 8, ajustando defesa/ataque) 46–51% em 4 variações; peças-chave do
+  deck (campeão, finalizadores, motores) 49–52% em 3. **Confirmação do might 4 na velocidade real** (`--old cur`, sem
+  `--fast`): 65 × 62 espelhado + 116 × 121 com decks variados = **49,7%: não se confirmou**. Nada mudou na IA.
+  Conclusões: os pesos atuais já estão no ótimo local (cair muito de unit/might/hand piora, subir não melhora); ganho
+  do modo rápido não transfere; o que falta à IA não é peso nem "plano" na avaliação. Próximas ideias: modelar as
+  Reactions escondidas do oponente (mana aberta) na busca; usar o tempo do Difícil em amostragem da mão do oponente.
