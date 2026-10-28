@@ -1,0 +1,122 @@
+{
+ "fixed": {
+  "menu": {
+   "name": "Menu e deckbuilder",
+   "src": "music/menu.m4a"
+  },
+  "start": {
+   "name": "Começo da partida",
+   "src": "music/start.m4a"
+  },
+  "victory": {
+   "name": "Vitória",
+   "src": "music/victory.m4a"
+  },
+  "defeat": {
+   "name": "Derrota",
+   "src": "music/defeat.m4a"
+  }
+ },
+ "boards": [
+  {
+   "id": "arcade",
+   "name": "Arcade",
+   "src": "music/arcade.m4a"
+  },
+  {
+   "id": "festival-shrine",
+   "name": "Festival Shrine",
+   "src": "music/festival-shrine.m4a"
+  },
+  {
+   "id": "nightshade-shrine",
+   "name": "Nightshade Shrine",
+   "src": "music/nightshade-shrine.m4a"
+  },
+  {
+   "id": "haunted-grounds",
+   "name": "Haunted Grounds",
+   "src": "music/haunted-grounds.m4a"
+  },
+  {
+   "id": "snowy-glade",
+   "name": "Snowy Glade",
+   "src": "music/snowy-glade.m4a"
+  },
+  {
+   "id": "club-ox",
+   "name": "Club Ox",
+   "src": "music/club-ox.m4a"
+  },
+  {
+   "id": "planet-urf",
+   "name": "Planet Urf",
+   "src": "music/planet-urf.m4a"
+  },
+  {
+   "id": "clifftop-monastery",
+   "name": "Clifftop Monastery",
+   "src": "music/clifftop-monastery.m4a"
+  },
+  {
+   "id": "cursed-ruins",
+   "name": "Cursed Ruins",
+   "src": "music/cursed-ruins.m4a"
+  },
+  {
+   "id": "hall-of-valor",
+   "name": "Hall of Valor",
+   "src": "music/hall-of-valor.m4a"
+  },
+  {
+   "id": "hextech-lab",
+   "name": "Hextech Lab",
+   "src": "music/hextech-lab.m4a"
+  },
+  {
+   "id": "iceborn-peak",
+   "name": "Iceborn Peak",
+   "src": "music/iceborn-peak.m4a"
+  },
+  {
+   "id": "reckoner-s-arena",
+   "name": "Reckoner's Arena",
+   "src": "music/reckoner-s-arena.m4a"
+  },
+  {
+   "id": "slaughter-docks",
+   "name": "Slaughter Docks",
+   "src": "music/slaughter-docks.m4a"
+  },
+  {
+   "id": "celestial-summit",
+   "name": "Celestial Summit",
+   "src": "music/celestial-summit.m4a"
+  },
+  {
+   "id": "the-undercity",
+   "name": "The Undercity",
+   "src": "music/the-undercity.m4a"
+  },
+  {
+   "id": "ascended-oasis",
+   "name": "Ascended Oasis",
+   "src": "music/ascended-oasis.m4a"
+  },
+  {
+   "id": "bandlewood-outpost",
+   "name": "Bandlewood Outpost",
+   "src": "music/bandlewood-outpost.m4a"
+  },
+  {
+   "id": "jinx-s-mayhem",
+   "name": "Jinx's Mayhem",
+   "src": "music/jinx-s-mayhem.m4a"
+  },
+  {
+   "id": "summoner-s-rift",
+   "name": "Summoner's Rift",
+   "src": "music/summoner-s-rift.m4a"
+  }
+ ]
+}

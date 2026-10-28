@@ -11,6 +11,7 @@ import { DOMAIN_COLOR, DOMAIN_PT, esc, rulesHtml } from './text';
 import { AiPlayer, quickPick, AI_LEVELS, isAiLevel, type AiLevel } from '../ai/ai';
 import { artUrl, ensureArt } from './art';
 import { cycleSound, sfx, soundFromLog, soundIcon } from './sound';
+import { cycleMusic, loadMusic, musicBoards, musicIcon, musicScene, stopPreview } from './music';
 import * as acc from './account';
 import { RUNE_CODES, coverArt, db as dbState, deckbuilderHtml, mountDb, onDbClick, onDbContext, onDbHover, onDbInput, poolCodes, refreshDbPeek, setHooks } from './deckbuilder';
 import * as hist from './history';
@@ -1579,6 +1580,19 @@ function histHtml(eng: Engine): string {
     .join('');
   return items ? `<div class="tt-hist" aria-label="Últimas coisas que resolveram (mais nova em cima)"><span class="tt-histl">Últimas</span>${items}</div>` : '<div class="tt-hist"></div>';
 }
+const rerenderMenu = () => {
+  if (!game) render();
+};
+/** Música da cena: menu fora da partida, a trilha do meu deck (escolhida no deckbuilder) na partida, vitória/derrota no fim. */
+function syncMusic() {
+  // o índice chega depois do primeiro desenho: redesenha para o botão da música aparecer
+  loadMusic(rerenderMenu);
+  if (page !== 'decks') stopPreview();
+  if (!game || replay) return musicScene({ kind: 'menu' });
+  const w = game.engine.winner;
+  if (w !== null) return musicScene({ kind: 'end', won: w === (mySeat() ?? view), key: `${game.cfg.seed}:${game.answers.length}` });
+  musicScene({ kind: 'game', choice: acc.savedDeckOf(settings.decks[0])?.music, seed: game.cfg.seed });
+}
 /** Sons das linhas novas do registro (no replay, só acompanha a leitura). */
 function playSounds(eng: Engine) {
   if (!game) return;
@@ -1869,6 +1883,7 @@ function sideHtml(eng: Engine, d: Decision | null): string {
         ${online() ? netChip() : vsAi() ? '' : `<label class="tog"><input type="checkbox" id="privacy" ${settings.privacy ? 'checked' : ''}> esconder mãos</label><button data-act="flip" title="Ver a mesa do outro lado">Girar</button>`}
         <button data-act="guide" title="Como funciona (?)">Como funciona</button>
         <button data-act="sound" class="tt-sound" title="Volume dos sons (M)">${soundIcon()}</button>
+        <button data-act="music" class="tt-sound" title="Volume da música (N); a trilha de cada deck se escolhe no deckbuilder">${musicIcon()}</button>
         ${replay ? '' : '<button data-act="report" title="Guardar esta partida para mostrar um problema">Relatar problema</button>'}
         ${online() ? '<button data-act="leave">Sair da sala</button>' : '<button data-act="setup">Menu</button>'}
       </div>
@@ -2866,7 +2881,7 @@ function setupHtml(): string {
     </nav>`;
   const summary = `${settings.opponent === 'ai' ? `Contra a IA (${AI_LEVELS.find((l) => l.id === settings.aiLevel)!.t})` : 'Passa-e-joga'} · ${settings.format === 'padrao' ? 'Padrão' : 'Casual'} · campos ${settings.bfMode === 'random' ? 'sorteados' : 'escolhidos'}`;
   return `<header class="topbar"><div class="brand">Riftbound <span>mesa</span></div><div class="turninfo">${esc(acc.profile().name)}</div>
-    <div class="tb">${net ? '<button type="button" data-act="decks">Meus decks</button>' : ''}</div></header>
+    <div class="tb">${musicBoards().length ? `<button type="button" data-act="music" title="Volume da música (N)">${musicIcon()}</button>` : ''}${net ? '<button type="button" data-act="decks">Meus decks</button>' : ''}</div></header>
   <main class="setup home">
     ${net ? lobbyHtml() : `<div class="hero"><h1>Riftbound na mesa</h1><p>As regras rodam sozinhas: custos, pilha, combate, pontos e o efeito de cada carta.</p></div>
       ${saved && (saved.saved || saved.online) ? `<div class="resume mz"><span>${saved.online ? 'Você estava numa sala online.' : 'Há uma partida em andamento.'}</span><button class="primary" data-act="resume">${resumeLabel}</button></div>` : ''}
@@ -3079,6 +3094,7 @@ function render() {
   }
   recordIfOver();
   yourTurnCue();
+  syncMusic();
   const ll = document.getElementById('logl');
   if (ll) ll.scrollTop = logNewestFirst ? 0 : ll.scrollHeight;
   void logScrolled;
@@ -3345,6 +3361,11 @@ function onClick(ev: MouseEvent) {
     if (a === 'rgo') return replayGo(Number(act.dataset.to));
     if (a === 'rplay') return exitReplay(act.dataset.mode as 'human' | 'ai');
     if (a === 'rexit') return exitReplay();
+    if (a === 'music') {
+      cycleMusic();
+      render();
+      return;
+    }
     if (a === 'sound') {
       cycleSound();
       render();
@@ -4018,7 +4039,7 @@ document.addEventListener('visibilitychange', () => {
   if (!document.hidden) document.title = 'Riftbound Mesa';
 });
 
-/** Atalhos: Espaço = passar/encerrar o turno, Enter = confirmar, Esc = cancelar/fechar, Z = desfazer, M = volume. */
+/** Atalhos: Espaço = passar/encerrar o turno, Enter = confirmar, Esc = cancelar/fechar, Z = desfazer, M = volume dos sons, N = volume da música. */
 function onKey(ev: KeyboardEvent) {
   const t = ev.target as HTMLElement;
   if (t?.id === 'chatin' && (ev.key === 'Enter' || ev.key === 'Escape')) {
@@ -4098,6 +4119,7 @@ function onKey(ev: KeyboardEvent) {
   else if (ev.key === 'v' || ev.key === 'V') document.querySelector<HTMLElement>('[data-act=oracle]')?.click();
   else if (ev.key === 'z' || ev.key === 'Z') document.querySelector<HTMLElement>('.decision [data-act=undo]:not([disabled])')?.click();
   else if (ev.key === 'm' || ev.key === 'M') document.querySelector<HTMLElement>('[data-act=sound]')?.click();
+  else if (ev.key === 'n' || ev.key === 'N') document.querySelector<HTMLElement>('[data-act=music]')?.click();
 }
 
 /** Fim de partida: guarda no histórico da conta e conta nas estatísticas do deck (uma vez por partida). */

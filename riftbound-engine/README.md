@@ -79,6 +79,10 @@ Projeto de fã, sem fins comerciais, feito sob a política "Legal Jibber Jabber"
   conquista, sua vez, vitória/derrota) com volume no botão 🔊 ou na tecla M. No site, os campeões falam com as vozes do
   Legends of Runeterra (81 campeões em `assets/voice/`: jogar, atacar, bloquear, morrer, vitória, derrota), baixadas da
   wiki do League of Legends por `python3 scripts/lor_voices.py` e comprimidas em mono 48 kbps. Áudio da Riot Games.
+- **Música** (`src/ui/music.ts`): os temas de tabuleiro do Legends of Runeterra (20 tabuleiros em `assets/music/`,
+  `python3 scripts/lor_music.py`, AAC 48 kbps) tocam em loop na partida; o tema do menu fora dela; vitória e derrota no
+  fim. Cada deck escolhe a trilha no deckbuilder (linha "Música": sorteada, sem música ou um tabuleiro, com prévia);
+  na partida vale a do seu deck. Volume no botão 🎵 (mesa e tela inicial) ou na tecla N. Só no site.
 - **Ponto final** (regra 471.1.b.1): o 8º ponto vem de hold, de efeito de carta, ou de uma conquista no turno em que o
   jogador pontuou todos os campos (hold num e conquista no outro também vale). Fora disso a conquista compra 1.
 - **Online** (`src/ui/online.ts`): cada um no seu aparelho. Dentro do app do Claude usa o canal "room" da própria

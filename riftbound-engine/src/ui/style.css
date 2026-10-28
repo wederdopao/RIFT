@@ -681,6 +681,7 @@ textarea { font: 13px/1.4 ui-monospace, 'SFMono-Regular', Menlo, monospace; colo
 .dkexport { display: flex; align-items: center; gap: 6px; }
 .dkexport span { font-size: 0.8em; color: var(--muted); }
 .dkexport button { flex: 1; }
+.dkmusic select { flex: 2; min-width: 0; }
 .dgl { font: 600 15px var(--f-display); letter-spacing: 0.01em; color: var(--gold-hi); display: flex; gap: 8px; align-items: baseline; }
 .dgl span { color: var(--muted); font-weight: 500; }
 .dgl .link { margin-left: auto; }
