@@ -16,14 +16,15 @@
 // ("need") e batimentos ("ping"/"sync").
 import type { P } from '../engine/types';
 import type { DeckList } from '../engine/engine';
+import type { RankCard } from './rating';
 
 /** `undo` com `n`: pedido de desfazer aceito pelo oponente — volta até a resposta n (sempre uma decisão raiz). */
 export type Op = { k: 'answer'; ids: string[] } | { k: 'batch'; list: string[][] } | { k: 'cancel' } | { k: 'undo'; n?: number };
 /** `z`: carga empacotada (`pack`): visão completa (ViewState) ou diferença (ViewDiff); cifrada para o convidado. */
 export type Msg =
-  | { t: 'hello'; name: string; deck: DeckList; v: number; pk?: string }
+  | { t: 'hello'; name: string; deck: DeckList; v: number; pk?: string; rk?: RankCard }
   | { t: 'watch'; name: string; v: number }
-  | { t: 'welcome'; hostName: string; hostDeck: string; pk?: string }
+  | { t: 'welcome'; hostName: string; hostDeck: string; pk?: string; rk?: RankCard }
   | { t: 'start'; z: string; seq: number; you: P }
   | { t: 'lobby' }
   | { t: 'req'; z: string; seq: number }
@@ -56,7 +57,10 @@ export type TourMsg =
   | { t: 'tdeny'; msg: string };
 
 // 10: torneio (canal "t-<código>" com as mensagens TourMsg; a partida de uma sala de torneio leva cfg.tour e o
-//     resultado volta pelo canal do torneio — as mensagens da sala não mudaram); 9: visão filtrada (start/state/view para o convidado, cifradas; wstate/wview para espectadores; req cifrado; sem
+//     resultado volta pelo canal do torneio — as mensagens da sala não mudaram)
+// (sem mudar o número: `rk` opcional no hello/welcome = cartão do ranking, rating.ts; versão sem ele joga
+//  normalmente com esta, só a partida não conta no ranking)
+// 9: visão filtrada (start/state/view para o convidado, cifradas; wstate/wview para espectadores; req cifrado; sem
 //    'op'); 8: hub de salas, chat, pedido de desfazer (undo com n); 7: verbo 'manualpay'; 6: DeckList.extraLegends
 export const PROTOCOL = 10;
 

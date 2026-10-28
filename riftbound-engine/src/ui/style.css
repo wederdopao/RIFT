@@ -2254,3 +2254,93 @@ body.tut .tt-endbtn.tut-off { opacity: 0.45; }
 }
 /* tela inicial com o botão do torneio: 7–8 botões auxiliares em 4 colunas no computador */
 @media (min-width: 1100px) { .modegroup.aux:has(> :nth-child(7)) { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+/* ───────────── ranking entre amigos e perfil (src/ui/profile.ts) ───────────── */
+@media (min-width: 1100px) { .modegroup.aux:has(> :nth-child(7)) { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.tb-acct { background: transparent; border: 1px solid transparent; color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit; padding: 2px 8px; border-radius: 4px; cursor: pointer; }
+.tb-acct span { color: var(--gold); margin-left: 4px; }
+.tb-acct:hover, .tb-acct:focus-visible { border-color: var(--gold-soft); }
+.setup.ranking, .setup.profile { display: grid; gap: 14px; padding-top: 14px; max-width: 1180px; margin: 0 auto; }
+.setup.ranking .lad-top, .setup.profile .lad-top { gap: 8px; }
+.rk-grid { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(0, 3fr); gap: 12px; align-items: start; }
+.rk-me { display: grid; gap: 6px; }
+.rk-big { font: 700 54px/1 var(--f-display); color: var(--gold-hi); }
+.rk-table ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.rk-row { display: grid; grid-template-columns: 44px minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, 1.2fr); gap: 10px; align-items: center; padding: 8px 10px; border-radius: 4px; background: rgba(8, 15, 30, 0.35); }
+.rk-headrow { background: transparent; font: 600 13px var(--f-display); letter-spacing: 0.06em; color: var(--muted); text-transform: uppercase; padding-bottom: 2px; }
+.rk-row.me { background: rgba(92, 200, 184, 0.1); box-shadow: inset 3px 0 0 var(--me); }
+.rk-pos { font: 700 20px var(--f-display); color: var(--gold); }
+.rk-name { overflow-wrap: anywhere; }
+.rk-you { font: 600 12px var(--f-display); letter-spacing: 0.05em; text-transform: uppercase; color: var(--me); border: 1px solid var(--me); border-radius: 3px; padding: 0 4px; margin-left: 4px; }
+.rk-elo { display: grid; }
+.rk-elo b { font: 700 22px/1 var(--f-display); }
+.rk-lab { display: none; }
+.rk-streak i { font-style: normal; margin-right: 4px; font-size: 11px; }
+.rk-streak.up, .rk-d.up { color: var(--ok); }
+.rk-streak.down, .rk-d.down { color: var(--them); }
+.rk-table > p { margin: 10px 0 0; }
+@media (max-width: 760px) {
+  .rk-grid { grid-template-columns: 1fr; }
+  .rk-headrow { display: none; }
+  .rk-row { grid-template-columns: 40px minmax(0, 1fr) auto; grid-template-areas: 'pos name elo' 'pos wl wl' 'pos st st' 'pos last last'; row-gap: 2px; }
+  .rk-pos { grid-area: pos; align-self: start; }
+  .rk-name { grid-area: name; }
+  .rk-elo { grid-area: elo; text-align: right; }
+  .rk-wl { grid-area: wl; }
+  .rk-st { grid-area: st; }
+  .rk-last { grid-area: last; }
+  .rk-lab { display: inline; color: var(--muted); font-size: 13px; margin-right: 6px; }
+}
+.pf-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.pf-tile { display: grid; gap: 2px; padding: 12px 14px; border-radius: 4px; background: rgba(8, 15, 30, 0.45); border: 1px solid var(--line); }
+.pf-tlab { font: 600 13px var(--f-display); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.pf-tval { font: 700 34px/1.05 var(--f-display); color: var(--ink); }
+.pf-grid { display: grid; grid-template-columns: minmax(0, 2.4fr) minmax(220px, 1fr); gap: 12px; align-items: start; }
+.pf-fav { display: grid; gap: 6px; }
+.pf-cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: start; }
+.pf-chart { margin: 0; }
+.pf-chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.pf-chart .pf-gl { stroke: rgba(141, 153, 178, 0.16); stroke-width: 1; }
+.pf-chart .pf-base { stroke: var(--gold); stroke-width: 1; stroke-dasharray: 4 4; opacity: 0.7; }
+.pf-chart .pf-ax { fill: var(--muted); font: 12px var(--f-body); }
+.pf-chart .pf-line { fill: none; stroke: var(--me); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.pf-chart .pf-dot { stroke: var(--me); stroke-width: 2; }
+.pf-chart .pf-dot.w { fill: var(--me); }
+.pf-chart .pf-dot.l { fill: var(--mat); }
+.pf-chart .pf-hit { fill: transparent; }
+.pf-chart .pf-pt:hover .pf-dot { r: 6.5; }
+.pf-chart .pf-lastlab { fill: var(--ink); font: 700 15px var(--f-display); }
+.pf-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 6px; font-size: 13px; color: var(--ink); align-items: center; }
+.pf-key { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; border: 2px solid var(--me); }
+.pf-key.w { background: var(--me); }
+.pf-key.l { background: transparent; }
+.pf-key.base { width: 16px; height: 0; border-radius: 0; border: 0; border-top: 1px dashed var(--gold); vertical-align: 3px; }
+.pf-nochart { margin: 6px 0; }
+.pf-bars { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 8px; }
+.pf-bars li { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(60px, 1.4fr) auto; gap: 10px; align-items: center; }
+.pf-blab { display: grid; min-width: 0; }
+.pf-blab b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.pf-blab .small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pf-track { position: relative; height: 10px; border-radius: 4px; background: rgba(141, 153, 178, 0.18); overflow: hidden; }
+.pf-fill { position: absolute; inset: 0 auto 0 0; border-radius: 4px; background: var(--me); }
+.pf-bars.count .pf-fill { background: var(--gold); }
+.pf-half { position: absolute; left: 50%; top: -2px; bottom: -2px; width: 2px; background: var(--mat); opacity: 0.9; }
+.pf-bval { white-space: nowrap; font-size: 14px; text-align: right; }
+@media (max-width: 860px) {
+  .pf-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pf-grid, .pf-cols { grid-template-columns: 1fr; }
+  .pf-tval { font-size: 28px; }
+}
+@media (max-width: 420px) {
+  .pf-bars li { grid-template-columns: minmax(0, 1fr) auto; }
+  .pf-bars .pf-track { grid-column: 1 / -1; grid-row: 2; }
+}
+/* com torneio, ranking e perfil são 9 botões auxiliares: 3 colunas fecham a grade */
+@media (min-width: 1100px) { .modegroup.aux:has(> :nth-child(9)) { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+/* telas grandes de PC (1440p, ultrawide, 4K): a mesa é desenhada para ~1920×1080; acima disso tudo ficava miúdo
+   (carta limitada a 104 px, texto de 12–15 px). O zoom da página aumenta tudo junto, mantendo o desenho; o que é
+   posicionado pelo mouse converte as medidas (src/ui/zoom.ts). */
+@media (min-width: 2200px) and (min-height: 1200px) { html { zoom: 1.2; --zf: 1.2; } }
+@media (min-width: 2500px) and (min-height: 1380px) { html { zoom: 1.333; --zf: 1.333; } }
+@media (min-width: 3000px) and (min-height: 1650px) { html { zoom: 1.6; --zf: 1.6; } }
+@media (min-width: 3600px) and (min-height: 2000px) { html { zoom: 2; --zf: 2; } }

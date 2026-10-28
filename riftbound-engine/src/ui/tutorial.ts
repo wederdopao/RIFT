@@ -8,6 +8,7 @@ import { MANUAL_PAY } from '../engine/engine';
 import type { Answer, Decision } from '../engine/types';
 import * as acc from './account';
 import { STEPS, advance, oppAnswer as scriptAnswer, tutorialConfig, type TutCtx, type TutStep } from './tutorial-script';
+import { zRect, zpx } from './zoom';
 
 /** A partida do tutorial: igual à normal, mas cada resposta sua passa pelo passo atual; desfazer não existe. */
 export class TutorialGame extends Game {
@@ -397,9 +398,10 @@ function place() {
   // um painel por cima da mesa (zoom da carta, janela) cobre o alvo: o destaque só vale para o que está nele
   const over = document.querySelector('#app .modal');
   if (over && el && !over.contains(el)) el = null;
-  const tr = el ? el.getBoundingClientRect() : null;
-  const W = innerWidth;
-  const H = innerHeight;
+  // tudo em pixels de CSS (o zoom das telas grandes muda a escala das medidas da tela; zoom.ts)
+  const tr = el ? zRect(el.getBoundingClientRect()) : null;
+  const W = zpx(innerWidth);
+  const H = zpx(innerHeight);
   if (tr) {
     const pad = 6;
     ring.hidden = false;
@@ -413,7 +415,8 @@ function place() {
     arrow.hidden = true;
   }
   // caixa: perto do alvo sem cobri-lo (nem a seta); sem alvo, em cima no meio da mesa
-  const mat = document.querySelector('.tt-mat')?.getBoundingClientRect();
+  const matEl = document.querySelector('.tt-mat');
+  const mat = matEl ? zRect(matEl.getBoundingClientRect()) : undefined;
   const left0 = mat ? mat.left : 0;
   const right0 = mat ? mat.right : W;
   const bw = Math.min(400, W - 16);
@@ -424,7 +427,8 @@ function place() {
   const hi = Math.max(lo, Math.min(right0, W) - bw - 8);
   const x = Math.max(lo, Math.min(hi, cx - bw / 2));
   const keep = tr ? new DOMRect(tr.left - 10, tr.top - 44, tr.width + 20, tr.height + 88) : null;
-  const dock = document.querySelector('.tt-dock')?.getBoundingClientRect();
+  const dockEl = document.querySelector('.tt-dock');
+  const dock = dockEl ? zRect(dockEl.getBoundingClientRect()) : undefined;
   const near = [tr ? tr.top - 44 - bh : 8, tr ? tr.bottom + 44 : 8]; // em cima / embaixo do alvo
   const edges = [8, H - bh - 8]; // topo / pé da tela
   // no celular a caixa prefere as bordas (em cima fica a área do oponente; perto do alvo cobriria a barra e a mão)

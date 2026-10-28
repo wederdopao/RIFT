@@ -46,7 +46,13 @@ const res = await build({
   legalComments: 'none',
 });
 const js = res.outputFiles[0].text.replace(/<\/script/gi, '<\\/script');
-const css = readFileSync('src/ui/style.css', 'utf8');
+// zoom das telas grandes (fim do style.css: `html { zoom; --zf }`): no Chrome as unidades da tela (vh, vw) não
+// descontam o zoom, e a mesa, medida nelas, sairia grande demais (a barra de ação cobria a base). Cada uma vira
+// "dividida por --zf" (1 sem zoom); fora de @media, onde a tela é medida como está.
+const css = readFileSync('src/ui/style.css', 'utf8')
+  .split('\n')
+  .map((l) => (l.trimStart().startsWith('@media') ? l.replace(/\{.*$/, (b) => b.replace(/(\d*\.?\d+)(dvh|svh|lvh|vh|dvw|svw|lvw|vw)\b/g, 'calc($1$2 / var(--zf, 1))')) : l.replace(/(\d*\.?\d+)(dvh|svh|lvh|vh|dvw|svw|lvw|vw)\b/g, 'calc($1$2 / var(--zf, 1))')))
+  .join('\n');
 // fontes: no site, servidas do próprio endereço (scripts/fonts.py; sem conexões extras ao Google na abertura); no
 // artifact e na versão offline, do Google Fonts
 const googleFonts = `<link rel="preconnect" href="https://fonts.googleapis.com">

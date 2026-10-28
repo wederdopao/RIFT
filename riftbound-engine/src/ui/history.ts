@@ -4,6 +4,7 @@
 import type { Engine, DeckList } from '../engine/engine';
 import type { P } from '../engine/types';
 import * as acc from './account';
+import * as rating from './rating';
 
 export type HistMode = 'ai' | 'human' | 'online';
 export interface HistDeck {
@@ -32,6 +33,11 @@ export interface HistEntry {
   replay?: string;
   /** o replay saiu por falta de espaço */
   dropped?: boolean;
+  /** Novo: nível da IA (contra a IA) */
+  ai?: string;
+  /** Novo (online): id do amigo no ranking (rating.ts) e a mudança da sua pontuação nesta partida */
+  opp?: string;
+  elo?: { d: number; after: number };
 }
 interface Store {
   v: 1;
@@ -216,8 +222,29 @@ export function recordGame(
     dead: sm.dead.filter((c) => mineCards.has(c)),
     cards: [...mineCards],
   });
+  // ranking (só online, uma vez por partida) e o resumo do perfil
+  const rk = rating.recordRanked(info.mode, g.cfg, eng.winner, me);
+  const oppCard = Array.isArray(g.cfg.rank) ? rating.cleanCard(g.cfg.rank[1 - me]) : null;
+  const aiLevel = info.mode === 'ai' && typeof g.cfg.aiLevel === 'string' ? (g.cfg.aiLevel as string) : undefined;
+  rating.recordCareer(
+    {
+      seed: Number(g.cfg.seed),
+      mode: info.mode,
+      won: eng.winner === me,
+      deckKey: choice[me],
+      deckName: decks[me].name,
+      legend: decks[me].legend,
+      champion: decks[me].champion,
+      opp: info.mode === 'ai' ? `ai:${aiLevel || '?'}` : info.mode === 'online' ? (oppCard ? `f:${oppCard.id}` : `n:${eng.pl[1 - me].name}`) : '',
+      oppName: info.mode === 'online' && oppCard ? oppCard.name : eng.pl[1 - me].name,
+    },
+    list,
+  );
   const e: HistEntry = {
     id,
+    ...(aiLevel ? { ai: aiLevel } : {}),
+    ...(info.mode === 'online' && oppCard ? { opp: oppCard.id } : {}),
+    ...(rk ? { elo: { d: rk.d, after: rk.elo } } : {}),
     at: Date.now(),
     mode: info.mode,
     seat: me,

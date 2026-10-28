@@ -566,3 +566,35 @@ RiftJudge/playriftbound não acessíveis no contêiner: rulings vieram de resumo
   Partidas curtas com `window.__RB_TEST_CFG__ = {startPoints:[7,7]}` (só teste). Prints em `docs/prints/torneio-*`.
 - Fora: não há "desistir" de partida (o organizador dá W.O.); não dá para passar a organização a outro aparelho; o
   deck do adversário não é conferido contra o inscrito (o cliente dele manda o do torneio); sem disputa de 3º lugar.
+## Ranking entre amigos e Perfil (28/10/2026, branch claude/ranking)
+- **Ranking** (tela inicial → Ranking): Elo por conta, começa em 1000, K = 32, só partidas **online** (IA,
+  passa-e-joga, desafios, tutorial e espectador não contam). Lógica sem DOM em `src/ui/rating.ts`; telas em
+  `src/ui/profile.ts` (`rankingHtml`, `profileHtml`, `rankEndNote`, `onProfileClick`); CSS no fim de `style.css`
+  (seção "ranking entre amigos e perfil", classes `.rk-*` e `.pf-*`).
+- **Identidade**: a chave ECDH do online (`makeKeys`) é nova a cada abertura da página, então não serve. Cada conta
+  ganha um id aleatório estável (`Profile.rank.id`, 24 hex), que vai no backup da conta (importar o backup em outro
+  aparelho = a mesma pessoa no ranking). Amigo é identificado por esse id, não pelo nome.
+- **Protocolo** (continua `PROTOCOL` 9, campo opcional): `hello` e `welcome` levam `rk` = cartão {id, nome, pontos,
+  partidas}. Cada lado guarda o cartão do outro (`sawFriend`). O anfitrião põe os dois cartões no cfg
+  (`cfg.rank = [anfitrião, convidado]`; na revanche com a pontuação nova do convidado, `latestCard`). O convidado recebe
+  esse cfg no fim (a partida completa, `fin`). Os dois calculam pela MESMA conta (`eloDelta0` pelos valores do cfg, com
+  arredondamento simétrico) e pelo vencedor da partida do anfitrião: o que um ganha o outro perde e os dois veem os
+  mesmos números. A minha pontuação anda a partir da que eu tenho guardada (cartão mexido no caminho não me prejudica).
+  Versão sem `rk` joga normalmente, só a partida não conta. Mesma conta nos dois lados (duas abas) não conta.
+- **Uma vez por partida**: `recordRanked` só conta com modo online, os dois cartões, o meu id no meu lugar e semente
+  nova (`rank.seen`). Chamado em `history.recordGame` (que já é chamado pelo `recordIfOver`, fora do replay e do
+  espectador). Desfazer depois do fim é recusado no online; recarregar e ver o replay não contam de novo.
+- **Perfil** (tela inicial → Perfil, ou o nome da conta no topo): `Profile.career` (versão `v: 1`) = partidas por modo,
+  por deck (`my:`/`pre:`/`x:<nome>`), por lenda, por adversário (`f:<id>` amigo, `n:<nome>` online antigo, `ai:<nível>`,
+  `ai:?` antes de o histórico guardar o nível), sequência atual e maior; uma vez por semente. Conta antiga: na primeira
+  vez é montado a partir do histórico (`fromHist`). `HistEntry` ganhou `ai`, `opp` e `elo` ({d, after}).
+- Gráfico da pontuação: SVG simples (linha, 1000 tracejado como referência, vitória = ponto cheio, derrota = ponto
+  vazado, rótulo direto no último valor, dica por ponto). Barras de taxa de vitória sempre com "xx% · V · D" escrito e
+  marca em 50%.
+- **Testes**: `tests/ranking.test.ts` (Elo simétrico, dois lados com os mesmos números, uma vez só, o que não conta,
+  fim pelo histórico com desfazer/replay, conta antiga + dado estragado + backup) e `node scripts/rankingtest.mjs
+  <pasta>` (duas contas jogam online até o fim pela mesa; MODE=room também). Prints em `docs/prints/ranking/`.
+  `tests/historico.test.ts`: o aparelho "pequeno" do teste de falta de espaço subiu de 6000 para 6800 bytes (a conta
+  agora guarda também o resumo do perfil).
+- O Histórico mostra "+16 → 1016 pontos" nas partidas online que contaram (`HistEntry.elo`).
+- Ficou de fora: o ranking não é à prova de quem edita o próprio localStorage (é entre amigos, sem servidor).
