@@ -419,7 +419,7 @@ let games = 0;
 for (; games < 3; games++) {
   if (games === 0) await runGame(liga.host, liga.guest, `liga, partida ${games + 1}`);
   else {
-    const next = await liga.host.$('[data-act=rematch]');
+    const next = (await liga.host.$('.tt-overlay [data-act=rematch]')) ?? (await liga.host.$('[data-act=rematch]'));
     if (!next) break;
     ok((await next.textContent()).includes('Próxima partida'), `liga: "Próxima partida" depois da partida ${games}`);
     if (games === 1) await liga.host.screenshot({ path: `${OUT}/torneio-proxima-partida.png` });

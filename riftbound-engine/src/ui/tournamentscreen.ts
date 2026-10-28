@@ -283,7 +283,7 @@ function champHtml(t: Tournament): string {
   const p = playerOf(t, t.champion);
   const d = t.champDeck ?? p?.deck ?? null;
   return `<section class="mz tour-champ" aria-label="Campeão">${cover(d)}<div><span class="tour-kicker">Campeão</span><h2>🏆 ${esc(p?.name ?? '?')}</h2>
-    ${d ? `<p>com o deck <b>${esc(d.name)}</b>${legendName(d) ? ` · ${esc(legendName(d))}` : ''}${champOk(d) ? ` (${esc(cardData(d.champion).name.split(',')[0])})` : ''}</p>` : ''}
+    ${d ? `<p>com o deck <b>${esc(d.name)}</b>${legendName(d) ? ` · ${esc(legendName(d))}` : ''}${champOk(d) && cardData(d.champion).name.split(',')[0] !== legendName(d) ? ` (${esc(cardData(d.champion).name.split(',')[0])})` : ''}</p>` : ''}
     <p class="muted small">${fmtText(t)} · ${t.players.length} participantes · terminou em ${date(t.finished ?? Date.now())}</p></div></section>`;
 }
 function fixHtml(t: Tournament): string {
