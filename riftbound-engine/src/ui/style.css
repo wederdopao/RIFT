@@ -2139,3 +2139,118 @@ body.tut .tt-endbtn.tut-off { opacity: 0.45; }
 /* aviso do service worker: o site foi atualizado (src/ui/swreg.ts) */
 .rb-update { position: fixed; left: 12px; bottom: 12px; z-index: 90; display: flex; align-items: center; gap: 8px; padding: 6px 8px 6px 12px; border: 1px solid var(--gold); border-radius: 8px; background: var(--panel); box-shadow: 0 6px 20px var(--shadow); font-size: 14px; }
 .rb-update button:last-child { padding: 4px 8px; }
+
+/* ── torneio entre amigos (src/ui/tournamentscreen.ts) ── */
+.mode.aux.tour { border-style: solid; border-color: rgba(92, 200, 184, 0.45); background: linear-gradient(180deg, rgba(92, 200, 184, 0.14), rgba(92, 200, 184, 0.02)); }
+.mode.aux.tour b { color: var(--me); }
+.setup.tour { display: grid; gap: 14px; padding-top: 14px; max-width: 1240px; margin: 0 auto; }
+.tour-top { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+.tour-top button { padding: 5px 12px; }
+.tour-confirm { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; color: var(--muted); font-size: 0.9em; }
+.tour-hero { margin-top: -4px; }
+.tour-hubgrid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 12px; align-items: start; }
+.tour-create, .tour-join { display: grid; gap: 8px; align-content: start; }
+.tour-create label:not(.tog), .tour-join label, .tour-lbl { font: 600 13px var(--f-display); letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+.tour-create .tog { color: var(--ink); }
+.tour-create button.big { justify-self: start; }
+.tour-row { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 8px; align-items: center; }
+.tour-row select { min-width: 0; width: 100%; }
+.tour-list ul { list-style: none; margin: 6px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; }
+.tour-card button { width: 100%; display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 10px; align-items: center; text-align: left; padding: 6px; background: rgba(8, 15, 30, 0.45); }
+.tour-card .cv { aspect-ratio: 16 / 10; }
+.tour-card .cv-champ { display: none; }
+.tour-cinfo { display: grid; gap: 2px; min-width: 0; }
+.tour-cinfo b { font: 700 18px/1.1 var(--f-display); overflow-wrap: anywhere; }
+.tour-champline { font: 600 14px var(--f-display); color: var(--gold-hi); letter-spacing: 0.02em; }
+.tour-list.past .tour-card button { border-color: var(--gold-soft); }
+.tour-head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, 340px); gap: 14px; align-items: center; }
+.tour-hinfo { display: grid; gap: 4px; justify-items: start; min-width: 0; }
+.tour-hinfo h1 { font: 700 clamp(28px, 3.4vw, 40px)/1.05 var(--f-display); margin: 0; color: var(--gold-hi); overflow-wrap: anywhere; }
+.tour-hinfo p { margin: 0; }
+.tour-kicker { font: 700 13px var(--f-display); letter-spacing: 0.1em; text-transform: uppercase; color: var(--me); }
+.tour-code { display: grid; gap: 4px; justify-items: stretch; text-align: center; }
+.tour-code .roomcode { font-size: clamp(34px, 5vw, 46px); }
+.tour-me { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 14px; align-items: start; }
+.tour-mecv .cv { aspect-ratio: 16 / 10; }
+.tour-meinfo { display: grid; gap: 6px; min-width: 0; }
+.tour-meinfo p { margin: 0; }
+.tour-pend { padding: 6px 10px; border: 1px solid var(--gold-soft); border-radius: 4px; color: var(--gold-hi); font-size: 0.9em; }
+.tour-players ul { list-style: none; margin: 6px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; }
+.tour-players li { display: grid; grid-template-columns: 84px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 5px; border-radius: 4px; background: rgba(8, 15, 30, 0.45); border: 1px solid var(--line); }
+.tour-players li.me { border-color: var(--me); }
+.tour-players li .cv { aspect-ratio: 16 / 10; }
+.tour-players li .cv-champ { display: none; }
+.tour-players li > span { display: grid; gap: 1px; min-width: 0; }
+.tour-players li b { font: 700 17px/1.1 var(--f-display); overflow-wrap: anywhere; }
+.tour-players li small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tour-players .btns { margin-top: 10px; }
+.tour-x { padding: 2px 8px; font-size: 13px; }
+.tour-next ul, .tour-results ul { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 6px; }
+.tour-next li, .tour-results li { display: grid; grid-template-columns: 130px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 6px 10px; border-radius: 4px; background: rgba(8, 15, 30, 0.45); border: 1px solid var(--line); }
+.tour-next li.mine { border-color: var(--me); box-shadow: 0 0 14px rgba(92, 200, 184, 0.18); }
+.tour-nr { font: 600 13px var(--f-display); letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+.tour-vs { min-width: 0; overflow-wrap: anywhere; }
+.tour-nb { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.tour-results li { grid-template-columns: 130px minmax(0, 1fr); }
+.tour-gs { grid-column: 2; display: grid; gap: 3px; }
+.tour-g { font-size: 0.92em; }
+.tour-rp { padding: 1px 9px; font-size: 12px; margin-left: 4px; }
+.tour-org { border-color: var(--gold-soft); color: var(--gold-hi); }
+/* chave: uma coluna por rodada, os confrontos espaçados para alinhar com a rodada seguinte */
+.tour-cols { display: grid; grid-template-columns: repeat(var(--rounds), minmax(210px, 1fr)); gap: 16px; overflow-x: auto; padding-bottom: 6px; }
+.tour-col { display: grid; grid-template-rows: auto 1fr; gap: 4px; min-width: 0; }
+.tour-colm { display: flex; flex-direction: column; justify-content: space-around; gap: 10px; min-width: 0; }
+.tour-col h3, .tour-round h3 { font: 600 15px var(--f-display); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin: 0 0 2px; }
+.tour-m { display: grid; gap: 0; border: 1px solid var(--line); border-radius: 5px; background: rgba(8, 15, 30, 0.55); overflow: hidden; }
+.tour-m.ready { border-color: var(--gold-soft); }
+.tour-m.mine { box-shadow: 0 0 0 1px var(--me); }
+.tour-side { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 5px 8px; min-height: 40px; }
+.tour-side + .tour-side { border-top: 1px solid rgba(43, 64, 112, 0.6); }
+.tour-pn { display: grid; min-width: 0; }
+.tour-pn b { font: 700 16px/1.1 var(--f-display); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tour-pn small { font-size: 0.75em; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tour-pn.win b { color: var(--gold-hi); }
+.tour-pn.lose b { color: var(--muted); text-decoration: line-through; text-decoration-color: rgba(141, 153, 178, 0.5); }
+.tour-pn.me b::after { content: ' (você)'; font-weight: 500; font-size: 0.8em; color: var(--me); }
+.tour-pn.tbd { color: var(--muted); font-style: italic; font-size: 0.9em; }
+.tour-wmark { font-style: normal; color: var(--ok); font-weight: 700; }
+.tour-mfoot { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 4px 8px 6px; background: rgba(19, 34, 63, 0.5); }
+.tour-mfoot:empty { display: none; }
+.tour-mfoot button { padding: 3px 10px; font-size: 13px; }
+.tour-sc { font: 700 15px var(--f-display); color: var(--ink); margin-right: auto; letter-spacing: 0.04em; }
+.tour-tablewrap { overflow-x: auto; }
+.tour-table table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.tour-table th, .tour-table td { padding: 6px 8px; text-align: center; border-bottom: 1px solid rgba(43, 64, 112, 0.6); }
+.tour-table th { font: 600 13px var(--f-display); letter-spacing: 0.06em; color: var(--muted); }
+.tour-table .l { text-align: left; }
+.tour-table td b { font-family: var(--f-display); font-size: 17px; }
+.tour-table tr.me td { background: rgba(92, 200, 184, 0.08); }
+.tour-table tr.champ td { background: rgba(214, 176, 90, 0.12); }
+.tour-table tr.champ td:first-child::before { content: '🏆 '; }
+.tour-round + .tour-round { margin-top: 10px; }
+.tour-rms { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; }
+.tour-champ { display: grid; grid-template-columns: minmax(180px, 300px) minmax(0, 1fr); gap: 16px; align-items: center; background-color: rgba(214, 176, 90, 0.1); }
+.tour-champ .cv { aspect-ratio: 16 / 10; }
+.tour-champ h2 { font: 700 clamp(30px, 4vw, 44px)/1 var(--f-display); color: var(--gold-hi); margin: 2px 0 6px; overflow-wrap: anywhere; }
+.tour-champ p { margin: 0 0 4px; }
+.tour-fix { max-width: 640px; }
+.tour-fixrow { display: grid; grid-template-columns: 64px minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr) auto; gap: 6px; align-items: center; margin-bottom: 6px; }
+.tour-fixpts { display: flex; gap: 4px; align-items: center; font-size: 0.85em; color: var(--muted); min-width: 0; overflow: hidden; }
+.tour-fixpts input { width: 52px; flex: 0 0 auto; }
+.tour-fix .btns { margin-top: 10px; flex-wrap: wrap; }
+@media (max-width: 860px) {
+  .tour-hubgrid, .tour-head { grid-template-columns: minmax(0, 1fr); }
+  .tour-me { grid-template-columns: 120px minmax(0, 1fr); }
+  .tour-me .cv-champ, .tour-champ .cv-champ { display: none; }
+  .tour-champ { grid-template-columns: 130px minmax(0, 1fr); }
+  .tour-next li, .tour-results li { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .tour-gs { grid-column: 1; }
+  .tour-nb { justify-content: flex-start; }
+  .tour-cols { grid-template-columns: repeat(var(--rounds), minmax(180px, 78vw)); }
+  .tour-fixrow { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; }
+  .tour-fixrow > span { grid-column: 1 / -1; font-weight: 600; }
+  .tour-row { grid-template-columns: minmax(0, 1fr); gap: 3px; }
+  .tour-list ul { grid-template-columns: minmax(0, 1fr); }
+}
+/* tela inicial com o botão do torneio: 7–8 botões auxiliares em 4 colunas no computador */
+@media (min-width: 1100px) { .modegroup.aux:has(> :nth-child(7)) { grid-template-columns: repeat(4, minmax(0, 1fr)); } }

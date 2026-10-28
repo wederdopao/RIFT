@@ -535,3 +535,34 @@ RiftJudge/playriftbound não acessíveis no contêiner: rulings vieram de resumo
 - Teste: `tests/escada.test.ts` (decks legais, trilhas existentes, 2 partidas IA × IA por deck sem erro, progresso);
   prints: `node scripts/laddershot.mjs <pasta>` (o fim de partida é forçado só para o print).
 
+
+## Torneio entre amigos (28/10/2026, branch claude/torneio; PROTOCOL 10)
+- Tela inicial → **Torneio** (`[data-act=tour]`, página `'tour'` em main.ts). Lista: criar (nome, eliminação simples ou
+  pontos corridos, melhor de 1/3, Casual/Padrão, "pode trocar de deck entre confrontos", "eu também jogo" + deck),
+  entrar por código, "Meus torneios" e "Torneios passados" (campeão + deck). Link de convite `#torneio-XXXXXX` (abre
+  direto, inclusive colado na mesma aba; recarregar na tela do torneio volta para ela).
+- **Lógica pura** `src/ui/tournament.ts` (testes em `tests/torneio.test.ts`): inscrição (até 16), sorteio, chave pela
+  ordem de cabeças (`seedOrder`; byes para os primeiros sorteados, sempre no lado b, nunca bye × bye), rodízio pelo
+  método do círculo (folga com número ímpar), `reportGame` (só os dois jogadores ou o organizador, lados conferidos,
+  uma vez por semente, nada depois de decidido), `fixMatch` (organizador: partidas/pontos, W.O., limpar), `settle`
+  (na chave, quem passa; confronto cujos lados mudaram por correção perde as partidas; campeão e deck do último
+  confronto dele), `standings` (3 por vitória → confronto direto entre os empatados → saldo de pontos de partida →
+  pontos feitos → sorteio), `cleanTournament` (o que chega da rede).
+- **Sincronização** `src/ui/tournamentsync.ts`: cada aparelho guarda o torneio na conta (`Profile.tournaments`,
+  `acc.tourEntries`): estado mais novo, papel (org/player/watch), o próprio deck (a lista inteira: não muda se o deck
+  da conta for editado), resultados ainda não confirmados. Canal próprio `t-<código>` pelo mesmo transporte das salas
+  (`openChannel` em online.ts). O organizador aplica tudo e repassa o estado inteiro com `rev`; batimento `tping`; quem
+  está atrás pede `tneed`; participante se apresenta com `tjoin` (versão = PROTOCOL; diferente é recusado). Replays
+  ficam numa chave à parte por conta (`riftbound-mesa-torneio-rp:<perfil>`, ~1,2 MB, os mais velhos saem); quem não
+  tem pede ao organizador (`trq`/`trp`).
+- **Confronto = sala normal**: código da sala derivado de torneio + confronto (`matchRoomCode`): lado a cria (anfitrião),
+  lado b entra, os outros assistem. Em main.ts: `roomTour` (marca + deck do torneio; salvo com a sala para voltar ao
+  recarregar), `myDeck()`, só o adversário certo pode começar (`guestId`), o cfg leva `tour` (o motor ignora),
+  `recordIfOver` chama `tourRecord` nos dois lados (o resultado vai na hora e o replay logo depois), fim da partida com
+  "Próxima partida (a × b)" no melhor de 3 e "Voltar ao torneio". As mensagens da sala não mudaram.
+- Teste: `node scripts/tourtest.mjs <pasta>` (broker local ou MODE=room): 3 navegadores; eliminação com bye, semifinal
+  jogada com espectador, participante e organizador recarregando, final, campeão nas três telas, replay vindo do
+  organizador, passados; liga em melhor de 3 com W.O., resultado lançado e um confronto jogado em 2–3 partidas.
+  Partidas curtas com `window.__RB_TEST_CFG__ = {startPoints:[7,7]}` (só teste). Prints em `docs/prints/torneio-*`.
+- Fora: não há "desistir" de partida (o organizador dá W.O.); não dá para passar a organização a outro aparelho; o
+  deck do adversário não é conferido contra o inscrito (o cliente dele manda o do torneio); sem disputa de 3º lugar.
