@@ -1759,6 +1759,7 @@ body.tt-dragging, body.tt-dragging * { user-select: none !important; -webkit-use
 @media (max-width: 860px) and (orientation: portrait) {
   .tt-bubble { font-size: 12px; }
   .tt-chatpop { left: 8px; right: 8px; width: auto; }
+}
 /* ── confirmar antes de jogar: carta armada, alvos/locais acesos e o painel ── */
 .tt .card.armed { box-shadow: 0 0 0 3px var(--gold-hi), 0 0 26px rgba(240, 212, 138, 0.9); transform: translateY(-6px); z-index: 6; }
 .tt .card.armtgt { outline: 2px dashed #7fe3d2; outline-offset: 3px; cursor: pointer; }
