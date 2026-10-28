@@ -250,11 +250,12 @@ export function tourRecord(cfg: any, answers: string[][], winner: P | null, poin
     decks: [deckInfo(cfg.decks[0]), deckInfo(cfg.decks[1])],
     at: Date.now(),
   };
-  save();
-  // o replay vai junto (empacotado: o empacotamento é assíncrono)
+  // o resultado vai já (o fim da partida mostra os botões certos); o replay vai depois (empacotar é assíncrono) — o
+  // organizador conta a partida uma vez e só marca que tem o replay
+  submit(e.code, r);
   void pack({ cfg, answers }).then(
     (z) => submit(e.code, { ...r, z }),
-    () => submit(e.code, r),
+    () => {},
   );
 }
 function submit(code: string, r: TourReport) {

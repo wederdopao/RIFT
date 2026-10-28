@@ -2164,7 +2164,8 @@ body.tut .tt-endbtn.tut-off { opacity: 0.45; }
 .tour-org { border-color: var(--gold-soft); color: var(--gold-hi); }
 /* chave: uma coluna por rodada, os confrontos espaçados para alinhar com a rodada seguinte */
 .tour-cols { display: grid; grid-template-columns: repeat(var(--rounds), minmax(210px, 1fr)); gap: 16px; overflow-x: auto; padding-bottom: 6px; }
-.tour-col { display: flex; flex-direction: column; justify-content: space-around; gap: 10px; min-width: 0; }
+.tour-col { display: grid; grid-template-rows: auto 1fr; gap: 4px; min-width: 0; }
+.tour-colm { display: flex; flex-direction: column; justify-content: space-around; gap: 10px; min-width: 0; }
 .tour-col h3, .tour-round h3 { font: 600 15px var(--f-display); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin: 0 0 2px; }
 .tour-m { display: grid; gap: 0; border: 1px solid var(--line); border-radius: 5px; background: rgba(8, 15, 30, 0.55); overflow: hidden; }
 .tour-m.ready { border-color: var(--gold-soft); }

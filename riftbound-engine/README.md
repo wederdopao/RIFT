@@ -32,6 +32,11 @@ Projeto de fã, sem fins comerciais, feito sob a política "Legal Jibber Jabber"
   tela inicial; o jogador escolhe um deck e enfrenta 5 adversários com decks temáticos (Rengar aggro, Ziggs Bombas/
   Deploy, Ambessa Empower, Lux control, Kai'Sa chefe), IA de Fácil a Difícil e um tema de tabuleiro do LoR por degrau;
   3 vidas (sem vidas, recomeça); vencer os 5 põe o deck no hall da conta. Progresso em `Profile.ladder`/`ladderHall`.
+- **Torneio entre amigos** (`src/ui/tournament.ts` lógica, `tournamentsync.ts` rede/conta, `tournamentscreen.ts`
+  tela): botão "Torneio" na tela inicial; eliminação simples (chave com bye) ou pontos corridos (vitória = 3; desempate
+  por confronto direto e saldo de pontos de partida), melhor de 1 ou de 3, deck fixo ou trocável. Entra-se por código
+  ou link (`#torneio-XXXXXX`); cada confronto é uma sala online normal e o resultado (com o replay) volta sozinho; o
+  organizador é a fonte da verdade, corrige resultados e dá W.O. Fica na conta (`Profile.tournaments`).
 - **Mesa de verdade** (`src/ui/main.ts`, seção "mesa"; lógica pura em `src/ui/interact.ts`): tapete com oponente em
   cima e você embaixo, os campos de batalha no meio, mão em leque, runas como cartas (exauridas deitadas; a lenda
   também gira), pilhas com contagem, trilhas de pontos nas laterais e prévia grande da carta ao apontar.
@@ -140,6 +145,7 @@ node scripts/uioverlap.mjs                                  # a barra cobre algu
 node scripts/uireplay.mjs <pasta>                           # relatório baixado → aberto no replay → lances → continuar
 node scripts/tutorialplay.mjs <pasta>                       # tutorial inteiro pela mesa, com prints de cada passo
 node scripts/laddershot.mjs <pasta>                         # prints da escada contra a IA (SIZES=1920x1080,1366x768,390x844)
+node scripts/mqttbroker.cjs 8888 & node scripts/tourtest.mjs <pasta>   # torneio com 3 navegadores (MODE=room também)
 ```
 
 ## Estrutura

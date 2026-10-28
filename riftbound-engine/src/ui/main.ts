@@ -20,7 +20,7 @@ import * as tut from './tutorial';
 import { ladderEndButtons, ladderEndNote, ladderRecord, type LadderMatch } from './ladder';
 import { ladderCodes, ladderHtml, onLadderClick, setLadderHooks } from './ladderscreen';
 import { initTour, knownGames, tourRecord, tourTagOf, type TourTag } from './tournamentsync';
-import { onTourClick, setTourHooks, showTour, tourArtCodes, tourHtml, type TourRoom } from './tournamentscreen';
+import { onTourClick, setHash, setTourHooks, showTour, tourArtCodes, tourHtml, type TourRoom } from './tournamentscreen';
 import type { DeckList, GameConfig } from '../engine/engine';
 import { chainTargets, liveCombat, locKey, matchDrop, moveCombat, moveTargets, type CombatPreview, type Drop } from './interact';
 import { CONCEPTS, guideHtml, keywordHelpHtml } from './glossary';
@@ -4513,6 +4513,7 @@ function enterTourRoom(r: TourRoom) {
   pickSeat = null;
   settings.opponent = 'online';
   page = 'setup';
+  setHash(null); // na sala, recarregar volta para a sala (não para a tela do torneio)
   openRoom(r.role, r.room, { pub: false, name: r.name, tour: { tag: r.tag, deck: r.deck } });
   window.scrollTo(0, 0);
 }
@@ -4560,11 +4561,19 @@ function start(data: any = {}) {
   }
   // caiu ou recarregou no meio de uma sala online: volta sozinho para a mesma sala (o anfitrião manda o lance atual)
   const back = !data?.saved || ViewGame.isSaved(data.saved) ? loadSaved() : null;
-  if (back?.online && !game && (!hm || hm[1].toUpperCase() === back.online.code)) {
+  if (back?.online && !game && !tm && (!hm || hm[1].toUpperCase() === back.online.code)) {
     settings.opponent = 'online';
     resumeOnline(back);
   }
   document.addEventListener('click', onClick);
+  // link de torneio colado na mesma aba (só o # muda: a página não recarrega)
+  window.addEventListener('hashchange', () => {
+    const h = /^#torneio-([A-Za-z0-9]{6})$/.exec(location.hash);
+    if (!h || game || net) return;
+    page = 'tour';
+    showTour(h[1].toUpperCase());
+    render();
+  });
   document.addEventListener('keydown', onKey);
   const onField = (ev: Event) => {
     if (!game && page === 'decks') onDbInput(ev.target as HTMLElement);

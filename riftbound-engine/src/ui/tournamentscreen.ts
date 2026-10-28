@@ -47,6 +47,18 @@ export function showTour(code: string | null) {
   fixing = null;
   if (code) openTour(code);
   else syncConns(null);
+  setHash(code);
+}
+/** O endereço leva o torneio aberto (#torneio-XXXXXX): recarregar a página volta para ele. */
+export function setHash(code: string | null) {
+  if (typeof location === 'undefined') return;
+  const want = code ? `#torneio-${code}` : '';
+  if (location.hash === want || (!code && !/^#torneio-/.test(location.hash))) return;
+  try {
+    history.replaceState(null, '', location.pathname + location.search + want);
+  } catch {
+    /* sem histórico (arquivo local em alguns navegadores): segue */
+  }
 }
 
 const legendOk = (d: TourDeck | null | undefined) => (d && hasCard(d.legend) ? d.legend : null);
@@ -140,7 +152,7 @@ function nameCell(t: Tournament, id: string | null, win: string | null, tbd = 'a
   return `<span class="tour-pn${win === id ? ' win' : win ? ' lose' : ''}${id === me() ? ' me' : ''}"><b>${esc(p?.name ?? '?')}</b>${p?.deck ? `<small>${esc(legendName(p.deck) || p.deck.name)}</small>` : ''}</span>`;
 }
 function scoreOf(t: Tournament, m: TourMatch): string {
-  if (m.bye) return '<span class="tour-sc">bye</span>';
+  if (m.bye) return '';
   if (m.wo) return `<span class="tour-sc">W.O.</span>`;
   if (!m.games.length) return '';
   if (t.bestOf === 1) {
@@ -171,11 +183,11 @@ function matchHtml(e: TourEntry, t: Tournament, m: TourMatch, withBtns = true): 
 function bracketHtml(e: TourEntry, t: Tournament): string {
   const cols: string[] = [];
   for (let r = 0; r < t.rounds; r++)
-    cols.push(`<div class="tour-col"><h3>${roundName(t, r)}</h3>${t.matches
+    cols.push(`<div class="tour-col"><h3>${roundName(t, r)}</h3><div class="tour-colm">${t.matches
       .filter((m) => m.round === r)
       .sort((x, y) => x.slot - y.slot)
       .map((m) => matchHtml(e, t, m))
-      .join('')}</div>`);
+      .join('')}</div></div>`);
   return `<section class="mz tour-bracket" aria-label="Chave"><h2>Chave</h2><div class="tour-cols" style="--rounds:${t.rounds}">${cols.join('')}</div></section>`;
 }
 function tableHtml(t: Tournament): string {
@@ -365,6 +377,7 @@ export function onTourClick(t: HTMLElement): boolean {
   switch (a) {
     case 'thome':
       cur = null;
+      setHash(null);
       hooks.home();
       return true;
     case 'tback':
