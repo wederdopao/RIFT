@@ -414,6 +414,23 @@ RiftJudge/playriftbound não acessíveis no contêiner: rulings vieram de resumo
 - ~~`scripts/onlinetest.mjs` instável no clique do pedido de desfazer~~ — resolvido (27/10): o clique usa localizador
   em vez de ElementHandle; 3 rodadas seguidas passaram.
 
+## Mesa, site e modos novos (28/10/2026)
+- **CSS**: um `@media (max-width: 860px) and (orientation: portrait)` sem `}` deixava o resto do arquivo valendo só em
+  celular em pé (o painel de jogar a carta saía "gigante" no computador). Corrigido, e `tests/css.test.ts` confere que
+  toda chave abre e fecha — na junção dos modos novos o mesmo erro voltou (um `@media` dos desafios) e o teste pegou.
+- **Site**: arte em `art/<código>.webp` (uma por carta, `__RB_ART_FILES__`) em vez dos pacotes base64 — abrir uma
+  partida baixa ~360 KB de arte. O artifact e o offline continuam com os pacotes.
+- **Sons e música**: `src/ui/sound.ts` (efeitos gerados + vozes do LoR, `scripts/lor_voices.py`, 81 campeões) e
+  `src/ui/music.ts` (20 temas de tabuleiro do LoR, `scripts/lor_music.py`; trilha por deck no deckbuilder, ou pedida
+  pela partida em `cfg.music`, como na escada). Volume: 🔊/M e 🎵/N.
+- **Emotes** no online (😊/E): viajam pelo chat com o emoji na frente (`EMOTES` em main.ts), balão com o emoji grande.
+- **Fim da partida**: `endSummaryHtml` (pontos por turno em SVG, virada, mais dano, cartas jogadas), tirado do registro.
+- **Animações**: dano que sobe (`.tt-fx.dmgpop`) e unidade que morre se partindo (`.tt-fx.shatter`), em `animateArrivals`
+  com as posições das cartas antes de redesenhar (`Seen`).
+- **Modos novos** (feitos em 3 sessões paralelas e juntados aqui): Desafios, Tutorial e Escada — ver as seções de cada um.
+  Ordem no `render()`: `recordIfOver()` antes de desenhar (a escada mostra o resultado já gravado), `tut.afterRender()`
+  depois.
+
 ## Retomada (27/10/2026)
 - **Mesa**: `touchUi()` agora vai pelo ponteiro (`(hover: none), (pointer: coarse)`), não pela largura — em notebook
   com zoom do Windows (125%/150%) o clique na carta abria o zoom gigante e travava. Zoom no toque: tocar na carta fecha,
@@ -500,3 +517,21 @@ RiftJudge/playriftbound não acessíveis no contêiner: rulings vieram de resumo
 - **Testes**: `tests/tutorial.test.ts` (roteiro inteiro pelo motor; outras opções raiz recusadas em cada passo) e
   `node scripts/tutorialplay.mjs docs/prints/tutorial` (pela mesa, 1366x768 e 390x844 com toque: segue a seta, confere
   a jogada barrada, sai no meio e continua, chega à vitória, começa a partida Fácil; prints JPEG de cada passo).
+
+## Escada contra a IA (28/10/2026, branch claude/escada)
+- Tela inicial → **Escada** (`[data-act=ladder]`): escolhe um deck (salvo ou starter) e enfrenta 5 adversários em
+  sequência. Decks à mão em `src/decks/ladder.ts` (`LADDER`: nome, apelido, frase, ideia, nível, trilha, deck), todos
+  legais no Padrão: 1 Rengar (aggro Fúria/Corpo, Fácil), 2 Ziggs (Bombas e Deploy do Radiance, Fácil), 3 Ambessa
+  (Empower do Vendetta, Normal), 4 Lux (control Ordem/Mente, Difícil), 5 Kai'Sa (chefe Fúria/Mente, Difícil). A ordem
+  segue a força medida em round-robin IA Fácil × IA Fácil (com os starters): Kai'Sa 19/24, Lux 16/24, Rengar 11/24,
+  Ambessa 10/24, Ziggs 5–7/24.
+- Progresso na conta (`Profile.ladder` = `LadderRun`: deck, degrau, vidas, derrotas, recomeços, sementes já contadas;
+  `Profile.ladderHall`). Lógica em `src/ui/ladder.ts` (`ladderStart`, `ladderMatch`, `ladderRecord` — conta uma vez
+  por semente e só se a partida é do degrau atual da escada em andamento —, botões do fim da partida), tela em
+  `src/ui/ladderscreen.ts`. Em main.ts: botão, página `'ladder'`, `onLadderClick`, `startLadderGame` (cfg com `aiLevel`,
+  `music` e `ladder: {rung, started}`), botões do fim e `recordIfOver` (agora chamado antes de desenhar).
+- Música: `musicScene({kind:'game', track})` — a partida pode pedir uma trilha (`cfg.music`, id do tabuleiro); sem
+  ela, vale a escolha do deck como antes.
+- Teste: `tests/escada.test.ts` (decks legais, trilhas existentes, 2 partidas IA × IA por deck sem erro, progresso);
+  prints: `node scripts/laddershot.mjs <pasta>` (o fim de partida é forçado só para o print).
+

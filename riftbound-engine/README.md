@@ -28,6 +28,10 @@ Projeto de fã, sem fins comerciais, feito sob a política "Legal Jibber Jabber"
   coleção, raridade, busca), deck principal, side (até 10), runas, campos, validação pelas regras 103 e 601.1.c,
   curva de energia, mão de teste, código de deck no formato do Piltover Archive (importar e copiar), decks salvos por
   conta, várias contas no mesmo aparelho, backup da conta e placar de vitórias por deck.
+- **Escada contra a IA** (`src/decks/ladder.ts`, `src/ui/ladder.ts`, `src/ui/ladderscreen.ts`): botão "Escada" na
+  tela inicial; o jogador escolhe um deck e enfrenta 5 adversários com decks temáticos (Rengar aggro, Ziggs Bombas/
+  Deploy, Ambessa Empower, Lux control, Kai'Sa chefe), IA de Fácil a Difícil e um tema de tabuleiro do LoR por degrau;
+  3 vidas (sem vidas, recomeça); vencer os 5 põe o deck no hall da conta. Progresso em `Profile.ladder`/`ladderHall`.
 - **Mesa de verdade** (`src/ui/main.ts`, seção "mesa"; lógica pura em `src/ui/interact.ts`): tapete com oponente em
   cima e você embaixo, os campos de batalha no meio, mão em leque, runas como cartas (exauridas deitadas; a lenda
   também gira), pilhas com contagem, trilhas de pontos nas laterais e prévia grande da carta ao apontar.
@@ -135,6 +139,7 @@ node scripts/uiinteract.mjs <pasta>                         # partida usando a m
 node scripts/uioverlap.mjs                                  # a barra cobre alguma carta? o pedido sai cortado? (6 telas)
 node scripts/uireplay.mjs <pasta>                           # relatório baixado → aberto no replay → lances → continuar
 node scripts/tutorialplay.mjs <pasta>                       # tutorial inteiro pela mesa, com prints de cada passo
+node scripts/laddershot.mjs <pasta>                         # prints da escada contra a IA (SIZES=1920x1080,1366x768,390x844)
 ```
 
 ## Estrutura
