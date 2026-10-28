@@ -9,9 +9,14 @@ import { MANUAL_PAY, type Engine } from '../engine/engine';
 import type { Decision, Domain, Loc, Obj, Option, P } from '../engine/types';
 import { DOMAIN_COLOR, DOMAIN_PT, esc, rulesHtml } from './text';
 import { AiPlayer, quickPick, AI_LEVELS, isAiLevel, type AiLevel } from '../ai/ai';
-import { artUrl, ensureArt } from './art';
+import { artHd, artUrl, ensureArt } from './art';
 import { cycleSound, sfx, soundFromLog, soundIcon } from './sound';
-import { cycleMusic, loadMusic, musicBoards, musicIcon, musicScene, stopPreview } from './music';
+import { canLink, codeFromText, decodeReplay, encodeReplay, linkFor, prepareReplay } from './replaylink';
+import { copyText, showCopyBox } from './copy';
+import { cycleMusic, deckTrack, loadMusic, musicBoards, musicIcon, musicScene, stopPreview } from './music';
+import { registerSw } from './swreg';
+import { pageZoom, zRect, zpx } from './zoom';
+import { FELTS, currentMat, loadMats, lorMats, matAttrs, matChoice, setMat } from './mats';
 import * as acc from './account';
 import { RUNE_CODES, coverArt, db as dbState, deckbuilderHtml, mountDb, onDbClick, onDbContext, onDbHover, onDbInput, poolCodes, refreshDbPeek, setHooks } from './deckbuilder';
 import * as hist from './history';
@@ -19,10 +24,14 @@ import { challengeArtCodes, challengeHold, challengeHudHtml, challengeOf, challe
 import * as tut from './tutorial';
 import { ladderEndButtons, ladderEndNote, ladderRecord, type LadderMatch } from './ladder';
 import { ladderCodes, ladderHtml, onLadderClick, setLadderHooks } from './ladderscreen';
+import { initTour, knownGames, tourRecord, tourTagOf, type TourTag } from './tournamentsync';
+import { onTourClick, setHash, setTourHooks, showTour, tourArtCodes, tourHtml, type TourRoom } from './tournamentscreen';
 import type { DeckList, GameConfig } from '../engine/engine';
 import { chainTargets, liveCombat, locKey, matchDrop, moveCombat, moveTargets, type CombatPreview, type Drop } from './interact';
 import { CONCEPTS, guideHtml, keywordHelpHtml } from './glossary';
 import { LobbyWatch, Net, PROTOCOL, cleanCode, cleanText, inClaudeApp, makeKeys, newCode, pack, sharedKey, unpack, type Listing, type Msg, type Op } from './online';
+import * as rating from './rating';
+import { onProfileClick, profileCodes, profileHtml, rankEndNote, rankingHtml, setProfileHooks } from './profile';
 import { ViewGame, ViewKeeper, type ViewDiff, type ViewSource, type ViewState, type Viewer } from '../engine/view';
 /** A página está aberta dentro do app do Claude? (lá o online usa o canal da própria página) */
 let claudeApp = false;
@@ -83,8 +92,8 @@ let net: Net | null = null;
 let seat: P = 0; // meu lugar na partida online (anfitrião 0, convidado 1)
 let seq = 0; // jogadas aplicadas (para o convidado não perder nenhuma)
 let owners: P[] = []; // anfitrião: quem deu cada resposta (para o "desfazer")
-let guest: { name: string; deck: DeckList } | null = null; // anfitrião: quem entrou
-let hostInfo: { name: string; deck: string } | null = null; // convidado: dados do anfitrião
+let guest: { name: string; deck: DeckList; rk?: rating.RankCard | null } | null = null; // anfitrião: quem entrou
+let hostInfo: { name: string; deck: string; rk?: rating.RankCard | null } | null = null; // convidado: dados do anfitrião
 let joinCode = '';
 let netNote = '';
 const online = () => !!net;
@@ -128,7 +137,13 @@ function fullGame(): Game | null {
   }
   return finCache.g;
 }
-const helloMsg = (): Msg => ({ t: 'hello', name: settings.names[0], deck: acc.deckById(settings.decks[0]), v: PROTOCOL, pk: myKeys?.pub });
+const helloMsg = (): Msg => ({ t: 'hello', name: settings.names[0], deck: myDeck(), v: PROTOCOL, pk: myKeys?.pub, rk: rating.myCard(settings.names[0]) });
+/** Sala de um confronto do torneio (tournamentscreen.ts): a marca que vai no cfg e o deck inscrito no torneio. */
+let roomTour: { tag: TourTag; deck: DeckList | null } | null = null;
+/** Anfitrião: quem entrou como convidado (id do aparelho; no torneio tem de ser o lado b do confronto). */
+let guestId = '';
+/** Meu deck na sala: o do torneio (fica o mesmo até o fim) ou o escolhido na tela inicial. */
+const myDeck = (): DeckList => roomTour?.deck ?? acc.deckById(settings.decks[0]);
 function sendReq(op: Op, s: number) {
   queueOut(async () => {
     const z = await pack(op, peerKey);
@@ -315,8 +330,10 @@ function sendChat(text: string) {
   render();
 }
 
-function openRoom(role: 'host' | 'guest' | 'watch', code: string, opts?: { pub: boolean; name: string }) {
+function openRoom(role: 'host' | 'guest' | 'watch', code: string, opts?: { pub: boolean; name: string; tour?: typeof roomTour }) {
   net?.close();
+  roomTour = opts?.tour ?? null;
+  guestId = '';
   guest = null;
   hostInfo = null;
   netNote = '';
@@ -381,6 +398,12 @@ function leaveRoom() {
   guestView = watchView = null;
   remoteSteps = null;
   if (location.hash) history.replaceState(null, '', location.pathname + location.search);
+  // sala de um confronto do torneio: volta para a tela do torneio
+  if (roomTour) {
+    page = 'tour';
+    showTour(roomTour.tag.code);
+    roomTour = null;
+  }
   save();
   render();
 }
@@ -465,13 +488,20 @@ function applyOp(op: Op, by: P, accepted = false): boolean {
 }
 function startOnlineGame() {
   if (!net || net.role !== 'host' || !guest || !net.connected) return;
+  if (roomTour && guestId && guestId !== roomTour.tag.b) return; // confronto do torneio: só contra o adversário certo
   game = new Game({
     seed: (Math.random() * 2 ** 31) | 0,
-    decks: [acc.deckById(settings.decks[0]), guest.deck],
+    decks: [myDeck(), guest.deck],
     names: [settings.names[0], guest.name],
     battlefieldMode: settings.bfMode,
     autoPass: settings.autoPass,
-  });
+    // partida de torneio: o resultado volta para o torneio (tournamentsync.ts); o motor ignora
+    ...(roomTour ? { tour: roomTour.tag } : {}),
+    // testes (scripts/tourtest.mjs): partida mais curta
+    ...((window as any).__RB_TEST_CFG__ || {}),
+    // ranking: os cartões dos dois como estavam no começo (o motor ignora; os dois lados contam pelo mesmo cfg)
+    ...((r) => (r ? { rank: r } : {}))(rating.rankForGame(rating.myCard(settings.names[0]), rating.latestCard(guest.rk))),
+  } as GameConfig);
   seq = 0;
   owners = [];
   undoReq = null;
@@ -545,14 +575,16 @@ async function handleNet(m: Msg | { t: '__open' }, from: string) {
         net.send({ t: 'deny', msg: 'Vocês estão com versões diferentes do Riftbound Mesa: atualizem a página.' });
         return;
       }
-      guest = { name: (m.name || 'Amigo').slice(0, 20), deck: m.deck && typeof m.deck === 'object' ? m.deck : DECKS[0] };
+      guest = { name: (m.name || 'Amigo').slice(0, 20), deck: m.deck && typeof m.deck === 'object' ? m.deck : DECKS[0], rk: rating.cleanCard(m.rk) };
+      guestId = from;
+      rating.sawFriend(guest.rk ?? null);
       // canal cifrado: chave combinada com a chave pública que veio no hello (antes de mandar a visão)
       const pk = typeof m.pk === 'string' ? m.pk : undefined;
       queueOut(async () => {
         guestPk = pk;
         await keysReady;
         peerKey = myKeys ? await sharedKey(myKeys.priv, pk) : null;
-        net?.send({ t: 'welcome', hostName: settings.names[0], hostDeck: acc.deckById(settings.decks[0]).name, pk: myKeys?.pub });
+        net?.send({ t: 'welcome', hostName: settings.names[0], hostDeck: myDeck().name, pk: myKeys?.pub, rk: rating.myCard(settings.names[0]) });
       });
       if (game) sendGuestFull('start');
     } else if (m.t === 'req') {
@@ -576,7 +608,8 @@ async function handleNet(m: Msg | { t: '__open' }, from: string) {
       return;
     } else if (m.t === '__open') return;
     else if (m.t === 'welcome') {
-      hostInfo = { name: m.hostName, deck: m.hostDeck };
+      hostInfo = { name: m.hostName, deck: m.hostDeck, rk: rating.cleanCard(m.rk) };
+      rating.sawFriend(hostInfo.rk ?? null);
       peerKey = myKeys ? await sharedKey(myKeys.priv, m.pk) : null;
     } else if (m.t === 'start' || m.t === 'state' || m.t === 'wstate') {
       try {
@@ -695,8 +728,9 @@ let preview: string | null = null;
 let modal: { title: string; html: string } | null = null;
 let flashOpt: string | null = null;
 let zoom: string | null = null;
-/** Tela fora da partida: mesa (configuração), decks, desafios ou a escada contra a IA (src/ui/ladder.ts). */
-let page: 'setup' | 'decks' | 'challenges' | 'ladder' = 'setup';
+/** Tela fora da partida: mesa (configuração), decks, desafios, a escada contra a IA (src/ui/ladder.ts), o torneio
+ *  entre amigos (src/ui/tournamentscreen.ts), o ranking ou o perfil (src/ui/profile.ts). */
+let page: 'setup' | 'decks' | 'challenges' | 'ladder' | 'tour' | 'ranking' | 'profile' = 'setup';
 let logOpen = true;
 /** Unidades escolhidas para mover (clique direto na unidade pronta), válidas enquanto a decisão raiz não muda. */
 let moveSel: string[] = [];
@@ -768,7 +802,7 @@ function save() {
   if (replay) return; // rever uma partida não mexe na partida salva
   if (tut.isTut(game)) return; // tutorial: o progresso fica na conta (tutorial.ts), a partida salva continua a mesma
   try {
-    const on = net ? { role: net.role, code: net.code, seat, seq, owners, pub: net.pub, rname: net.roomName } : null;
+    const on = net ? { role: net.role, code: net.code, seat, seq, owners, pub: net.pub, rname: net.roomName, tour: roomTour } : null;
     localStorage.setItem(STORE, JSON.stringify({ settings, saved: game ? game.serialize() : null, view, online: on }));
   } catch {
     /* armazenamento indisponível: segue sem salvar */
@@ -782,6 +816,8 @@ interface SavedOnline {
   owners: P[];
   pub?: boolean;
   rname?: string;
+  /** sala de um confronto do torneio */
+  tour?: { tag: TourTag; deck: DeckList | null } | null;
 }
 function loadSaved(): { settings: Settings; saved: string | null; view: P; online?: SavedOnline | null } | null {
   try {
@@ -1205,7 +1241,8 @@ function cardHtml(eng: Engine, o: Obj, mode: 'hand' | 'board' | 'small' | 'thumb
   const bar = doms.length ? doms.join(', ') : 'var(--line)';
   const opts = optionsFor(o.id);
   const sel = selected.includes(o.id) || opts.some((x) => selected.includes(x.id));
-  const url = artUrl(o.code);
+  // na mão a carta é grande (e cresce ao passar o mouse; o mulligan também usa a mão): arte em alta no site
+  const url = mode === 'hand' ? artHd(o.code) : artUrl(o.code);
   const classes = ['card', mode, k, url ? 'has-art' : 'frame'];
   const onBoard = o.zone === 'board';
   // a lenda também gira quando exaure (ela fica na zona da lenda, não no tabuleiro)
@@ -1368,7 +1405,7 @@ function isHiddenFromView(eng: Engine, o: Obj): boolean {
 function cardDetail(eng: Engine, o: Obj): string {
   const d = cardData(o.code);
   const k = o.zone === 'board' && eng.isUnit(o) ? 'unit' : kindOf(o.code); // novo: unit gear
-  const url = artUrl(o.code);
+  const url = artHd(o.code);
   const eff = d.effectText ? `<p class="eff"><b>Quando equipado:</b> ${rulesHtml(d.effectText)}</p>` : '';
   const sc = (eng.script(o) as any)?.notes;
   const live: string[] = [];
@@ -1621,6 +1658,37 @@ function syncMusic() {
   // a partida pode pedir a própria trilha (cfg.music, ex.: degrau da escada); senão vale a escolha do deck
   musicScene({ kind: 'game', choice: acc.savedDeckOf(settings.decks[0])?.music, track: (game.cfg as { music?: string }).music, seed: game.cfg.seed });
 }
+/** Cartas e textos maiores (botão "Aa"/tecla A; para quem enxerga pouco): classe no <html>, guardada no aparelho. */
+let bigText = false;
+try {
+  bigText = localStorage.getItem('rb-bigtext') === '1';
+} catch {}
+function setBigText(on: boolean) {
+  bigText = on;
+  document.documentElement.classList.toggle('rb-big', on);
+  try {
+    localStorage.setItem('rb-bigtext', on ? '1' : '0');
+  } catch {}
+}
+if (typeof document !== 'undefined') document.documentElement.classList.toggle('rb-big', bigText);
+/** O tabuleiro (id) da música desta partida, mesmo com a música desligada: o tapete 'auto' acompanha. */
+function gameTrackId(): string | undefined {
+  if (!game) return undefined;
+  const t = (game.cfg as { music?: string }).music;
+  if (t && musicBoards().some((b) => b.id === t)) return t;
+  return deckTrack(acc.savedDeckOf(settings.decks[0])?.music, game.cfg.seed)?.id;
+}
+/** Escolha do tapete: automático (o da música), os feltros e, no site, as ilustrações do LoR. Todos liberados. */
+function matPickHtml(): string {
+  const cur = matChoice();
+  const btn = (id: string, name: string, src?: string) =>
+    `<button type="button" data-act="mat" data-id="${esc(id)}" class="${src ? '' : `mat-${esc(id)}`}${cur === id ? ' on' : ''}"${src ? ` style="background-image:url('${esc(src)}')"` : ''} title="${esc(name)}"><span>${esc(name)}</span></button>`;
+  const lor = lorMats();
+  return `<div class="tt-matpick">
+    <h4>Feltro</h4>${btn('auto', 'Automático (o do tabuleiro da música)')}${FELTS.map((m) => btn(m.id, m.name)).join('')}
+    ${lor.length ? `<h4>Tabuleiros do Legends of Runeterra</h4>${lor.map((m) => btn(m.id, m.name, m.src)).join('')}` : location.protocol === 'file:' ? '<p class="note">As ilustrações dos tabuleiros só aparecem no site.</p>' : ''}
+  </div>`;
+}
 /** Sons das linhas novas do registro (no replay, só acompanha a leitura). */
 function playSounds(eng: Engine) {
   if (!game) return;
@@ -1803,6 +1871,15 @@ function endSummaryHtml(eng: Engine): string {
 
 /** Sobreposição no centro da mesa: escolha de campo, mulligan, cartas fora da mesa, troca de jogador e fim. */
 let overlayHidden = '';
+/** Fim de uma partida de confronto do torneio: a próxima partida (melhor de 3, anfitrião) e a volta ao torneio. */
+function tourEndButtons(eng: Engine, compact = false): string | null {
+  // (a visão do convidado não traz o cfg inteiro: vale a marca da sala)
+  const tag = roomTour && net && !watching() ? tourTagOf(game?.cfg) ?? roomTour.tag : null;
+  if (!tag) return roomTour && watching() ? '<button class="primary" data-act="tourback">Voltar ao torneio</button>' : null;
+  const k = knownGames(tag);
+  const next = k.decided ? '' : net!.role === 'host' ? `<button class="primary" data-act="rematch">Próxima partida (${k.w[0]} × ${k.w[1]})</button>` : compact ? '' : `<span class="muted">Confronto em ${k.w[0]} × ${k.w[1]}: ${esc(eng.pl[0].name)} começa a próxima partida aqui.</span>`;
+  return `${next}<button class="${next && net!.role === 'host' ? '' : 'primary'}" data-act="tourback">Voltar ao torneio</button>`;
+}
 function overlayHtml(eng: Engine, d: Decision | null): string {
   if (!game || replay) return '';
   // desafio: abertura e resultado no lugar do fim de jogo
@@ -1815,17 +1892,22 @@ function overlayHtml(eng: Engine, d: Decision | null): string {
     const w = eng.winner;
     const mine = w !== null && (vsAi() ? w === HUMAN : online() ? w === seat : true);
     const btns = online()
-      ? net!.role === 'host'
+      ? tourEndButtons(eng) ?? (net!.role === 'host'
         ? '<button class="primary" data-act="rematch">Revanche</button><button data-act="lobby">Trocar decks</button>'
-        : `<span class="muted">Esperando ${esc(eng.pl[0].name)} pedir a revanche.</span>`
+        : `<span class="muted">Esperando ${esc(eng.pl[0].name)} pedir a revanche.</span>`)
       : ladderEndButtons(game.cfg) ?? '<button class="primary" data-act="newgame">Nova partida</button><button data-act="setup">Trocar decks</button>';
-    const lad = ladderEndNote(game.cfg);
+    const lad = online() ? rankEndNote(fullGame()?.cfg, seat) : ladderEndNote(game.cfg);
     return `<div class="tt-overlay end ${mine ? 'win' : 'lose'}"><div class="tt-obox">
       <p class="tt-kicker">Fim de jogo</p><h2>${w !== null ? `${esc(eng.pl[w].name)} venceu` : 'Fim de jogo'}</h2>
       <p>${esc(eng.winReason || '')} · ${eng.pl[0].points} × ${eng.pl[1].points} · ${eng.turn} turnos</p>${lad ? `<p class="tt-ladnote">${lad}</p>` : ''}${(() => {
         const last = [...eng.log].reverse().find((l) => /ganha \d+ ponto/.test(l.text));
         return last ? `<p class="muted">Último ponto: ${linkCards(eng, last.text)}</p>` : '';
-      })()}${endSummaryHtml(eng)}<div class="btns">${btns}<button data-act="replaythis">Ver o replay</button><button data-act="hideoverlay">Ver a mesa</button></div></div></div>`;
+      })()}${endSummaryHtml(eng)}<div class="btns">${btns}<button data-act="replaythis">Ver o replay</button>${(() => {
+        const fg = fullGame();
+        if (!fg) return '';
+        const sv = JSON.parse(fg.serialize());
+        return replayShareBtn(sv.cfg, sv.answers);
+      })()}<button data-act="hideoverlay">Ver a mesa</button></div></div></div>`;
   }
   if (handoffPending)
     return `<div class="tt-overlay handoff"><div class="tt-obox"><p class="tt-kicker">Passe o aparelho</p><h2>Vez de ${esc(eng.pl[d.player].name)}</h2>
@@ -1838,7 +1920,7 @@ function overlayHtml(eng: Engine, d: Decision | null): string {
   if (d.kind === 'setup') {
     const picks = d.options
       .map((o) => {
-        const url = hasCard(o.id) ? artUrl(o.id) : null;
+        const url = hasCard(o.id) ? artHd(o.id) : null;
         return `<button class="tt-pick land" data-opt="${esc(o.id)}" ${hasCard(o.id) ? `data-hover="code:${esc(o.id)}"` : ''}>${url ? `<img src="${url}" alt="" draggable="false">` : `<span class="tt-pickname">${esc(o.label)}</span>`}<span class="tt-picklabel">${esc(o.label)}</span></button>`;
       })
       .join('');
@@ -1866,7 +1948,7 @@ function overlayHtml(eng: Engine, d: Decision | null): string {
         const ob = o.obj ? eng.objs[o.obj] : null;
         const on = selected.includes(o.id);
         if (!ob) return `<button class="tt-pick text${on ? ' on' : ''}" data-opt="${esc(o.id)}"><span class="tt-pickname">${esc(o.label)}</span></button>`;
-        const url = artUrl(ob.code);
+        const url = artHd(ob.code);
         return `<button class="tt-pick${on ? ' on' : ''}" data-opt="${esc(o.id)}" data-hover="${ob.id}" title="${esc(o.label)}">${url ? `<img src="${url}" alt="" draggable="false">` : `<span class="tt-pickname">${esc(cardData(ob.code).name)}</span>`}<span class="tt-picklabel">${esc(o.label)}</span></button>`;
       })
       .join('');
@@ -1937,7 +2019,7 @@ function peekHtml(eng: Engine, id: string | null): string {
   if (!o.id.startsWith('code:') && isHiddenFromView(eng, o)) return '';
   const d = cardData(o.code);
   const k = o.zone === 'board' && eng.isUnit(o) ? 'unit' : kindOf(o.code); // novo: unit gear
-  const url = artUrl(o.code);
+  const url = artHd(o.code);
   const live: string[] = [];
   if (k === 'unit' && o.zone === 'board') {
     live.push(`Might <b>${eng.might(o)}</b>`);
@@ -1979,6 +2061,8 @@ function sideHtml(eng: Engine, d: Decision | null): string {
         <button data-act="guide" title="Como funciona (?)">Como funciona</button>
         <button data-act="sound" class="tt-sound" title="Volume dos sons (M)">${soundIcon()}</button>
         <button data-act="music" class="tt-sound" title="Volume da música (N); a trilha de cada deck se escolhe no deckbuilder">${musicIcon()}</button>
+        <button data-act="matpick" title="Trocar o tapete da mesa (T)">Tapete</button>
+        <button data-act="bigtext" class="tt-sound${bigText ? ' on' : ''}" title="Cartas e textos maiores (A)" aria-pressed="${bigText}">Aa</button>
         ${replay ? '' : '<button data-act="report" title="Guardar esta partida para mostrar um problema">Relatar problema</button>'}
         ${online() ? '<button data-act="leave">Sair da sala</button>' : '<button data-act="setup">Menu</button>'}
       </div>
@@ -2372,6 +2456,13 @@ function optListHtml(eng: Engine, d: Decision, head = ''): string {
   return `<div class="tt-optlist${head ? ' forced' : ''}">${head ? `<p class="tt-olh">${esc(head)}</p>` : ''}${[...groups.entries()].map(([g, opts]) => `${g ? `<div class="og">${esc(g)}</div>` : ''}<div class="opts">${optButtons(eng, opts, multi)}</div>`).join('')}</div>`;
 }
 
+/** Botão de compartilhar o replay: o link (site) ou o código (offline), preparado antes para o clique só copiar. */
+let shareCode: string | null = null;
+function replayShareBtn(cfg: any, answers: string[][], cls = ''): string {
+  shareCode = prepareReplay(`${cfg?.seed}:${answers.length}`, { cfg, answers, view }, scheduleRender);
+  const label = canLink() ? 'Copiar link do replay' : 'Copiar código do replay';
+  return `<button class="${cls}" data-act="rlink" ${shareCode ? '' : 'disabled'} title="${canLink() ? 'Quem abrir o link vê a partida inteira, lance a lance' : 'Cole o código em Abrir replay, na tela inicial'}">${label}</button>`;
+}
 function replayBarHtml(eng: Engine, d: Decision | null): string {
   const r = replay!;
   const n = r.answers.length;
@@ -2387,6 +2478,7 @@ function replayBarHtml(eng: Engine, d: Decision | null): string {
       <button class="tt-dbtn" data-act="rgo" data-to="${r.pos + 1}" title="Próximo lance (→)">▶</button>
       <button class="tt-dbtn" data-act="rgo" data-to="${n}" title="Fim">⏭</button>
       <button class="tt-dbtn" data-act="flip" title="Ver do outro lado">Girar</button>
+      ${replayShareBtn(r.cfg, r.answers, 'tt-dbtn')}
       <button class="tt-dbtn" data-act="rplay" data-mode="human" title="Continuar daqui, os dois no mesmo aparelho">Jogar daqui</button>
       <button class="tt-dbtn" data-act="rplay" data-mode="ai" title="Continuar daqui contra a IA (você é o Jogador 1)">Daqui × IA</button>
       <button class="primary" data-act="rexit">Sair do replay</button>
@@ -2486,12 +2578,22 @@ function importHtml(): string {
     <p>Abra um relatório (ou o arquivo de uma partida) para rever lance a lance.</p>
     <input type="file" id="rfile" accept=".json,.txt,application/json,text/plain">
     <label for="rpaste">Ou cole o conteúdo aqui</label>
-    <textarea id="rpaste" rows="4" placeholder='{"app":"riftbound-mesa", ...}'></textarea>
+    <textarea id="rpaste" rows="4" placeholder='O link do replay, o código rb1:… ou o conteúdo do relatório'></textarea>
     <div class="btns"><button class="primary" data-act="rimport">Abrir</button></div>
     <p class="err" id="rerr"></p>
   </div>`;
 }
 function importText(text: string): string | null {
+  const code = codeFromText(text);
+  if (code) {
+    void decodeReplay(code)
+      .then((d) => openReplay(d.cfg, d.answers, 0, { view: d.view as P }))
+      .catch(() => {
+        const el = document.getElementById('rerr');
+        if (el) el.textContent = 'Não consegui ler este link ou código: confira se copiou inteiro.';
+      });
+    return null;
+  }
   try {
     const o = JSON.parse(text.trim());
     if (o?.partial && !o.game)
@@ -2651,9 +2753,7 @@ function dockHtml(eng: Engine, d: Decision | null): string {
   if (eng.winner !== null || !d) {
     const w = eng.winner;
     const again = online()
-      ? net!.role === 'host'
-        ? '<button class="primary" data-act="rematch">Revanche</button>'
-        : ''
+      ? tourEndButtons(eng, true) ?? (net!.role === 'host' ? '<button class="primary" data-act="rematch">Revanche</button>' : '')
       : challengeOf(game)
         ? '<button class="primary" data-act="chretry">Tentar de novo</button>'
         : ladderEndButtons(game.cfg, true) ?? '<button class="primary" data-act="newgame">Nova partida</button>';
@@ -2769,8 +2869,10 @@ function ctxMenuHtml(eng: Engine): string {
   for (const x of optionsFor(o.id))
     items.push(ROOT_ACT.test(x.id) && game?.current?.root ? `<button data-act="arm" data-id="${o.id}" data-opt="${esc(x.id)}">${esc(x.label)}</button>` : `<button data-opt="${esc(x.id)}">${esc(x.label)}</button>`);
   if (!items.length) return '';
-  const left = Math.min(ctxMenu.x, window.innerWidth - 260);
-  const top = Math.min(ctxMenu.y, window.innerHeight - 40 - items.length * 38);
+  // ctxMenu está em pixels da tela; o menu, em pixels de CSS (zoom das telas grandes, zoom.ts)
+  const f = pageZoom();
+  const left = Math.min(ctxMenu.x / f, window.innerWidth / f - 260);
+  const top = Math.min(ctxMenu.y / f, window.innerHeight / f - 40 - items.length * 38);
   return `<div class="tt-ctx" style="left:${left}px;top:${Math.max(8, top)}px"><div class="tt-ctxh">${esc(cardData(o.code).name)}</div>${items.join('')}</div>`;
 }
 
@@ -2783,8 +2885,9 @@ function gameHtml(): string {
   const d = game!.current;
   const top: P = (1 - view) as P;
   frame = computeFrame(eng, d);
+  const mat = matAttrs(currentMat(gameTrackId()));
   return `<div class="tt${isOtherTurn() ? ' waiting' : ''}${moveSel.length ? ' moving' : ''}${sideOpen ? ' sideopen' : ''}">
-    <main class="tt-mat">
+    <main class="tt-mat${mat.cls}"${mat.style ? ` style="${mat.style}"` : ''}>
       ${railHtml(eng, view, 'left')}${railHtml(eng, top, 'right')}
       ${handRowHtml(eng, top, true)}
       ${homeRowHtml(eng, top, true)}
@@ -2813,7 +2916,8 @@ let motionKeys = new Map<string, string>();
 let motionGame: Game | null = null;
 let motionLog = 0;
 const calmMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
-function fxAt(cls: string, r: DOMRect, html = '', ms = 900, style = '') {
+function fxAt(cls: string, r0: DOMRect, html = '', ms = 900, style = '') {
+  const r = zRect(r0);
   const el = document.createElement('div');
   el.className = `tt-fx ${cls}`;
   el.setAttribute('aria-hidden', 'true');
@@ -2889,7 +2993,7 @@ function animateArrivals(before: Map<string, Seen> = new Map()) {
         const ra = a.getBoundingClientRect();
         const rb = b.getBoundingClientRect();
         for (let k = 0; k < Math.min(n, 6); k++)
-          fxAt('fly', ra, '', 1000 + k * 90, `--dx:${rb.left - ra.left}px;--dy:${rb.top - ra.top}px;animation-delay:${k * 90}ms`);
+          fxAt('fly', ra, '', 1000 + k * 90, `--dx:${zpx(rb.left - ra.left)}px;--dy:${zpx(rb.top - ra.top)}px;animation-delay:${k * 90}ms`);
         fxAt('pilenote burn', rb, `<b>Burn ${n}</b>`, 1500);
       }
       // Predict: o deck de quem fez pisca (olhou o topo)
@@ -2991,10 +3095,10 @@ function setupHtml(): string {
       <div class="modegroup" role="radiogroup" aria-label="Adversário">${MODES.map(
         (m) => `<button type="button" role="radio" class="mode${settings.opponent === m.id ? ' on' : ''}" data-act="mode" data-mode="${m.id}" aria-checked="${settings.opponent === m.id}"><b>${m.t}</b><span>${m.s}</span></button>`,
       ).join('')}</div>
-      <div class="modegroup aux">${tut.homeButton()}<button type="button" class="mode aux" data-act="decks"><b>Meus decks</b><span>Montar, importar e exportar</span></button><button type="button" class="mode aux" data-act="history"><b>Histórico</b><span>Partidas, replays e estatísticas</span></button><button type="button" class="mode aux" data-act="importopen"><b>Abrir replay</b><span>De um arquivo ou relatório</span></button><button type="button" class="mode aux" data-act="challenges"><b>Desafios</b><span>Vença neste turno</span></button><button type="button" class="mode aux ladder" data-act="ladder"><b>Escada</b><span>5 adversários seguidos contra a IA</span></button></div>
+      <div class="modegroup aux">${tut.homeButton()}<button type="button" class="mode aux" data-act="decks"><b>Meus decks</b><span>Montar, importar e exportar</span></button><button type="button" class="mode aux" data-act="history"><b>Histórico</b><span>Partidas, replays e estatísticas</span></button><button type="button" class="mode aux" data-act="importopen"><b>Abrir replay</b><span>De um arquivo ou relatório</span></button><button type="button" class="mode aux" data-act="challenges"><b>Desafios</b><span>Vença neste turno</span></button><button type="button" class="mode aux ladder" data-act="ladder"><b>Escada</b><span>5 adversários seguidos contra a IA</span></button><button type="button" class="mode aux tour" data-act="tour"><b>Torneio</b><span>Chave ou pontos corridos entre amigos</span></button><button type="button" class="mode aux" data-act="ranking"><b>Ranking</b><span>${rating.rankStore().elo} pontos · amigos online</span></button><button type="button" class="mode aux" data-act="profile"><b>Perfil</b><span>Pontuação, vitórias e decks</span></button></div>
     </nav>`;
   const summary = `${settings.opponent === 'ai' ? `Contra a IA (${AI_LEVELS.find((l) => l.id === settings.aiLevel)!.t})` : 'Passa-e-joga'} · ${settings.format === 'padrao' ? 'Padrão' : 'Casual'} · campos ${settings.bfMode === 'random' ? 'sorteados' : 'escolhidos'}`;
-  return `<header class="topbar"><div class="brand">Riftbound <span>mesa</span></div><div class="turninfo">${esc(acc.profile().name)}</div>
+  return `<header class="topbar"><div class="brand">Riftbound <span>mesa</span></div><div class="turninfo"><button type="button" class="tb-acct" data-act="profile" title="Ver o perfil">${esc(acc.profile().name)} <span>${rating.rankStore().elo}</span></button></div>
     <div class="tb">${musicBoards().length ? `<button type="button" data-act="music" title="Volume da música (N)">${musicIcon()}</button>` : ''}${net ? '<button type="button" data-act="decks">Meus decks</button>' : ''}</div></header>
   <main class="setup home">
     ${net ? lobbyHtml() : `<div class="hero"><h1>Riftbound na mesa</h1><p>As regras rodam sozinhas: custos, pilha, combate, pontos e o efeito de cada carta.</p></div>
@@ -3117,8 +3221,10 @@ function lobbyHtml(): string {
     const g = guest && net.connected ? guest : null;
     const gRep = g ? checkDeck(g.deck) : null;
     const gBan = g && gRep && (gRep.errors.length || (settings.format === 'padrao' && gRep.banned.length));
+    // confronto do torneio: só o adversário do confronto pode jogar nesta sala
+    const wrong = !!(g && roomTour && guestId && guestId !== roomTour.tag.b);
     return `<section class="lobby panel">
-      <p class="who">Sua sala · <b>${esc(net.roomName || defaultRoomName())}</b> · ${net.pub ? '<span class="hub-tag pub">pública: aparece na lista de salas</span>' : '<span class="hub-tag">privada: só entra quem tiver o código</span>'}</p>
+      <p class="who">${roomTour ? 'Confronto do torneio' : 'Sua sala'} · <b>${esc(net.roomName || defaultRoomName())}</b> · ${roomTour ? '<span class="hub-tag">seu adversário entra sozinho pela tela do torneio</span>' : net.pub ? '<span class="hub-tag pub">pública: aparece na lista de salas</span>' : '<span class="hub-tag">privada: só entra quem tiver o código</span>'}</p>
       <div class="roomcode" aria-label="Código da sala">${esc(net.code)}</div>
       ${(net.kind ?? (claudeApp ? 'room' : 'mqtt')) === 'room' ? '<p class="note">Vocês estão jogando pela página do Claude. Compartilhe esta página com o seu amigo dando acesso de edição (menu Compartilhar); ele abre a página, escolhe "Amigo online" e digita este código.</p>' : web ? `<label for="invite">Link de convite</label><div class="joinrow"><input id="invite" readonly value="${esc(link)}"><button type="button" data-act="copy">Copiar</button></div>` : '<p class="note">Mande este código para o seu amigo. Ele abre o jogo, escolhe "Amigo online" e digita o código.</p>'}
       ${err}
@@ -3126,11 +3232,12 @@ function lobbyHtml(): string {
         net.status === 'abrindo'
           ? 'Abrindo a sala…'
           : g
-            ? `<b>${esc(g.name)}</b> entrou com o deck <b>${esc(g.deck.name)}</b>.`
+            ? `<b>${esc(g.name)}</b>${g.rk ? ` (${rating.latestCard(g.rk)!.elo} pontos)` : ''} entrou com o deck <b>${esc(g.deck.name)}</b>.`
             : 'Esperando seu amigo entrar…'
       }${net.watcherCount ? ` · ${net.watcherCount} assistindo` : ''}</p>
       ${gBan ? `<p class="err">${gRep!.errors.length ? `O deck do seu amigo não é válido: ${esc(gRep!.errors[0])}` : 'O deck do seu amigo tem cartas banidas no formato Padrão. Troque para Casual para jogar.'}</p>` : ''}
-      <div class="btns"><button class="primary" data-act="ostart" ${g && !gBan ? '' : 'disabled'}>Começar partida</button><button data-act="leave">Fechar sala</button></div>
+      ${wrong ? '<p class="err">Quem entrou não é o seu adversário neste confronto do torneio.</p>' : ''}
+      <div class="btns"><button class="primary" data-act="ostart" ${g && !gBan && !wrong ? '' : 'disabled'}>Começar partida</button><button data-act="leave">${roomTour ? 'Voltar ao torneio' : 'Fechar sala'}</button></div>
     </section>`;
   }
   if (net.role === 'watch')
@@ -3143,9 +3250,9 @@ function lobbyHtml(): string {
   </section>`;
   return `<section class="lobby panel">
     <p class="who">Sala ${esc(net.code)}</p>
-    <h2>${net.connected ? (hostInfo ? `Conectado com ${esc(hostInfo.name)}` : 'Conectado') : net.status === 'reconectando' ? 'Procurando a sala…' : 'Conectando…'}</h2>
+    <h2>${net.connected ? (hostInfo ? `Conectado com ${esc(hostInfo.name)}${hostInfo.rk ? ` (${rating.latestCard(hostInfo.rk)!.elo} pontos)` : ''}` : 'Conectado') : net.status === 'reconectando' ? 'Procurando a sala…' : 'Conectando…'}</h2>
     ${err}
-    <p class="lstatus">${net.connected ? `Esperando ${esc(hostInfo?.name ?? 'o anfitrião')} começar a partida. Seu deck: <b>${esc(acc.deckById(settings.decks[0]).name)}</b> (pode trocar no campo Deck: o anfitrião vê na hora).` : 'O jogo tenta de novo sozinho a cada poucos segundos.'}</p>
+    <p class="lstatus">${net.connected ? `Esperando ${esc(hostInfo?.name ?? 'o anfitrião')} começar a partida. Seu deck: <b>${esc(myDeck().name)}</b>${roomTour ? ' (o do torneio)' : ' (pode trocar no campo Deck: o anfitrião vê na hora)'}.` : 'O jogo tenta de novo sozinho a cada poucos segundos.'}</p>
     <div class="btns"><button data-act="leave">Sair da sala</button></div>
   </section>`;
 }
@@ -3188,7 +3295,7 @@ function render() {
     for (const el of Array.from(document.querySelectorAll<HTMLElement>('.tt-mat .card[data-obj]')))
       before.set(el.dataset.obj!, { r: el.getBoundingClientRect(), bomb: el.classList.contains('bomb'), unit: el.classList.contains('unit'), art: el.querySelector<HTMLImageElement>('img.art')?.src || '' });
   recordIfOver(); // antes de desenhar: o quadro do fim já mostra o resultado gravado (escada: próximo degrau / vidas)
-  app.innerHTML = game ? gameHtml() : page === 'decks' ? deckbuilderHtml() : page === 'challenges' ? challengesHtml(acc.profile().name) : page === 'ladder' ? ladderHtml(ladderTopbar()) + modalHtml() : setupHtml() + modalHtml();
+  app.innerHTML = game ? gameHtml() : page === 'decks' ? deckbuilderHtml() : page === 'challenges' ? challengesHtml(acc.profile().name) : page === 'ladder' ? ladderHtml(ladderTopbar()) + modalHtml() : page === 'tour' ? tourHtml(ladderTopbar()) + modalHtml() : page === 'ranking' ? rankingHtml(ladderTopbar()) : page === 'profile' ? profileHtml(ladderTopbar()) : setupHtml() + modalHtml();
   if (focusId) {
     const el = document.getElementById(focusId) as HTMLInputElement | null;
     if (el && el !== document.activeElement) {
@@ -3232,6 +3339,10 @@ function render() {
         ? challengeArtCodes()
       : page === 'ladder'
         ? [...RUNE_CODES, ...ladderCodes()]
+      : page === 'tour'
+        ? tourArtCodes()
+      : page === 'profile'
+        ? profileCodes()
         : [
           ...RUNE_CODES,
           ...settings.decks.flatMap((i) => {
@@ -3311,6 +3422,8 @@ function onClick(ev: MouseEvent) {
   }
   if (!game && page === 'decks' && onDbClick(t)) return;
   if (onLadderClick(t)) return;
+  if (!game && page === 'tour' && onTourClick(t)) return;
+  if (onProfileClick(t)) return;
   // clique fora do menu da carta fecha o menu (e segue valendo como clique normal)
   if (ctxMenu && !t.closest('.tt-ctx')) {
     ctxMenu = null;
@@ -3477,6 +3590,21 @@ function onClick(ev: MouseEvent) {
       if (err && el) el.textContent = err;
       return;
     }
+    if (a === 'rlink') {
+      if (!shareCode) {
+        // ainda preparando: gera agora e mostra numa caixa para copiar (fora do clique a cópia automática falha)
+        const src = replay ? { cfg: replay.cfg, answers: replay.answers } : fullGame() ? JSON.parse(fullGame()!.serialize()) : null;
+        if (src) void encodeReplay({ cfg: src.cfg, answers: src.answers, view }).then((c) => showCopyBox(canLink() ? linkFor(c) : `rb1:${c}`, canLink() ? 'Link do replay' : 'Código do replay', 'O link ficou pronto agora.'));
+        return;
+      }
+      const text = canLink() ? linkFor(shareCode) : `rb1:${shareCode}`;
+      copyText(text, canLink() ? 'Link do replay' : 'Código do replay', () => {
+        uiHint = canLink() ? 'Link do replay copiado: quem abrir vê a partida inteira.' : 'Código copiado: cole em Abrir replay, na tela inicial.';
+        modal = { title: 'Replay', html: `<p>${uiHint}</p>` };
+        render();
+      });
+      return;
+    }
     if (a === 'replaythis' && game) {
       const fg = fullGame();
       if (!fg) {
@@ -3498,6 +3626,26 @@ function onClick(ev: MouseEvent) {
     }
     if (a === 'sound') {
       cycleSound();
+      render();
+      return;
+    }
+    if (a === 'bigtext') {
+      setBigText(!bigText);
+      render();
+      return;
+    }
+    if (a === 'matpick') {
+      loadMats(() => {
+        if (modal?.title === 'Tapete da mesa') modal.html = matPickHtml();
+        render();
+      });
+      modal = { title: 'Tapete da mesa', html: matPickHtml() };
+      render();
+      return;
+    }
+    if (a === 'mat') {
+      setMat(act.dataset.id || 'auto');
+      modal = null;
       render();
       return;
     }
@@ -3685,6 +3833,15 @@ function onClick(ev: MouseEvent) {
       window.scrollTo(0, 0);
       return;
     }
+    if (a === 'tour') {
+      pickSeat = null;
+      page = 'tour';
+      showTour(null);
+      render();
+      window.scrollTo(0, 0);
+      return;
+    }
+    if (a === 'tourback') return leaveRoom(); // sala de um confronto: volta para a tela do torneio
     if (a === 'challenges') {
       pickSeat = null;
       page = 'challenges';
@@ -4020,7 +4177,7 @@ function onPointerMove(ev: PointerEvent) {
     document.querySelector(`.tt-mat .card[data-obj="${CSS.escape(drag.id)}"]`)?.classList.add('tt-dragsrc');
   }
   ev.preventDefault();
-  drag.ghost!.style.transform = `translate(${ev.clientX}px, ${ev.clientY}px)`;
+  drag.ghost!.style.transform = `translate(${zpx(ev.clientX)}px, ${zpx(ev.clientY)}px)`;
   const u = dropUnder(ev.clientX, ev.clientY);
   for (const z of Array.from(document.querySelectorAll('.dropover'))) if (z !== u.zone) z.classList.remove('dropover');
   const okZone = u.zone && (drag.kind !== 'move' || (u.zone.dataset.dest && frame.dests.has(u.zone.dataset.dest)));
@@ -4144,7 +4301,7 @@ function onHover(ev: MouseEvent) {
 
 function resumeOnline(s: { saved: string | null; online?: SavedOnline | null }) {
   const on = s.online!;
-  openRoom(on.role, on.code, { pub: !!on.pub, name: on.rname || '' });
+  openRoom(on.role, on.code, { pub: !!on.pub, name: on.rname || '', tour: on.tour && tourTagOf({ tour: on.tour.tag }) ? on.tour : null });
   // volta no lance em que estava (o convidado e o espectador recebem o estado do anfitrião logo depois)
   if (s.saved) {
     try {
@@ -4190,7 +4347,7 @@ document.addEventListener('visibilitychange', () => {
   if (!document.hidden) document.title = 'Riftbound Mesa';
 });
 
-/** Atalhos: Espaço = passar/encerrar o turno, Enter = confirmar, Esc = cancelar/fechar, Z = desfazer, M = volume dos sons, N = volume da música, E = emotes (online). */
+/** Atalhos: Espaço = passar/encerrar o turno, Enter = confirmar, Esc = cancelar/fechar, Z = desfazer, M = volume dos sons, N = volume da música, E = emotes (online), T = tapete, A = cartas e textos maiores. */
 function onKey(ev: KeyboardEvent) {
   const t = ev.target as HTMLElement;
   if (t?.id === 'chatin' && (ev.key === 'Enter' || ev.key === 'Escape')) {
@@ -4272,6 +4429,11 @@ function onKey(ev: KeyboardEvent) {
   else if (ev.key === 'm' || ev.key === 'M') document.querySelector<HTMLElement>('[data-act=sound]')?.click();
   else if (ev.key === 'n' || ev.key === 'N') document.querySelector<HTMLElement>('[data-act=music]')?.click();
   else if (ev.key === 'e' || ev.key === 'E') document.querySelector<HTMLElement>('[data-act=emotetog]')?.click();
+  else if (ev.key === 't' || ev.key === 'T') document.querySelector<HTMLElement>('[data-act=matpick]')?.click();
+  else if (ev.key === 'a' || ev.key === 'A') {
+    setBigText(!bigText);
+    render();
+  }
 }
 
 /** Fim de partida: guarda no histórico da conta e conta nas estatísticas do deck (uma vez por partida). */
@@ -4288,6 +4450,8 @@ function recordIfOver() {
   // deck escolhido de cada lado (online: o meu é sempre settings.decks[0]; o do outro não se sabe)
   const prefer: [string | null, string | null] = online() ? (seat === 0 ? [settings.decks[0], null] : [null, settings.decks[0]]) : [settings.decks[0], settings.decks[1]];
   hist.recordGame(full, { mode, seat: mine, prefer });
+  // partida de um confronto do torneio: o resultado (e o replay) vai para o organizador
+  if (online()) tourRecord(full.cfg, full.answers, full.engine.winner, [full.engine.pl[0].points, full.engine.pl[1].points], full.engine.turn, seat);
   if (vsAi()) ladderRecord(full.cfg, full.engine.winner, HUMAN);
 }
 
@@ -4397,7 +4561,7 @@ setChallengeHooks({
 
 // ───────────────────────────── escada contra a IA (src/ui/ladder.ts) ─────────────────────────────
 function ladderTopbar(): string {
-  return `<header class="topbar"><div class="brand">Riftbound <span>mesa</span></div><div class="turninfo">${esc(acc.profile().name)}</div>
+  return `<header class="topbar"><div class="brand">Riftbound <span>mesa</span></div><div class="turninfo"><button type="button" class="tb-acct" data-act="profile" title="Ver o perfil">${esc(acc.profile().name)} <span>${rating.rankStore().elo}</span></button></div>
     <div class="tb">${musicBoards().length ? `<button type="button" data-act="music" title="Volume da música (N)">${musicIcon()}</button>` : ''}</div></header>`;
 }
 /** Partida de um degrau: contra a IA no nível do degrau, com a trilha dele (o cfg leva a marca da escada). */
@@ -4425,6 +4589,24 @@ function startLadderGame(m: LadderMatch) {
   window.scrollTo(0, 0);
   scheduleAi();
 }
+setProfileHooks({
+  render: () => render(),
+  home: () => {
+    page = 'setup';
+    render();
+    window.scrollTo(0, 0);
+  },
+  open: (pg) => {
+    if (replay) exitReplay();
+    if (game) {
+      game = null;
+      save();
+    }
+    page = pg;
+    render();
+    window.scrollTo(0, 0);
+  },
+});
 setLadderHooks({
   render: () => render(),
   home: () => {
@@ -4454,7 +4636,40 @@ setLadderHooks({
   },
 });
 
+// ───────────────────────────── torneio entre amigos (src/ui/tournament*.ts) ─────────────────────────────
+/** Abre a sala de um confronto (anfitrião = lado a da chave; o outro entra; os demais assistem). */
+function enterTourRoom(r: TourRoom) {
+  if (replay) exitReplay();
+  if (aiTimer) clearTimeout(aiTimer);
+  aiTimer = null;
+  game = null;
+  ai = null;
+  pickSeat = null;
+  settings.opponent = 'online';
+  page = 'setup';
+  setHash(null); // na sala, recarregar volta para a sala (não para a tela do torneio)
+  openRoom(r.role, r.room, { pub: false, name: r.name, tour: { tag: r.tag, deck: r.deck } });
+  window.scrollTo(0, 0);
+}
+setTourHooks({
+  render: () => render(),
+  home: () => {
+    page = 'setup';
+    render();
+    window.scrollTo(0, 0);
+  },
+  play: (r) => enterTourRoom(r),
+});
+initTour({
+  // o estado do torneio mudou: redesenha só se a tela do torneio está aberta (não mexe na mesa de uma partida)
+  changed: () => {
+    if (!game && !net && page === 'tour') scheduleRender();
+  },
+  openReplay: (cfg, answers) => openReplay(cfg, answers, answers.length, { view: 0 }),
+});
+
 function start(data: any = {}) {
+  registerSw();
   const snap = data?.saved ? data : loadSaved();
   if (snap?.settings) settings = normSettings(snap.settings);
   if (settings.names[0] === 'Você' && acc.profile().name !== 'Você') settings.names[0] = acc.profile().name;
@@ -4473,13 +4688,27 @@ function start(data: any = {}) {
     settings.opponent = 'online';
     joinCode = hm[1].toUpperCase();
   }
+  // link de convite do torneio: ...#torneio-ABC123
+  const tm = /^#torneio-([A-Za-z0-9]{6})$/.exec(location.hash);
+  if (tm && !game) {
+    page = 'tour';
+    showTour(tm[1].toUpperCase());
+  }
   // caiu ou recarregou no meio de uma sala online: volta sozinho para a mesma sala (o anfitrião manda o lance atual)
   const back = !data?.saved || ViewGame.isSaved(data.saved) ? loadSaved() : null;
-  if (back?.online && !game && (!hm || hm[1].toUpperCase() === back.online.code)) {
+  if (back?.online && !game && !tm && (!hm || hm[1].toUpperCase() === back.online.code)) {
     settings.opponent = 'online';
     resumeOnline(back);
   }
   document.addEventListener('click', onClick);
+  // link de torneio colado na mesma aba (só o # muda: a página não recarrega)
+  window.addEventListener('hashchange', () => {
+    const h = /^#torneio-([A-Za-z0-9]{6})$/.exec(location.hash);
+    if (!h || game || net) return;
+    page = 'tour';
+    showTour(h[1].toUpperCase());
+    render();
+  });
   document.addEventListener('keydown', onKey);
   const onField = (ev: Event) => {
     if (!game && page === 'decks') onDbInput(ev.target as HTMLElement);
@@ -4532,6 +4761,17 @@ function start(data: any = {}) {
   window.addEventListener('resize', () => drawArrows());
   render();
   scheduleAi();
+  // link de replay: ...#r=<código> abre direto no replay, do primeiro lance
+  const rl = /^#r=([zj][A-Za-z0-9_-]+)$/.exec(location.hash);
+  if (rl) {
+    history.replaceState(null, '', location.pathname + location.search);
+    void decodeReplay(rl[1])
+      .then((d) => openReplay(d.cfg, d.answers, 0, { view: d.view as P }))
+      .catch(() => {
+        modal = { title: 'Replay', html: '<p>Este link de replay está incompleto ou quebrado: peça para enviarem de novo.</p>' };
+        render();
+      });
+  }
 }
 
 const w = window as any;

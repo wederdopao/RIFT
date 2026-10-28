@@ -535,3 +535,89 @@ RiftJudge/playriftbound não acessíveis no contêiner: rulings vieram de resumo
 - Teste: `tests/escada.test.ts` (decks legais, trilhas existentes, 2 partidas IA × IA por deck sem erro, progresso);
   prints: `node scripts/laddershot.mjs <pasta>` (o fim de partida é forçado só para o print).
 
+
+## Torneio entre amigos (28/10/2026, branch claude/torneio; PROTOCOL 10)
+- Tela inicial → **Torneio** (`[data-act=tour]`, página `'tour'` em main.ts). Lista: criar (nome, eliminação simples ou
+  pontos corridos, melhor de 1/3, Casual/Padrão, "pode trocar de deck entre confrontos", "eu também jogo" + deck),
+  entrar por código, "Meus torneios" e "Torneios passados" (campeão + deck). Link de convite `#torneio-XXXXXX` (abre
+  direto, inclusive colado na mesma aba; recarregar na tela do torneio volta para ela).
+- **Lógica pura** `src/ui/tournament.ts` (testes em `tests/torneio.test.ts`): inscrição (até 16), sorteio, chave pela
+  ordem de cabeças (`seedOrder`; byes para os primeiros sorteados, sempre no lado b, nunca bye × bye), rodízio pelo
+  método do círculo (folga com número ímpar), `reportGame` (só os dois jogadores ou o organizador, lados conferidos,
+  uma vez por semente, nada depois de decidido), `fixMatch` (organizador: partidas/pontos, W.O., limpar), `settle`
+  (na chave, quem passa; confronto cujos lados mudaram por correção perde as partidas; campeão e deck do último
+  confronto dele), `standings` (3 por vitória → confronto direto entre os empatados → saldo de pontos de partida →
+  pontos feitos → sorteio), `cleanTournament` (o que chega da rede).
+- **Sincronização** `src/ui/tournamentsync.ts`: cada aparelho guarda o torneio na conta (`Profile.tournaments`,
+  `acc.tourEntries`): estado mais novo, papel (org/player/watch), o próprio deck (a lista inteira: não muda se o deck
+  da conta for editado), resultados ainda não confirmados. Canal próprio `t-<código>` pelo mesmo transporte das salas
+  (`openChannel` em online.ts). O organizador aplica tudo e repassa o estado inteiro com `rev`; batimento `tping`; quem
+  está atrás pede `tneed`; participante se apresenta com `tjoin` (versão = PROTOCOL; diferente é recusado). Replays
+  ficam numa chave à parte por conta (`riftbound-mesa-torneio-rp:<perfil>`, ~1,2 MB, os mais velhos saem); quem não
+  tem pede ao organizador (`trq`/`trp`).
+- **Confronto = sala normal**: código da sala derivado de torneio + confronto (`matchRoomCode`): lado a cria (anfitrião),
+  lado b entra, os outros assistem. Em main.ts: `roomTour` (marca + deck do torneio; salvo com a sala para voltar ao
+  recarregar), `myDeck()`, só o adversário certo pode começar (`guestId`), o cfg leva `tour` (o motor ignora),
+  `recordIfOver` chama `tourRecord` nos dois lados (o resultado vai na hora e o replay logo depois), fim da partida com
+  "Próxima partida (a × b)" no melhor de 3 e "Voltar ao torneio". As mensagens da sala não mudaram.
+- Teste: `node scripts/tourtest.mjs <pasta>` (broker local ou MODE=room): 3 navegadores; eliminação com bye, semifinal
+  jogada com espectador, participante e organizador recarregando, final, campeão nas três telas, replay vindo do
+  organizador, passados; liga em melhor de 3 com W.O., resultado lançado e um confronto jogado em 2–3 partidas.
+  Partidas curtas com `window.__RB_TEST_CFG__ = {startPoints:[7,7]}` (só teste). Prints em `docs/prints/torneio-*`.
+- Fora: não há "desistir" de partida (o organizador dá W.O.); não dá para passar a organização a outro aparelho; o
+  deck do adversário não é conferido contra o inscrito (o cliente dele manda o do torneio); sem disputa de 3º lugar.
+## Ranking entre amigos e Perfil (28/10/2026, branch claude/ranking)
+- **Ranking** (tela inicial → Ranking): Elo por conta, começa em 1000, K = 32, só partidas **online** (IA,
+  passa-e-joga, desafios, tutorial e espectador não contam). Lógica sem DOM em `src/ui/rating.ts`; telas em
+  `src/ui/profile.ts` (`rankingHtml`, `profileHtml`, `rankEndNote`, `onProfileClick`); CSS no fim de `style.css`
+  (seção "ranking entre amigos e perfil", classes `.rk-*` e `.pf-*`).
+- **Identidade**: a chave ECDH do online (`makeKeys`) é nova a cada abertura da página, então não serve. Cada conta
+  ganha um id aleatório estável (`Profile.rank.id`, 24 hex), que vai no backup da conta (importar o backup em outro
+  aparelho = a mesma pessoa no ranking). Amigo é identificado por esse id, não pelo nome.
+- **Protocolo** (continua `PROTOCOL` 9, campo opcional): `hello` e `welcome` levam `rk` = cartão {id, nome, pontos,
+  partidas}. Cada lado guarda o cartão do outro (`sawFriend`). O anfitrião põe os dois cartões no cfg
+  (`cfg.rank = [anfitrião, convidado]`; na revanche com a pontuação nova do convidado, `latestCard`). O convidado recebe
+  esse cfg no fim (a partida completa, `fin`). Os dois calculam pela MESMA conta (`eloDelta0` pelos valores do cfg, com
+  arredondamento simétrico) e pelo vencedor da partida do anfitrião: o que um ganha o outro perde e os dois veem os
+  mesmos números. A minha pontuação anda a partir da que eu tenho guardada (cartão mexido no caminho não me prejudica).
+  Versão sem `rk` joga normalmente, só a partida não conta. Mesma conta nos dois lados (duas abas) não conta.
+- **Uma vez por partida**: `recordRanked` só conta com modo online, os dois cartões, o meu id no meu lugar e semente
+  nova (`rank.seen`). Chamado em `history.recordGame` (que já é chamado pelo `recordIfOver`, fora do replay e do
+  espectador). Desfazer depois do fim é recusado no online; recarregar e ver o replay não contam de novo.
+- **Perfil** (tela inicial → Perfil, ou o nome da conta no topo): `Profile.career` (versão `v: 1`) = partidas por modo,
+  por deck (`my:`/`pre:`/`x:<nome>`), por lenda, por adversário (`f:<id>` amigo, `n:<nome>` online antigo, `ai:<nível>`,
+  `ai:?` antes de o histórico guardar o nível), sequência atual e maior; uma vez por semente. Conta antiga: na primeira
+  vez é montado a partir do histórico (`fromHist`). `HistEntry` ganhou `ai`, `opp` e `elo` ({d, after}).
+- Gráfico da pontuação: SVG simples (linha, 1000 tracejado como referência, vitória = ponto cheio, derrota = ponto
+  vazado, rótulo direto no último valor, dica por ponto). Barras de taxa de vitória sempre com "xx% · V · D" escrito e
+  marca em 50%.
+- **Testes**: `tests/ranking.test.ts` (Elo simétrico, dois lados com os mesmos números, uma vez só, o que não conta,
+  fim pelo histórico com desfazer/replay, conta antiga + dado estragado + backup) e `node scripts/rankingtest.mjs
+  <pasta>` (duas contas jogam online até o fim pela mesa; MODE=room também). Prints em `docs/prints/ranking/`.
+  `tests/historico.test.ts`: o aparelho "pequeno" do teste de falta de espaço subiu de 6000 para 6800 bytes (a conta
+  agora guarda também o resumo do perfil).
+- O Histórico mostra "+16 → 1016 pontos" nas partidas online que contaram (`HistEntry.elo`).
+- Ficou de fora: o ranking não é à prova de quem edita o próprio localStorage (é entre amigos, sem servidor).
+
+## Tapetes, abertura rápida e PC (28/10/2026, tarde)
+- **Tapetes** (`src/ui/mats.ts`, botão "Tapete"/tecla T na mesa, todos liberados, escolha no aparelho `rb-mat`):
+  6 feltros de CSS (`.tt-mat.mat-<id>`) + 36 ilustrações de "tela de carregamento" dos tabuleiros do LoR
+  (`scripts/lor_mats.py` → `assets/mats/*.webp` 1280 px, 1,4 MB; só no site). As capturas 3D dos tabuleiros ficaram de
+  fora (trazem a interface do LoR). "Automático" = o tabuleiro da música da partida (mesmo id da música).
+- **Abertura**: no site o código vai em `js/app-<hash>.js` (esbuild esm + splitting, `modulepreload`); a biblioteca MQTT
+  (324 KB) é import dinâmico (`loadMqtt` em online.ts; no artifact/offline continua embutida). Fontes Barlow servidas do
+  próprio site (`scripts/fonts.py` → `assets/fonts`). Service worker `src/sw.js` (página stale-while-revalidate + aviso
+  "Nova versão" via mensagem `check`, `src/ui/swreg.ts`; js/fonts cache-first; art/mats cache + revalida; voz/música
+  fora por causa de Range). `src/netlify-headers.txt` → `site/_headers`. Medido (20 Mbps simulados): 1ª visita ~945 →
+  ~420 ms; seguintes ~615 → ~240 ms; JS próprio na abertura ~25 ms.
+- **Telas grandes de PC**: `html { zoom; --zf }` em ≥2200×1200 (1.2), ≥2500×1380 (1.333), ≥3000×1650 (1.6), ≥3600×2000 (2).
+  No Chrome vh/vw não descontam o zoom: o build reescreve cada `Nvh/Nvw` como `calc(N… / var(--zf, 1))` (sem isso a mesa
+  crescia e a barra cobria a base — mover falhava). Posições escritas a partir do mouse/retângulos passam por
+  `src/ui/zoom.ts` (fator medido por sonda). uiinteract em 2560×1440: mover 47/47, arrastar 21/21.
+- Torneio e ranking juntos: hello/welcome levam `rk` (ranking) e o deck do torneio (`myDeck()`); home com 9 botões
+  auxiliares (3 colunas). Atalhos de teclado listados no "Como funciona".
+- **Artes em alta + "Aa"** (pedido do Weder: amigo com dificuldade de enxergar): `scripts/art_hd.py` baixa as originais
+  da galeria oficial (playriftbound.com, 744×1039, webp q80 → `assets/art-hd`, 85 MB; fichas TOK-* copiadas das leves).
+  Só no site (`__RB_ART_HD__`): `artHd()` em art.ts para a carta grande (prévia, ampliada, mão/mulligan, escolhas,
+  deckbuilder); a mesa continua com as leves de 360 px. Botão **Aa** (tecla A, `rb-bigtext` no aparelho, classe
+  `html.rb-big`): prévia/ampliada/registro/deckbuilder maiores.

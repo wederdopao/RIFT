@@ -6,13 +6,14 @@ import { isImplemented } from '../engine/script';
 import type { Domain } from '../engine/types';
 import { BANNED_STANDARD } from '../data/banlist';
 import { DECKS } from '../decks/origins';
-import { artUrl } from './art';
+import { artHd, artUrl } from './art';
 import { DOMAIN_COLOR, DOMAIN_PT, esc, rulesHtml } from './text';
 import * as acc from './account';
 import * as hist from './history';
 import { copyText } from './copy';
 import { needsExtraLegends } from '../engine/deckcheck';
 import { loadMusic, musicBoards, previewTrack } from './music';
+import { pageZoom } from './zoom';
 
 type Cat = 'unit' | 'champion' | 'spell' | 'signature' | 'gear' | 'legend' | 'battlefield' | 'rune';
 const CAT_PT: Record<Cat, string> = {
@@ -331,7 +332,7 @@ function addChampionIfFits(d: acc.SavedDeck, code: string) {
 // ───────────────────────────── HTML ─────────────────────────────
 const SETS: [string, string][] = [['OGN', 'Origins'], ['OGS', 'Proving Grounds'], ['SFD', 'Spiritforged'], ['UNL', 'Unleashed'], ['VEN', 'Vendetta'], ['RAD', 'Radiance']];
 function img(code: string, cls = '') {
-  const u = artUrl(code);
+  const u = cls === 'big' ? artHd(code) : artUrl(code);
   return u ? `<img class="${cls}" src="${u}" alt="${esc(cardData(code).name)}" draggable="false" loading="lazy">` : '';
 }
 function chip(on: boolean, attr: string, label: string, style = '') {
@@ -843,7 +844,7 @@ function histRow(e: hist.HistEntry): string {
   return `<article class="hrow ${res[0]}" data-h="${e.id}">
     <div class="hmeta"><span class="hres">${esc(res[1])}</span><span class="muted small">${when(e.at)} · ${MODE_PT[e.mode]}</span></div>
     <div class="hmatch">${side(me)}<span class="hvs">${e.points[me]}<i>×</i>${e.points[other]}</span>${side(other)}</div>
-    <div class="hinfo small"><span>${e.turns} turnos</span><span>${e.moves} lances</span>${e.reason ? `<span class="muted">${esc(e.reason)}</span>` : ''}</div>
+    <div class="hinfo small"><span>${e.turns} turnos</span><span>${e.moves} lances</span>${e.elo ? `<span title="Ranking entre amigos">${e.elo.d >= 0 ? '+' : '−'}${Math.abs(e.elo.d)} → ${e.elo.after} pontos</span>` : ''}${e.reason ? `<span class="muted">${esc(e.reason)}</span>` : ''}</div>
     <div class="hacts">${can ? `<button type="button" class="primary" data-db="hopen" data-h="${e.id}" title="Abre o replay; de lá dá para continuar jogando de qualquer lance">Ver replay</button>` : '<span class="muted small" title="Saiu para liberar espaço no aparelho">Replay apagado</span>'}<button type="button" class="link small" data-db="hdel" data-h="${e.id}">Excluir</button></div>
   </article>`;
 }
@@ -1462,14 +1463,15 @@ export function onDbHover(t: HTMLElement) {
   db.hover = code;
   pk.hidden = false;
   const r = el.getBoundingClientRect();
-  const W = pk.offsetWidth;
-  const H = pk.offsetHeight;
+  const f = pageZoom(); // tudo em pixels da tela; o style volta para pixels de CSS (zoom.ts)
+  const W = pk.offsetWidth * f;
+  const H = pk.offsetHeight * f;
   let x = r.right + 12;
   if (x + W > window.innerWidth - 8) x = r.left - W - 12;
   if (x < 8) x = Math.max(8, window.innerWidth - W - 8);
   const y = Math.max(8, Math.min(r.top + r.height / 2 - H / 2, window.innerHeight - H - 8));
-  pk.style.left = `${Math.round(x)}px`;
-  pk.style.top = `${Math.round(y)}px`;
+  pk.style.left = `${Math.round(x / f)}px`;
+  pk.style.top = `${Math.round(y / f)}px`;
 }
 /** Depois de redesenhar: a prévia volta para a carta que está sob o mouse. */
 export function refreshDbPeek() {

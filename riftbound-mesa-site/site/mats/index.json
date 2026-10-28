@@ -1,0 +1,184 @@
+{
+ "mats": [
+  {
+   "id": "arcade",
+   "name": "Arcade",
+   "src": "mats/arcade.webp"
+  },
+  {
+   "id": "ascended-oasis",
+   "name": "Ascended Oasis",
+   "src": "mats/ascended-oasis.webp"
+  },
+  {
+   "id": "bandlewood-outpost",
+   "name": "Bandlewood Outpost",
+   "src": "mats/bandlewood-outpost.webp"
+  },
+  {
+   "id": "celestial-summit",
+   "name": "Celestial Summit",
+   "src": "mats/celestial-summit.webp"
+  },
+  {
+   "id": "clifftop-monastery",
+   "name": "Clifftop Monastery",
+   "src": "mats/clifftop-monastery.webp"
+  },
+  {
+   "id": "club-ox",
+   "name": "Club Ox",
+   "src": "mats/club-ox.webp"
+  },
+  {
+   "id": "cursed-ruins",
+   "name": "Cursed Ruins",
+   "src": "mats/cursed-ruins.webp"
+  },
+  {
+   "id": "dark-emissary-s-realm",
+   "name": "Dark Emissary's Realm",
+   "src": "mats/dark-emissary-s-realm.webp"
+  },
+  {
+   "id": "dark-horizon",
+   "name": "Dark Horizon",
+   "src": "mats/dark-horizon.webp"
+  },
+  {
+   "id": "darkin-reaper",
+   "name": "Darkin Reaper",
+   "src": "mats/darkin-reaper.webp"
+  },
+  {
+   "id": "durandal-stadium",
+   "name": "Durandal Stadium",
+   "src": "mats/durandal-stadium.webp"
+  },
+  {
+   "id": "hall-of-valor",
+   "name": "Hall of Valor",
+   "src": "mats/hall-of-valor.webp"
+  },
+  {
+   "id": "haunted-grounds",
+   "name": "Haunted Grounds",
+   "src": "mats/haunted-grounds.webp"
+  },
+  {
+   "id": "hextech-lab",
+   "name": "Hextech Lab",
+   "src": "mats/hextech-lab.webp"
+  },
+  {
+   "id": "iceborn-peak",
+   "name": "Iceborn Peak",
+   "src": "mats/iceborn-peak.webp"
+  },
+  {
+   "id": "labs",
+   "name": "Labs",
+   "src": "mats/labs.webp"
+  },
+  {
+   "id": "lagoon-of-legends",
+   "name": "Lagoon of Legends",
+   "src": "mats/lagoon-of-legends.webp"
+  },
+  {
+   "id": "piltovan-rooftops",
+   "name": "Piltovan Rooftops",
+   "src": "mats/piltovan-rooftops.webp"
+  },
+  {
+   "id": "pinnacle-of-glory",
+   "name": "Pinnacle of Glory",
+   "src": "mats/pinnacle-of-glory.webp"
+  },
+  {
+   "id": "planet-urf",
+   "name": "Planet Urf",
+   "src": "mats/planet-urf.webp"
+  },
+  {
+   "id": "reckoner-s-arena",
+   "name": "Reckoner's Arena",
+   "src": "mats/reckoner-s-arena.webp"
+  },
+  {
+   "id": "ritual-altar",
+   "name": "Ritual Altar",
+   "src": "mats/ritual-altar.webp"
+  },
+  {
+   "id": "sentinel-sanctuary",
+   "name": "Sentinel Sanctuary",
+   "src": "mats/sentinel-sanctuary.webp"
+  },
+  {
+   "id": "slaughter-docks",
+   "name": "Slaughter Docks",
+   "src": "mats/slaughter-docks.webp"
+  },
+  {
+   "id": "snowy-glade",
+   "name": "Snowy Glade",
+   "src": "mats/snowy-glade.webp"
+  },
+  {
+   "id": "spirit-blossom",
+   "name": "Spirit Blossom",
+   "src": "mats/spirit-blossom.webp"
+  },
+  {
+   "id": "starlight-stage",
+   "name": "Starlight Stage",
+   "src": "mats/starlight-stage.webp"
+  },
+  {
+   "id": "summoner-s-rift",
+   "name": "Summoner's Rift",
+   "src": "mats/summoner-s-rift.webp"
+  },
+  {
+   "id": "sunken-shipyard",
+   "name": "Sunken Shipyard",
+   "src": "mats/sunken-shipyard.webp"
+  },
+  {
+   "id": "tabletop-tavern",
+   "name": "Tabletop Tavern",
+   "src": "mats/tabletop-tavern.webp"
+  },
+  {
+   "id": "temple-of-the-sun",
+   "name": "Temple of the Sun",
+   "src": "mats/temple-of-the-sun.webp"
+  },
+  {
+   "id": "the-chronosphere",
+   "name": "The Chronosphere",
+   "src": "mats/the-chronosphere.webp"
+  },
+  {
+   "id": "the-final-stage",
+   "name": "The Final Stage",
+   "src": "mats/the-final-stage.webp"
+  },
+  {
+   "id": "the-time-temple",
+   "name": "The Time Temple",
+   "src": "mats/the-time-temple.webp"
+  },
+  {
+   "id": "the-undercity",
+   "name": "The Undercity",
+   "src": "mats/the-undercity.webp"
+  },
+  {
+   "id": "vastayan-glade",
+   "name": "Vastayan Glade",
+   "src": "mats/vastayan-glade.webp"
+  }
+ ]
+}

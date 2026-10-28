@@ -14,17 +14,17 @@
 // combinada no hello/welcome): a sala é um canal aberto, e um espectador lendo as mensagens veria a mão do convidado.
 // Mensagens podem se perder: há numeração (seq), diferença sobre a visão anterior (base), pedido de estado completo
 // ("need") e batimentos ("ping"/"sync").
-import mqtt from 'mqtt';
 import type { P } from '../engine/types';
 import type { DeckList } from '../engine/engine';
+import type { RankCard } from './rating';
 
 /** `undo` com `n`: pedido de desfazer aceito pelo oponente — volta até a resposta n (sempre uma decisão raiz). */
 export type Op = { k: 'answer'; ids: string[] } | { k: 'batch'; list: string[][] } | { k: 'cancel' } | { k: 'undo'; n?: number };
 /** `z`: carga empacotada (`pack`): visão completa (ViewState) ou diferença (ViewDiff); cifrada para o convidado. */
 export type Msg =
-  | { t: 'hello'; name: string; deck: DeckList; v: number; pk?: string }
+  | { t: 'hello'; name: string; deck: DeckList; v: number; pk?: string; rk?: RankCard }
   | { t: 'watch'; name: string; v: number }
-  | { t: 'welcome'; hostName: string; hostDeck: string; pk?: string }
+  | { t: 'welcome'; hostName: string; hostDeck: string; pk?: string; rk?: RankCard }
   | { t: 'start'; z: string; seq: number; you: P }
   | { t: 'lobby' }
   | { t: 'req'; z: string; seq: number }
@@ -40,9 +40,29 @@ export type Msg =
   | { t: 'undoask'; seq: number }
   | { t: 'undoans'; ok: boolean; seq: number };
 
+/**
+ * Torneio entre amigos (src/ui/tournamentsync.ts): canal próprio do torneio ("t-<código>"), separado das salas. O
+ * organizador é a fonte da verdade e repassa o estado (`tstate`, empacotado) a todos; os outros se apresentam
+ * (`tjoin`), pedem o estado (`tneed`), relatam o resultado de uma partida (`tres`) e pedem replays (`trq`/`trp`).
+ */
+export type TourMsg =
+  | { t: 'tjoin'; v: number; name: string; deck: unknown; play: boolean }
+  | { t: 'tleave' }
+  | { t: 'tstate'; z: string; rev: number }
+  | { t: 'tping'; rev: number }
+  | { t: 'tneed' }
+  | { t: 'tres'; z: string }
+  | { t: 'trq'; seed: number }
+  | { t: 'trp'; seed: number; z: string }
+  | { t: 'tdeny'; msg: string };
+
+// 10: torneio (canal "t-<código>" com as mensagens TourMsg; a partida de uma sala de torneio leva cfg.tour e o
+//     resultado volta pelo canal do torneio — as mensagens da sala não mudaram)
+// (sem mudar o número: `rk` opcional no hello/welcome = cartão do ranking, rating.ts; versão sem ele joga
+//  normalmente com esta, só a partida não conta no ranking)
 // 9: visão filtrada (start/state/view para o convidado, cifradas; wstate/wview para espectadores; req cifrado; sem
 //    'op'); 8: hub de salas, chat, pedido de desfazer (undo com n); 7: verbo 'manualpay'; 6: DeckList.extraLegends
-export const PROTOCOL = 9;
+export const PROTOCOL = 10;
 
 // ───────────────────────────── carga: compactar e cifrar ─────────────────────────────
 const subtle: SubtleCrypto | undefined = (globalThis as any).crypto?.subtle;
@@ -190,7 +210,7 @@ export function cleanCode(s: string): string {
 }
 
 /** Identidade deste navegador (fica a mesma depois de recarregar a página, para voltar à sala). */
-function clientId(): string {
+export function clientId(): string {
   if (W.__RB_CID__) return W.__RB_CID__; // testes
   try {
     let id = localStorage.getItem('rbmesa-cid');
@@ -205,23 +225,23 @@ function clientId(): string {
 }
 
 // ───────────────────────────── transportes ─────────────────────────────
-interface LinkEvents {
+export interface LinkEvents {
   data(env: Env): void;
   up(): void;
   down(err?: string): void;
 }
-interface Link {
+export interface Link {
   kind: 'room' | 'mqtt';
   send(env: Env): void;
   close(): void;
 }
 /** Envelope: quem mandou, número da mensagem, para quem, e a mensagem. */
-interface Env {
+export interface Env {
   f: string;
   s: string; // sessão (muda ao recarregar a página)
   i: number;
   to?: string;
-  m: Msg | { t: 'ping' };
+  m: Msg | TourMsg | { t: 'ping' };
 }
 
 let roomApiP: Promise<any> | null = null;
@@ -313,8 +333,14 @@ async function roomLink(code: string, ev: LinkEvents): Promise<Link | null> {
   };
 }
 
+/** A biblioteca MQTT (324 KB) só baixa quando alguém entra numa sala: no site ela é um arquivo à parte (import
+ *  dinâmico); no artifact e na versão offline o build a deixa embutida. */
+let mqttLib: Promise<any> | null = null;
+const loadMqtt = () => (mqttLib ??= import('mqtt').then((m: any) => m.default ?? m));
+
 /** Retransmissores MQTT públicos: publica em todos os conectados e escuta todos (repetidas são descartadas). */
-function mqttLink(code: string, ev: LinkEvents): Link {
+async function mqttLink(code: string, ev: LinkEvents): Promise<Link> {
+  const mqtt = await loadMqtt();
   const topic = `rbmesa/v3/${code}`;
   const clients: any[] = [];
   let upCount = 0;
@@ -366,6 +392,11 @@ function mqttLink(code: string, ev: LinkEvents): Link {
       for (const c of clients) c.end(true);
     },
   };
+}
+
+/** Canal com outro nome (torneio): o mesmo transporte das salas — "room" no app do Claude, MQTT fora dele. */
+export async function openChannel(name: string, ev: LinkEvents): Promise<Link> {
+  return (await roomLink(name, ev)) ?? mqttLink(name, ev);
 }
 
 // ───────────────────────────── hub de salas ─────────────────────────────
@@ -447,6 +478,7 @@ async function lobbyLink(h: LobbyHandlers, hostCode?: string): Promise<LobbyLink
       },
     };
   }
+  const mqtt = await loadMqtt();
   const clients: any[] = [];
   const mine = hostCode ? `${LOBBY_TOPIC}/${hostCode}` : '';
   for (const url of brokers()) {
@@ -673,7 +705,9 @@ export class Net {
     };
     const room = await roomLink(this.code, ev);
     if (this.closed) return room?.close();
-    this.link = room ?? mqttLink(this.code, ev);
+    const link = room ?? (await mqttLink(this.code, ev));
+    if (this.closed) return link.close();
+    this.link = link;
     this.kind = this.link.kind;
     if (this.role === 'host' && this.pub) {
       const lk = await lobbyLink({ query: () => this.announce(true), up: () => setTimeout(() => this.announce(true), 100) }, this.code);
@@ -728,7 +762,7 @@ export class Net {
     if (this.recent.has(key)) return;
     this.recent.add(key);
     if (this.recent.size > 600) this.recent = new Set([...this.recent].slice(-300));
-    const m = env.m;
+    const m = env.m as Msg | { t: 'ping' }; // no canal da sala só chegam mensagens de sala
     this.lastFrom = env.f;
     if (this.role === 'host') {
       // espectadores: "watch", pedidos de estado e batimentos (não viram o jogador da sala)

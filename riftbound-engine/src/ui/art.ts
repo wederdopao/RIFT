@@ -35,10 +35,20 @@ export function hasArt(code: string): boolean {
   return code in INDEX;
 }
 
+/** site com as artes em alta (art-hd/<código>.webp, scripts/art_hd.py) */
+const HD = FILES && !!w.__RB_ART_HD__;
+
 /** URL da arte (ou null se ainda não carregou / não existe). */
 export function artUrl(code: string): string | null {
   if (FILES) return code in INDEX ? `art/${code}.webp` : null;
   return urls.get(code) ?? null;
+}
+
+/** Arte para mostrar a carta grande (ampliada, prévia, deckbuilder): a original em alta no site, para o texto da
+ *  carta ficar legível; fora do site, a mesma de sempre. */
+export function artHd(code: string): string | null {
+  if (HD && code in INDEX) return `art-hd/${code}.webp`;
+  return artUrl(code);
 }
 
 /** Baixa os pacotes com as artes destes códigos; chama `done` quando algum pacote novo chegar. */
