@@ -103,6 +103,13 @@ Projeto de fã, sem fins comerciais, feito sob a política "Legal Jibber Jabber"
   sala com um clique. **Assistir**: qualquer um com o código entra só para ver (sem ver nenhuma mão); o anfitrião vê
   quantos estão assistindo.
 - **Desfazer** e **cancelar ação** (a partida é refeita a partir das respostas, de forma determinística).
+- **Tutorial "Aprender a jogar"** (tela inicial; sugerido na primeira visita): partida guiada de ~10 minutos contra um
+  oponente roteirizado, com decks em ordem fixa e os dois começando com 4 pontos. Uma caixa explica cada passo e uma
+  seta aponta o que usar; só a jogada do passo vale (o resto fica apagado e o clique é explicado). Cobre o objetivo,
+  runas (canalizar, exaurir, reciclar), jogar unidade, mover e conquistar, hold, combate, pilha e Reaction, showdown e
+  Focus, palavras-chave, o último ponto e encerrar o turno; no fim leva à partida contra a IA (Fácil). Dá para sair e
+  continuar depois (progresso na conta local) ou refazer. Roteiro em `src/ui/tutorial-script.ts`, tela em
+  `src/ui/tutorial.ts`.
 
 ## Como jogar fora do app
 
@@ -127,6 +134,7 @@ node scripts/uiplay.mjs <pasta>                             # partida inteira cl
 node scripts/uiinteract.mjs <pasta>                         # partida usando a mesa: mover com clique, arrastar, setas
 node scripts/uioverlap.mjs                                  # a barra cobre alguma carta? o pedido sai cortado? (6 telas)
 node scripts/uireplay.mjs <pasta>                           # relatório baixado → aberto no replay → lances → continuar
+node scripts/tutorialplay.mjs <pasta>                       # tutorial inteiro pela mesa, com prints de cada passo
 ```
 
 ## Estrutura

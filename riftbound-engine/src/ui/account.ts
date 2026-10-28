@@ -58,6 +58,8 @@ export interface Profile {
   manualPay?: boolean;
   /** Novo (modo Desafios): progresso por id de desafio (src/data/challenges.ts). Ausente = nenhum tentado. */
   challenges?: Record<string, ChallengeProgress>;
+  /** Novo: progresso do tutorial "Aprender a jogar" (ver tutorial.ts). Ausente = nunca abriu nem dispensou. */
+  tutorial?: TutorialProgress;
 }
 /** Progresso num desafio: tentativas, quando resolveu e a melhor vitória (menos jogadas). */
 export interface ChallengeProgress {
@@ -65,6 +67,16 @@ export interface ChallengeProgress {
   solved?: number; // data da primeira vitória
   best?: number; // menos jogadas (ações completas) numa vitória
   hint?: boolean; // pediu a dica
+}
+/** Tutorial: a partida guiada é refeita pelas respostas (cfg fixo); `step` = passo em que parou. */
+export interface TutorialProgress {
+  step: number;
+  answers: string[][];
+  /** terminou pelo menos uma vez */
+  done?: boolean;
+  /** dispensou a sugestão da primeira visita sem abrir */
+  dismissed?: boolean;
+  at: number;
 }
 interface Store {
   active: string;
@@ -192,6 +204,17 @@ export function recordChallengeHint(id: string) {
   const c = challengeEntry(id);
   if (c.hint) return;
   c.hint = true;
+  persist();
+}
+// ───────────────────────────── tutorial ─────────────────────────────
+/** Progresso do tutorial nesta conta (null: nunca abriu nem dispensou a sugestão). */
+export function tutorialProgress(): TutorialProgress | null {
+  return profile().tutorial ?? null;
+}
+export function setTutorialProgress(t: TutorialProgress | null) {
+  const p = profile();
+  if (t) p.tutorial = t;
+  else delete p.tutorial;
   persist();
 }
 

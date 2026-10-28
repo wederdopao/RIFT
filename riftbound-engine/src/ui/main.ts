@@ -16,6 +16,7 @@ import * as acc from './account';
 import { RUNE_CODES, coverArt, db as dbState, deckbuilderHtml, mountDb, onDbClick, onDbContext, onDbHover, onDbInput, poolCodes, refreshDbPeek, setHooks } from './deckbuilder';
 import * as hist from './history';
 import { challengeArtCodes, challengeHold, challengeHudHtml, challengeOf, challengeOverlayHtml, challengesHtml, onChallengeClick, setChallengeHooks } from './challenges';
+import * as tut from './tutorial';
 import type { DeckList, GameConfig } from '../engine/engine';
 import { chainTargets, liveCombat, locKey, matchDrop, moveCombat, moveTargets, type CombatPreview, type Drop } from './interact';
 import { CONCEPTS, guideHtml, keywordHelpHtml } from './glossary';
@@ -668,7 +669,8 @@ function scheduleAi() {
     // a IA pensa em fatias (a mesa continua respondendo); se a partida mudou no meio (desfazer, sair), descarta
     const stale = () => game !== g || g.answers.length !== at || ai !== who || !!replay;
     aiThinking = true;
-    void who.decideAsync(g, stale).then((ans) => {
+    const think = tut.isTut(g) ? Promise.resolve(tut.oppAnswer(g)) : who.decideAsync(g, stale);
+    void think.then((ans) => {
       aiThinking = false;
       if (!ans || stale()) return scheduleAi();
       if (!g.answer(ans)) {
@@ -762,6 +764,7 @@ const STORE = 'riftbound-mesa-v1';
 
 function save() {
   if (replay) return; // rever uma partida não mexe na partida salva
+  if (tut.isTut(game)) return; // tutorial: o progresso fica na conta (tutorial.ts), a partida salva continua a mesma
   try {
     const on = net ? { role: net.role, code: net.code, seat, seq, owners, pub: net.pub, rname: net.roomName } : null;
     localStorage.setItem(STORE, JSON.stringify({ settings, saved: game ? game.serialize() : null, view, online: on }));
@@ -2984,13 +2987,14 @@ function setupHtml(): string {
       <div class="modegroup" role="radiogroup" aria-label="Adversário">${MODES.map(
         (m) => `<button type="button" role="radio" class="mode${settings.opponent === m.id ? ' on' : ''}" data-act="mode" data-mode="${m.id}" aria-checked="${settings.opponent === m.id}"><b>${m.t}</b><span>${m.s}</span></button>`,
       ).join('')}</div>
-      <div class="modegroup aux"><button type="button" class="mode aux" data-act="decks"><b>Meus decks</b><span>Montar, importar e exportar</span></button><button type="button" class="mode aux" data-act="history"><b>Histórico</b><span>Partidas, replays e estatísticas</span></button><button type="button" class="mode aux" data-act="importopen"><b>Abrir replay</b><span>De um arquivo ou relatório</span></button><button type="button" class="mode aux" data-act="challenges"><b>Desafios</b><span>Vença neste turno</span></button></div>
+      <div class="modegroup aux">${tut.homeButton()}<button type="button" class="mode aux" data-act="decks"><b>Meus decks</b><span>Montar, importar e exportar</span></button><button type="button" class="mode aux" data-act="history"><b>Histórico</b><span>Partidas, replays e estatísticas</span></button><button type="button" class="mode aux" data-act="importopen"><b>Abrir replay</b><span>De um arquivo ou relatório</span></button><button type="button" class="mode aux" data-act="challenges"><b>Desafios</b><span>Vença neste turno</span></button></div>
     </nav>`;
   const summary = `${settings.opponent === 'ai' ? `Contra a IA (${AI_LEVELS.find((l) => l.id === settings.aiLevel)!.t})` : 'Passa-e-joga'} · ${settings.format === 'padrao' ? 'Padrão' : 'Casual'} · campos ${settings.bfMode === 'random' ? 'sorteados' : 'escolhidos'}`;
   return `<header class="topbar"><div class="brand">Riftbound <span>mesa</span></div><div class="turninfo">${esc(acc.profile().name)}</div>
     <div class="tb">${musicBoards().length ? `<button type="button" data-act="music" title="Volume da música (N)">${musicIcon()}</button>` : ''}${net ? '<button type="button" data-act="decks">Meus decks</button>' : ''}</div></header>
   <main class="setup home">
     ${net ? lobbyHtml() : `<div class="hero"><h1>Riftbound na mesa</h1><p>As regras rodam sozinhas: custos, pilha, combate, pontos e o efeito de cada carta.</p></div>
+      ${tut.homeBanner()}
       ${saved && (saved.saved || saved.online) ? `<div class="resume mz"><span>${saved.online ? 'Você estava numa sala online.' : 'Há uma partida em andamento.'}</span><button class="primary" data-act="resume">${resumeLabel}</button></div>` : ''}
       ${modes}`}
     <form class="form" id="setupform">
@@ -3157,6 +3161,11 @@ function scheduleRender() {
 const touchUi = () => matchMedia('(hover: none), (pointer: coarse)').matches;
 
 function render() {
+  // saiu do tutorial por qualquer caminho (menu, fim): volta às configurações de antes
+  if (tutPrev && !tut.isTut(game)) {
+    settings = tutPrev;
+    tutPrev = null;
+  }
   const app = $app();
   const logScrolled = document.getElementById('logl');
   const grid = document.querySelector('.dbgrid');
@@ -3202,6 +3211,7 @@ function render() {
     hoveredDest = null;
     queueAuto();
   }
+  tut.afterRender();
   recordIfOver();
   yourTurnCue();
   syncMusic();
@@ -4261,6 +4271,7 @@ function onKey(ev: KeyboardEvent) {
 function recordIfOver() {
   if (!game || replay || game.engine.winner === null) return;
   if (challengeOf(game)) return; // desafio: o progresso vai para a conta (challenges.ts), não para o histórico
+  if (tut.isTut(game)) return; // o tutorial não entra no histórico nem nas estatísticas
   if (online() && watching()) return;
   // convidado: grava com a partida completa que o anfitrião manda no fim (até ela chegar, espera)
   const full = fullGame();
@@ -4271,6 +4282,57 @@ function recordIfOver() {
   const prefer: [string | null, string | null] = online() ? (seat === 0 ? [settings.decks[0], null] : [null, settings.decks[0]]) : [settings.decks[0], settings.decks[1]];
   hist.recordGame(full, { mode, seat: mine, prefer });
 }
+
+/** Configurações de antes do tutorial (ele joga como "contra a IA" com o oponente roteirizado). */
+let tutPrev: Settings | null = null;
+tut.init({
+  game: () => game,
+  start: (g) => {
+    if (replay) exitReplay();
+    if (!tutPrev) tutPrev = { ...settings };
+    settings = { ...settings, opponent: 'ai', names: ['Você', 'Oponente'] };
+    if (aiTimer) clearTimeout(aiTimer);
+    aiTimer = null;
+    game = g;
+    view = HUMAN;
+    ai = newAi();
+    selected = [];
+    preview = null;
+    zoom = null;
+    armed = null;
+    moveSel = [];
+    trigPlan = null;
+    pickSeat = null;
+    page = 'setup';
+    render();
+    scheduleAi();
+  },
+  exit: () => {
+    game = null;
+    zoom = null;
+    armed = null;
+    moveSel = [];
+    render();
+    window.scrollTo(0, 0);
+  },
+  render: () => render(),
+  answer: (ids) => answer(ids),
+  touch: () => touchUi(),
+  zoomId: () => zoom,
+  zoom: (id) => {
+    zoom = id;
+    armed = null;
+    moveSel = [];
+    render();
+  },
+  playEasy: () => {
+    game = null;
+    render(); // devolve as configurações de antes
+    settings.opponent = 'ai';
+    settings.aiLevel = 'easy';
+    newGame();
+  },
+});
 
 setHooks({
   render: () => render(),
@@ -4406,7 +4468,7 @@ function start(data: any = {}) {
 }
 
 const w = window as any;
-w.claude?.hot?.snapshot?.(() => ({ settings, saved: game?.serialize(), view }));
+w.claude?.hot?.snapshot?.(() => (tut.isTut(game) ? { settings: tutPrev ?? settings, saved: null, view } : { settings, saved: game?.serialize(), view }));
 if (w.claude?.hot?.ready) w.claude.hot.ready(start);
 else start(w.claude?.hot?.data ?? {});
 

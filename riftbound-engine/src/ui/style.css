@@ -1944,4 +1944,69 @@ body.tt-dragging, body.tt-dragging * { user-select: none !important; -webkit-use
   .chhud-main b { font-size: 14px; }
   .chhud-btns button { padding: 3px 7px; font-size: 12px; }
   .chgoalbig { font-size: 18px; }
+/* ───────────────────────────── tutorial ("Aprender a jogar", tutorial.ts) ───────────────────────────── */
+.modegroup.aux:has(.tut-mode) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.tut-mode b { color: var(--gold-hi); }
+.tut-hello { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; justify-content: space-between; padding: 12px 16px; border: 1px solid var(--gold); background: linear-gradient(90deg, rgba(214, 176, 90, 0.16), rgba(19, 34, 63, 0.7)); border-radius: 8px; }
+.tut-ht { display: grid; gap: 2px; min-width: 0; flex: 1 1 260px; }
+.tut-ht b { font: 700 21px/1.1 var(--f-display); color: var(--gold-hi); }
+.tut-ht span { color: var(--muted); font-size: 0.92em; }
+.tut-hbtns { display: flex; gap: 8px; flex-wrap: wrap; }
+/* na mesa: nada de desfazer nem de "nova partida" (a caixa oferece os próximos passos) */
+body.tut .tt-dock [data-act=undo], body.tut .tt-dock.over [data-act=newgame], body.tut .tt-overlay.end { display: none !important; }
+body.tut .tut-off { opacity: 0.38; filter: saturate(0.35); cursor: not-allowed; box-shadow: none !important; animation: none !important; }
+body.tut .tt-endbtn.tut-off { opacity: 0.45; }
+#tut-layer { position: fixed; inset: 0; z-index: 42; pointer-events: none; }
+.tut-ring {
+  position: fixed; border-radius: 10px; border: 2px solid var(--gold-hi); pointer-events: none;
+  box-shadow: 0 0 0 3px rgba(240, 212, 138, 0.25), 0 0 24px 6px rgba(240, 212, 138, 0.35);
+  animation: tutpulse 1.4s ease-in-out infinite; transition: left 0.18s, top 0.18s, width 0.18s, height 0.18s;
 }
+.tut-arrow {
+  position: fixed; width: 0; height: 0; margin-left: -13px; pointer-events: none;
+  border-left: 13px solid transparent; border-right: 13px solid transparent; border-top: 22px solid var(--gold-hi);
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.7)); animation: tutbob 0.9s ease-in-out infinite alternate;
+}
+.tut-arrow.up { border-top: 0; border-bottom: 22px solid var(--gold-hi); }
+@keyframes tutpulse { 50% { box-shadow: 0 0 0 6px rgba(240, 212, 138, 0.12), 0 0 34px 10px rgba(240, 212, 138, 0.45); } }
+@keyframes tutbob { to { transform: translateY(-7px); } }
+.tut-arrow.up { animation-name: tutbobup; }
+@keyframes tutbobup { to { transform: translateY(7px); } }
+.tut-box {
+  position: fixed; pointer-events: auto; max-height: calc(100dvh - 16px); overflow: auto;
+  padding: 10px 14px 12px; border-radius: 10px; border: 1px solid var(--gold);
+  background: linear-gradient(180deg, rgba(22, 38, 72, 0.98), rgba(10, 20, 42, 0.98));
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(240, 212, 138, 0.25);
+  font-size: 14.5px; line-height: 1.42; transition: top 0.2s, left 0.2s;
+}
+.tut-box.k-watch { border-color: var(--line-mid, var(--line)); }
+.tut-head { display: flex; align-items: center; gap: 6px; margin-bottom: 2px; }
+.tut-count { flex: 1; font: 600 12px var(--f-display); letter-spacing: 0.08em; text-transform: uppercase; color: var(--gold); }
+.tut-x { padding: 2px 9px; min-height: 26px; font: 600 13px var(--f-display); background: transparent; border: 1px solid var(--line); color: var(--muted); border-radius: 4px; }
+.tut-x:hover { color: var(--ink); border-color: var(--gold-soft); }
+.tut-title { margin: 0 0 4px; font: 700 22px/1.1 var(--f-display); color: var(--gold-hi); }
+.tut-box.min .tut-title { margin: 0; font-size: 18px; }
+.tut-body b { color: var(--gold-hi); font-weight: 600; }
+.tut-how { margin: 8px 0 0; padding: 6px 10px; border-left: 3px solid var(--gold); background: rgba(214, 176, 90, 0.1); border-radius: 0 6px 6px 0; }
+.tut-how b { color: var(--gold-hi); }
+.tut-msg { margin: 8px 0 0; padding: 6px 10px; border-left: 3px solid var(--them); background: rgba(232, 134, 111, 0.12); border-radius: 0 6px 6px 0; color: #ffd3c8; }
+.tut-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.tut-btns button { min-height: 38px; }
+.tut-wait { display: inline-flex; gap: 5px; padding: 6px 2px 0; }
+.tut-wait i { width: 7px; height: 7px; border-radius: 50%; background: var(--gold); animation: tutdot 1s infinite ease-in-out; }
+.tut-wait i:nth-child(2) { animation-delay: 0.15s; }
+.tut-wait i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes tutdot { 50% { opacity: 0.25; transform: translateY(-3px); } }
+.tut-box.shake { animation: tutshake 0.36s; }
+@keyframes tutshake { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
+@media (max-width: 700px) {
+  .tut-box { font-size: 13.5px; padding: 8px 12px 10px; }
+  .tut-title { font-size: 19px; }
+  .tut-btns button { flex: 1 1 auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tut-ring, .tut-arrow, .tut-wait i, .tut-box.shake { animation: none; }
+}
+
+/* tela inicial com tutorial e desafios: os 5 botões auxiliares em 3 + 2 */
+.modegroup.aux:has(> :nth-child(5)) { grid-template-columns: repeat(3, minmax(0, 1fr)); }

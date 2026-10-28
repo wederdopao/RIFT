@@ -53,6 +53,13 @@ export interface GameConfig {
   victoryScore?: number;
   /** Novo (modo Desafios): começa numa mesa montada, na fase principal do jogador ativo (src/engine/scenario.ts). */
   scenario?: ScenarioSetup;
+  /**
+   * Novo (tutorial e cenários roteirizados): decks na ordem da lista, sem embaralhar — o 1º da lista é o topo (deck
+   * principal e de runas). Não muda nenhuma regra; só a ordem inicial.
+   */
+  fixedOrder?: boolean;
+  /** Novo (tutorial): pontos com que cada jogador começa (padrão 0). */
+  startPoints?: [number, number];
 }
 
 export interface GameEvent {
@@ -349,7 +356,7 @@ export class Engine {
       hand: [],
       trash: [],
       banish: [],
-      points: 0,
+      points: cfg.startPoints?.[p] ?? 0,
       xp: 0,
       pool: { energy: 0, power: {} },
       played: [],
@@ -5501,8 +5508,10 @@ export class Engine {
       s.champion = ch.id;
       for (const [code, n] of d.main) for (let i = 0; i < n; i++) s.mainDeck.push(this.newObj(code, p, 'mainDeck').id);
       for (const [code, n] of d.runes) for (let i = 0; i < n; i++) s.runeDeck.push(this.newObj(code, p, 'runeDeck').id);
-      this.rng.shuffle(s.mainDeck);
-      this.rng.shuffle(s.runeDeck);
+      if (!this.cfg.fixedOrder) {
+        this.rng.shuffle(s.mainDeck);
+        this.rng.shuffle(s.runeDeck);
+      }
     }
     // campos: cada jogador usa 1 dos 3
     for (const p of [0, 1] as P[]) {
