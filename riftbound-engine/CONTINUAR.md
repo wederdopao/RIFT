@@ -446,3 +446,29 @@ RiftJudge/playriftbound não acessíveis no contêiner: rulings vieram de resumo
   Conclusões: os pesos atuais já estão no ótimo local (cair muito de unit/might/hand piora, subir não melhora); ganho
   do modo rápido não transfere; o que falta à IA não é peso nem "plano" na avaliação. Próximas ideias: modelar as
   Reactions escondidas do oponente (mana aberta) na busca; usar o tempo do Difícil em amostragem da mão do oponente.
+
+## Modo Desafios (28/10/2026, branch claude/desafios)
+- Tela inicial → **Desafios**: lista com 13 desafios (fácil → difícil), estado de cada um (novo / em aberto /
+  resolvido / bloqueado: o seguinte libera quando o anterior é resolvido), tentativas, melhor vitória (menos jogadas),
+  dica só se pedir e a solução depois de resolver. Na mesa: faixa do objetivo no alto (Dica, Recomeçar), abertura com a
+  situação, resultado (próximo / jogar de novo / desfazer / lista). A IA joga pelo oponente; quando o desafio tem
+  resultado ela para (`challengeHold`). Desafio não entra no Histórico.
+- **Motor** (genérico): `GameConfig.scenario` (`src/engine/scenario.ts`, `applyScenario`): lenda, campeão, pontos, XP,
+  mão, deck (topo primeiro; sem deck, completa com Playful Phantom para nenhum "compre" virar Burn Out), runas, deck de
+  runas, base, descarte, campos com controlador, unidades (exaurida, dano, buff, atordoada, equipamentos anexados) e
+  cartas escondidas. `run()` monta no lugar de `setup()` e `takeTurn(true)` começa na fase principal. Como tudo está no
+  cfg, desfazer, salvar/carregar, replay e relatório funcionam sem mudança.
+- **Dados**: `src/data/challenges.ts` (`CHALLENGES`, `challengeConfig`, `challengeResult`, `goalText`). Objetivos: `win`,
+  `conquer` (campo), `kill` (código), `survive` (chegar ao seu próximo turno). O cfg leva `challenge: id` (o motor
+  ignora). Progresso: `Profile.challenges` em account.ts (`recordChallengeTry/Win/Hint`).
+- **Testes**: `tests/desafios.test.ts` joga a solução de cada desafio pelo motor (o oponente passa; no "hold" também com
+  a IA de verdade) e a jogada errada óbvia; confere cartas, montagem e desfazer/salvar. Interface:
+  `node scripts/challengeshot.mjs <pasta>` (resolve o 1º pela lista de opções, erra o 2º, desfazer, recomeçar,
+  progresso salvo); prints em `docs/prints/desafios-*`.
+- Os 13: Escudo contra Assalto (Shield/Assault/Action no showdown), Mão na arma (Equip), Força interior (Empower),
+  O último ponto (471.1.b.1), Pele de pedra (Deflect), Carta na manga (Hidden por [0]), Não tão rápido (pilha: Not So
+  Fast no gatilho da Ahri), Parede de escudos (Tank), Último suspiro (Deathknell), Segure a linha (conquista × hold,
+  sobreviver), A legião primeiro (Legion), Mestre de armas (Accelerate + Weaponmaster), Duas frentes (Ride the Wind +
+  último ponto).
+- Ideias para mais: Backline, Quick-Draw, Vision/Predict, Repeat, Flow, XP/Level, Ambush, Temporary; desafios de
+  vários turnos; mostrar a mão do oponente quando o desafio depender dela.

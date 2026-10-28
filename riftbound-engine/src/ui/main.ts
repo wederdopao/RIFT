@@ -15,6 +15,7 @@ import { cycleMusic, loadMusic, musicBoards, musicIcon, musicScene, stopPreview 
 import * as acc from './account';
 import { RUNE_CODES, coverArt, db as dbState, deckbuilderHtml, mountDb, onDbClick, onDbContext, onDbHover, onDbInput, poolCodes, refreshDbPeek, setHooks } from './deckbuilder';
 import * as hist from './history';
+import { challengeArtCodes, challengeHold, challengeHudHtml, challengeOf, challengeOverlayHtml, challengesHtml, onChallengeClick, setChallengeHooks } from './challenges';
 import type { DeckList, GameConfig } from '../engine/engine';
 import { chainTargets, liveCombat, locKey, matchDrop, moveCombat, moveTargets, type CombatPreview, type Drop } from './interact';
 import { CONCEPTS, guideHtml, keywordHelpHtml } from './glossary';
@@ -53,7 +54,7 @@ const DEFAULTS: Settings = {
 const HUMAN: P = 0;
 let ai: AiPlayer | null = null;
 let aiTimer: ReturnType<typeof setTimeout> | null = null;
-const vsAi = () => settings.opponent === 'ai';
+const vsAi = () => settings.opponent === 'ai' || !!challengeOf(game); // desafio: sempre contra a IA
 /** Nível da IA da partida aberta: o guardado no cfg dela (replay e relatório reproduzem); sem ele, o das configurações. */
 const aiLevelOf = (g: Game | null): AiLevel => {
   const l = (g?.cfg as { aiLevel?: unknown } | undefined)?.aiLevel;
@@ -655,7 +656,7 @@ let aiSlow = false;
 /** A IA está pensando (decisão em fatias, ver AiPlayer.decideAsync). */
 let aiThinking = false;
 function scheduleAi() {
-  if (!game || replay || !isAiTurn() || aiTimer || aiThinking) return;
+  if (!game || replay || !isAiTurn() || aiTimer || aiThinking || challengeHold(game)) return;
   aiTimer = setTimeout(() => {
     aiTimer = null;
     if (!game || !isAiTurn()) return;
@@ -691,7 +692,7 @@ let modal: { title: string; html: string } | null = null;
 let flashOpt: string | null = null;
 let zoom: string | null = null;
 /** Tela fora da partida: mesa (configuração) ou decks. */
-let page: 'setup' | 'decks' = 'setup';
+let page: 'setup' | 'decks' | 'challenges' = 'setup';
 let logOpen = true;
 /** Unidades escolhidas para mover (clique direto na unidade pronta), válidas enquanto a decisão raiz não muda. */
 let moveSel: string[] = [];
@@ -1528,7 +1529,7 @@ function heroHtml(eng: Engine, p: P): string {
   return `<div class="tt-zone tt-hero">
     <div class="tt-slotcol"><div class="tt-zl">Lenda</div>${cardHtml(eng, legend, 'small')}<span class="tt-xp" title="Experiência">XP <b>${s.xp}</b></span></div>
     ${eng.legendsOf(p).slice(1).map((l) => `<div class="tt-slotcol"><div class="tt-zl">Lenda (Neeko)</div>${cardHtml(eng, l, 'small')}</div>`).join('')}
-    <div class="tt-slotcol"><div class="tt-zl">Campeão</div>${champ ? cardHtml(eng, champ, 'small') : '<div class="tt-emptyslot">em jogo</div>'}</div>
+    <div class="tt-slotcol"><div class="tt-zl">Campeão</div>${champ ? cardHtml(eng, champ, 'small') : `<div class="tt-emptyslot">${eng.cfg.decks[p].champion ? 'em jogo' : 'vazio'}</div>`}</div>
   </div>`;
 }
 
@@ -1798,6 +1799,11 @@ function endSummaryHtml(eng: Engine): string {
 let overlayHidden = '';
 function overlayHtml(eng: Engine, d: Decision | null): string {
   if (!game || replay) return '';
+  // desafio: abertura e resultado no lugar do fim de jogo
+  if (challengeOf(game)) {
+    const ch = challengeOverlayHtml(game);
+    if (ch || eng.winner !== null || !d) return ch;
+  }
   if (eng.winner !== null || !d) {
     if (overlayHidden === 'end') return '';
     const w = eng.winner;
@@ -2641,13 +2647,15 @@ function dockHtml(eng: Engine, d: Decision | null): string {
       ? net!.role === 'host'
         ? '<button class="primary" data-act="rematch">Revanche</button>'
         : ''
-      : '<button class="primary" data-act="newgame">Nova partida</button>';
+      : challengeOf(game)
+        ? '<button class="primary" data-act="chretry">Tentar de novo</button>'
+        : '<button class="primary" data-act="newgame">Nova partida</button>';
     return `<div class="tt-dock decision over"><div class="tt-dmain"><span class="tt-dprompt">${w !== null ? `${esc(eng.pl[w].name)} venceu` : 'Fim de jogo'}</span><span class="tt-dsub">${esc(eng.winReason || '')} · ${eng.pl[0].points} × ${eng.pl[1].points} · ${eng.turn} turnos</span></div><span class="tt-dbtns">${overlayHidden === 'end' ? '<button class="tt-dbtn" data-act="showoverlay">Resultado</button>' : ''}${again}</span></div>`;
   }
   const last = eng.log.filter((l) => !l.text.startsWith('──')).slice(-1)[0];
   const lastHtml = last ? `<span class="tt-dlast ${last.player === undefined ? '' : last.player === view ? 'me' : 'them'}">${linkCards(eng, last.text)}</span>` : '';
   if (isOtherTurn())
-    return `<div class="tt-dock decision thinking">${stackHtml(eng)}<span class="tt-dprompt wait"><span class="dots"><i></i><i></i><i></i></span>${esc(eng.pl[d.player].name)} ${online() ? 'está jogando' : 'está pensando'}</span>${lastHtml}${netNote ? `<span class="err">${esc(netNote)}</span>` : ''}<span class="tt-dbtns">${watching() || replay ? '' : undo}<button class="tt-dbtn ico-menu tt-sidebtn" data-act="sidetoggle" title="Registro e menu"><span class="lbl">Registro</span></button></span></div>`;
+    return `<div class="tt-dock decision thinking">${stackHtml(eng)}<span class="tt-dprompt wait"><span class="dots"><i></i><i></i><i></i></span>${challengeHold(game) ? 'Desafio encerrado' : `${esc(eng.pl[d.player].name)} ${online() ? 'está jogando' : 'está pensando'}`}</span>${lastHtml}${netNote ? `<span class="err">${esc(netNote)}</span>` : ''}<span class="tt-dbtns">${watching() || replay ? '' : undo}<button class="tt-dbtn ico-menu tt-sidebtn" data-act="sidetoggle" title="Registro e menu"><span class="lbl">Registro</span></button></span></div>`;
   if (handoffPending)
     return `<div class="tt-dock decision"><span class="tt-dprompt">Vez de ${esc(eng.pl[d.player].name)}</span><span class="tt-dsub">passe o aparelho</span></div>`;
   const multi = d.max > 1 || d.min === 0;
@@ -2778,6 +2786,7 @@ function gameHtml(): string {
       ${homeRowHtml(eng, view, false)}
       ${handRowHtml(eng, view, false)}
       <svg class="tt-arrows" id="tt-arrows" aria-hidden="true"></svg>
+      ${challengeOf(game) && !replay ? challengeHudHtml(game!) : ''}
       ${overlayHtml(eng, d)}
       ${online() ? netWarnHtml(eng) + undoAskHtml(eng) + chatBubblesHtml() + chatPopHtml() + emotePopHtml() : ''}
       <div class="tt-peek" id="tt-peek" aria-hidden="true"></div>
@@ -2975,7 +2984,7 @@ function setupHtml(): string {
       <div class="modegroup" role="radiogroup" aria-label="Adversário">${MODES.map(
         (m) => `<button type="button" role="radio" class="mode${settings.opponent === m.id ? ' on' : ''}" data-act="mode" data-mode="${m.id}" aria-checked="${settings.opponent === m.id}"><b>${m.t}</b><span>${m.s}</span></button>`,
       ).join('')}</div>
-      <div class="modegroup aux"><button type="button" class="mode aux" data-act="decks"><b>Meus decks</b><span>Montar, importar e exportar</span></button><button type="button" class="mode aux" data-act="history"><b>Histórico</b><span>Partidas, replays e estatísticas</span></button><button type="button" class="mode aux" data-act="importopen"><b>Abrir replay</b><span>De um arquivo ou relatório</span></button></div>
+      <div class="modegroup aux"><button type="button" class="mode aux" data-act="decks"><b>Meus decks</b><span>Montar, importar e exportar</span></button><button type="button" class="mode aux" data-act="history"><b>Histórico</b><span>Partidas, replays e estatísticas</span></button><button type="button" class="mode aux" data-act="importopen"><b>Abrir replay</b><span>De um arquivo ou relatório</span></button><button type="button" class="mode aux" data-act="challenges"><b>Desafios</b><span>Vença neste turno</span></button></div>
     </nav>`;
   const summary = `${settings.opponent === 'ai' ? `Contra a IA (${AI_LEVELS.find((l) => l.id === settings.aiLevel)!.t})` : 'Passa-e-joga'} · ${settings.format === 'padrao' ? 'Padrão' : 'Casual'} · campos ${settings.bfMode === 'random' ? 'sorteados' : 'escolhidos'}`;
   return `<header class="topbar"><div class="brand">Riftbound <span>mesa</span></div><div class="turninfo">${esc(acc.profile().name)}</div>
@@ -3165,7 +3174,7 @@ function render() {
   if (game)
     for (const el of Array.from(document.querySelectorAll<HTMLElement>('.tt-mat .card[data-obj]')))
       before.set(el.dataset.obj!, { r: el.getBoundingClientRect(), bomb: el.classList.contains('bomb'), unit: el.classList.contains('unit'), art: el.querySelector<HTMLImageElement>('img.art')?.src || '' });
-  app.innerHTML = game ? gameHtml() : page === 'decks' ? deckbuilderHtml() : setupHtml() + modalHtml();
+  app.innerHTML = game ? gameHtml() : page === 'decks' ? deckbuilderHtml() : page === 'challenges' ? challengesHtml(acc.profile().name) : setupHtml() + modalHtml();
   if (focusId) {
     const el = document.getElementById(focusId) as HTMLInputElement | null;
     if (el && el !== document.activeElement) {
@@ -3205,7 +3214,9 @@ function render() {
     ? Object.values(game.engine.objs).map((o) => o.code)
     : page === 'decks'
       ? poolCodes()
-      : [
+      : page === 'challenges'
+        ? challengeArtCodes()
+        : [
           ...RUNE_CODES,
           ...settings.decks.flatMap((i) => {
             const d = acc.deckById(i);
@@ -3315,6 +3326,7 @@ function onClick(ev: MouseEvent) {
       return;
     }
   }
+  if (onChallengeClick(t, replay ? null : game)) return;
   let act = t.closest('[data-act]') as HTMLElement | null;
   // botão de opção dentro de um contêiner com data-act (ex.: as ações no zoom da carta): vale a opção
   const optIn = t.closest('[data-opt]') as HTMLElement | null;
@@ -3656,6 +3668,13 @@ function onClick(ev: MouseEvent) {
       window.scrollTo(0, 0);
       return;
     }
+    if (a === 'challenges') {
+      pickSeat = null;
+      page = 'challenges';
+      render();
+      window.scrollTo(0, 0);
+      return;
+    }
     if (a === 'decks' || a === 'history') {
       pickSeat = null;
       page = 'decks';
@@ -3685,6 +3704,7 @@ function onClick(ev: MouseEvent) {
         render();
         return;
       }
+      if (challengeOf(game)) page = 'challenges'; // o Menu de um desafio volta para a lista
       game = null;
       save();
       render();
@@ -4240,6 +4260,7 @@ function onKey(ev: KeyboardEvent) {
 /** Fim de partida: guarda no histórico da conta e conta nas estatísticas do deck (uma vez por partida). */
 function recordIfOver() {
   if (!game || replay || game.engine.winner === null) return;
+  if (challengeOf(game)) return; // desafio: o progresso vai para a conta (challenges.ts), não para o histórico
   if (online() && watching()) return;
   // convidado: grava com a partida completa que o anfitrião manda no fim (até ela chegar, espera)
   const full = fullGame();
@@ -4268,6 +4289,40 @@ setHooks({
     window.scrollTo(0, 0);
   },
   touch: () => touchUi(),
+});
+
+// modo Desafios: a partida do desafio entra na mesa como uma partida contra a IA
+const leaveGame = (to: typeof page) => {
+  if (aiTimer) clearTimeout(aiTimer);
+  aiTimer = null;
+  game = null;
+  ai = null;
+  page = to;
+  save();
+  render();
+  window.scrollTo(0, 0);
+};
+setChallengeHooks({
+  play: (g) => {
+    if (aiTimer) clearTimeout(aiTimer);
+    aiTimer = null;
+    game = g;
+    view = HUMAN;
+    handoffPending = false;
+    selected = [];
+    armed = null;
+    moveSel = [];
+    pendingDrop = null;
+    trigPlan = null;
+    overlayHidden = '';
+    ai = newAi();
+    save();
+    render();
+    scheduleAi();
+  },
+  home: () => leaveGame('setup'),
+  list: () => leaveGame('challenges'),
+  render: () => render(),
 });
 
 function start(data: any = {}) {

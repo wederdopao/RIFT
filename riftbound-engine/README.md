@@ -19,6 +19,11 @@ Projeto de fã, sem fins comerciais, feito sob a política "Legal Jibber Jabber"
   Recycle, Counter, Prevent, Recall, Attach, fichas (Recruit, Sprite, Gold, Bird...).
 - **Cartas**: o Origins inteiro (OGN), o Proving Grounds (OGS), o Spiritforged inteiro (SFD-001 a SFD-221) e o
   Unleashed inteiro (UNL-001 a UNL-219: XP, Hunt, Level, Ambush, cópias, Brush e Baron Pit). Texto com a errata oficial mais recente.
+- **Desafios** ("vença neste turno"; tela inicial → Desafios): mesas montadas com objetivo (vencer, conquistar um
+  campo, destruir uma unidade, sobreviver ao turno do oponente), cada uma ensinando uma interação. Dados em
+  `src/data/challenges.ts` (para criar um desafio, acrescente um item e um teste em `tests/desafios.test.ts`), tela em
+  `src/ui/challenges.ts`, progresso na conta. A mesa montada é `GameConfig.scenario` (`src/engine/scenario.ts`): o
+  motor monta tudo no começo de `run()` e começa na fase principal, então desfazer, salvar e replay valem.
 - **Decks e conta** (`src/ui/deckbuilder.ts`, `src/ui/account.ts`): biblioteca com filtros (domínio, tipo, custo,
   coleção, raridade, busca), deck principal, side (até 10), runas, campos, validação pelas regras 103 e 601.1.c,
   curva de energia, mão de teste, código de deck no formato do Piltover Archive (importar e copiar), decks salvos por
@@ -131,7 +136,7 @@ src/engine/       motor: engine.ts (regras), game.ts (respostas/desfazer), scrip
                   types.ts, db.ts, tokens.ts, deckcheck.ts
 src/cards/<set>/  uma carta por arquivo (ex.: OGN-169-gust.ts) + index.ts do set
 src/decks/        listas de deck
-src/data/         cards.json (todas as cartas, gerado por scripts/build_carddata.py) e banlist.ts
+src/data/         cards.json (todas as cartas, gerado por scripts/build_carddata.py), banlist.ts e challenges.ts (desafios)
 src/ai/           IA adversária
 src/ui/           interface (TypeScript puro + CSS); art.ts carrega as artes
 assets/art/       artes oficiais das cartas (<CÓDIGO>.webp)
