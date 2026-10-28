@@ -75,6 +75,10 @@ Projeto de fã, sem fins comerciais, feito sob a política "Legal Jibber Jabber"
 - **Artes oficiais** de todas as cartas do banco (934 imagens, em `assets/art/`, reduzidas para 360 px). A página baixa
   só os pacotes das cartas em jogo; a versão `riftbound-mesa.html` já vem com as artes do Origins, do Proving Grounds e do Spiritforged embutidas.
   As imagens vêm da galeria oficial (playriftbound.com), via o pacote público `JeremyCPE/riftbound-vision-assets`.
+- **Sons e vozes** (`src/ui/sound.ts`): efeitos gerados no navegador (jogar, mover, combate, dano, morte, ponto,
+  conquista, sua vez, vitória/derrota) com volume no botão 🔊 ou na tecla M. No site, os campeões falam com as vozes do
+  Legends of Runeterra (81 campeões em `assets/voice/`: jogar, atacar, bloquear, morrer, vitória, derrota), baixadas da
+  wiki do League of Legends por `python3 scripts/lor_voices.py` e comprimidas em mono 48 kbps. Áudio da Riot Games.
 - **Ponto final** (regra 471.1.b.1): o 8º ponto vem de hold, de efeito de carta, ou de uma conquista no turno em que o
   jogador pontuou todos os campos (hold num e conquista no outro também vale). Fora disso a conquista compra 1.
 - **Online** (`src/ui/online.ts`): cada um no seu aparelho. Dentro do app do Claude usa o canal "room" da própria

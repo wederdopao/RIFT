@@ -1585,7 +1585,17 @@ function playSounds(eng: Engine) {
   const champs = Object.values(eng.objs)
     .filter((o) => isChampionCard(o.code))
     .map((o) => cardData(o.code).name);
-  soundFromLog(game, eng, view, !!replay, (text) => champs.find((n) => text.includes(n)) ?? null);
+  soundFromLog(game, eng, view, !!replay, {
+    champIn: (text) => champs.find((n) => text.includes(n)) ?? null,
+    champAt: (bf, player) => {
+      const p = eng.pl.findIndex((x) => eng.pname(eng.pl.indexOf(x) as P) === player);
+      const i = eng.bfs.findIndex((b) => eng.name(eng.objs[b.objId]) === bf);
+      const u = p < 0 || i < 0 ? undefined : eng.unitsAtBf(i, p as P).find((x) => isChampionCard(x.code));
+      return u ? cardData(u.code).name : null;
+    },
+    legend: (p) => cardData(eng.legendOf(p as P).code).name,
+    meName: eng.pname(view),
+  });
 }
 let toastSeen: { game: Game | null; n: number } = { game: null, n: 0 };
 let toasts: { line: LogLine; until: number; at: number }[] = [];

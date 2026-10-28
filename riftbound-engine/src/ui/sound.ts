@@ -1,7 +1,8 @@
 // Sons da mesa: efeitos gerados na hora (Web Audio, sem arquivos) e vozes de campeões opcionais.
 // A mesa chama `soundFromLog` a cada desenho com as linhas novas do registro; cada linha vira no máximo um som.
-// Vozes: `voice/index.json` (site) mapeia o campeão (primeiro nome, minúsculo: "jinx") para arquivos por evento
-// ({ "jinx": { "play": ["voice/jinx/play-1.ogg"], "attack": [...] } }). Sem o índice, só os efeitos tocam.
+// Vozes: `voice/index.json` (site; gerado por scripts/lor_voices.py com as falas do Legends of Runeterra) mapeia o
+// campeão ("jinx", "lee sin") para arquivos por evento ({ "jinx": { "play": ["voice/jinx/play-1.mp3"], ... } }):
+// jogar, atacar, bloquear, morrer, vitória e derrota. Sem o índice (versão offline), só os efeitos tocam.
 import type { Engine } from '../engine/engine';
 
 type Sfx = 'play' | 'move' | 'combat' | 'damage' | 'death' | 'point' | 'conquer' | 'turn' | 'win' | 'lose' | 'buff' | 'draw';
@@ -133,7 +134,8 @@ export function sfx(kind: Sfx) {
 }
 
 // ── vozes dos campeões (opcionais) ──
-type VoiceIndex = Record<string, Partial<Record<'play' | 'attack' | 'death', string[]>>>;
+type VoiceEv = 'play' | 'attack' | 'block' | 'death' | 'victory' | 'defeat';
+type VoiceIndex = Record<string, Partial<Record<VoiceEv, string[]>>>;
 let voices: VoiceIndex | null = null;
 let voicesAsked = false;
 function loadVoices() {
@@ -145,10 +147,14 @@ function loadVoices() {
     .catch(() => {});
 }
 let voiceUntil = 0;
-/** Fala do campeão (`name` é o nome da carta, "Jinx, Demolitionist"). Não sobrepõe falas. */
-export function voice(name: string, ev: 'play' | 'attack' | 'death'): boolean {
+/**
+ * Fala do campeão (`name` é o nome da carta, "Jinx, Demolitionist"; vale o campeão: "jinx"). Não sobrepõe falas, salvo
+ * a de vitória/derrota, que fecha a partida.
+ */
+export function voice(name: string, ev: VoiceEv): boolean {
   loadVoices();
-  if (!LEVELS[level] || !voices || Date.now() < voiceUntil) return false;
+  const final = ev === 'victory' || ev === 'defeat';
+  if (!LEVELS[level] || !voices || (!final && Date.now() < voiceUntil)) return false;
   const key = name.split(',')[0].trim().toLowerCase();
   const list = voices[key]?.[ev];
   if (!list?.length) return false;
@@ -159,13 +165,25 @@ export function voice(name: string, ev: 'play' | 'attack' | 'death'): boolean {
   return true;
 }
 
+/** O que a mesa sabe responder para escolher as vozes. */
+export interface VoiceCtx {
+  /** nome de um campeão citado no texto (ou null) */
+  champIn(text: string): string | null;
+  /** campeão do jogador (nome no registro) que está no campo (nome no registro) */
+  champAt(bf: string, player: string): string | null;
+  /** nome da lenda do jogador `p` (o campeão que fala na vitória/derrota) */
+  legend(p: number): string;
+  /** nome do jogador desta tela no registro */
+  meName: string;
+}
+
 // ── do registro para os sons ──
 let seen: { src: object | null; n: number } = { src: null, n: 0 };
 /**
- * Toca os sons das linhas novas do registro (`src` = a partida: trocou, recomeça a leitura). `quiet` (replay, carregar partida, desfazer) só avança a leitura.
- * `me` = o jogador desta tela (vitória × derrota); `champIn` acha o nome de um campeão citado no texto.
+ * Toca os sons das linhas novas do registro (`src` = a partida: trocou, recomeça a leitura). `quiet` (replay, carregar
+ * partida, desfazer) só avança a leitura. `me` = o jogador desta tela (vitória × derrota).
  */
-export function soundFromLog(src: object, eng: Engine, me: number, quiet: boolean, champIn: (text: string) => string | null) {
+export function soundFromLog(src: object, eng: Engine, me: number, quiet: boolean, vc: VoiceCtx) {
   if (seen.src !== src || eng.log.length < seen.n || quiet || eng.log.length - seen.n > 40) {
     seen = { src, n: eng.log.length };
     return;
@@ -180,20 +198,32 @@ export function soundFromLog(src: object, eng: Engine, me: number, quiet: boolea
       played++;
     }
   };
+  // quem ataca com campeão nesta leva (a linha do movimento vem antes da do combate)
+  let attacker: string | null = null;
   for (const l of lines) {
     const t = l.text;
     let m: RegExpExecArray | null;
-    if (/vence a partida/.test(t)) once(l.player === undefined ? 'win' : l.player === me ? 'win' : 'lose');
-    else if (/^⚔ Combate/.test(t)) once('combat');
-    else if (/ morre\b/.test(t)) once('death');
-    else if (/ganha \d+ ponto/.test(t)) once('point');
+    if (/vence a partida/.test(t)) {
+      const won = l.player === undefined || l.player === me;
+      once(won ? 'win' : 'lose');
+      voice(vc.legend(me), won ? 'victory' : 'defeat');
+    } else if ((m = /^⚔ Combate em (.+?): (.+?) ataca, (.+?) defende/.exec(t))) {
+      once('combat');
+      // a sua unidade defendendo fala o bloqueio; senão, o campeão que atacou fala o ataque
+      const blocker = m[3] === vc.meName ? vc.champAt(m[1], m[3]) : null;
+      if (!(blocker && voice(blocker, 'block')) && attacker) voice(attacker, 'attack');
+    } else if ((m = /^(.+?) morre\b/.exec(t))) {
+      once('death');
+      const champ = vc.champIn(m[1]);
+      if (champ) voice(champ, 'death');
+    } else if (/ganha \d+ ponto/.test(t)) once('point');
     else if (/assume o controle de/.test(t)) once('conquer');
     else if ((m = / joga (.+?)\.$/.exec(t))) {
-      const champ = champIn(m[1]);
+      const champ = vc.champIn(m[1]);
       if (!(champ && voice(champ, 'play'))) once('play');
     } else if ((m = /^(.+?) → /.exec(t))) {
-      const champ = champIn(m[1]);
-      if (!(champ && lines.some((x) => /^⚔ Combate/.test(x.text)) && voice(champ, 'attack'))) once('move');
+      attacker = vc.champIn(m[1]) ?? attacker;
+      once('move');
     } else if (/recebe \d+ de dano/.test(t)) once('damage');
     else if (/recebe um Buff|fica Empowered/.test(t)) once('buff');
   }

@@ -1,0 +1,2145 @@
+{
+ "ahri": {
+  "attack": [
+   "voice/ahri/attack-1.mp3",
+   "voice/ahri/attack-2.mp3"
+  ],
+  "block": [
+   "voice/ahri/block-1.mp3",
+   "voice/ahri/block-2.mp3"
+  ],
+  "death": [
+   "voice/ahri/death-1.mp3",
+   "voice/ahri/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/ahri/defeat-1.mp3",
+   "voice/ahri/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/ahri/play-1.mp3",
+   "voice/ahri/play-2.mp3",
+   "voice/ahri/play-3.mp3"
+  ],
+  "victory": [
+   "voice/ahri/victory-1.mp3",
+   "voice/ahri/victory-2.mp3"
+  ]
+ },
+ "akshan": {
+  "attack": [
+   "voice/akshan/attack-1.mp3",
+   "voice/akshan/attack-2.mp3"
+  ],
+  "block": [
+   "voice/akshan/block-1.mp3",
+   "voice/akshan/block-2.mp3"
+  ],
+  "death": [
+   "voice/akshan/death-1.mp3",
+   "voice/akshan/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/akshan/defeat-1.mp3",
+   "voice/akshan/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/akshan/play-1.mp3",
+   "voice/akshan/play-2.mp3",
+   "voice/akshan/play-3.mp3"
+  ],
+  "victory": [
+   "voice/akshan/victory-1.mp3",
+   "voice/akshan/victory-2.mp3"
+  ]
+ },
+ "anivia": {
+  "attack": [
+   "voice/anivia/attack-1.mp3",
+   "voice/anivia/attack-2.mp3"
+  ],
+  "block": [
+   "voice/anivia/block-1.mp3",
+   "voice/anivia/block-2.mp3"
+  ],
+  "death": [
+   "voice/anivia/death-1.mp3",
+   "voice/anivia/death-2.mp3"
+  ],
+  "play": [
+   "voice/anivia/play-1.mp3",
+   "voice/anivia/play-2.mp3",
+   "voice/anivia/play-3.mp3"
+  ],
+  "victory": [
+   "voice/anivia/victory-1.mp3",
+   "voice/anivia/victory-2.mp3"
+  ]
+ },
+ "annie": {
+  "attack": [
+   "voice/annie/attack-1.mp3",
+   "voice/annie/attack-2.mp3"
+  ],
+  "block": [
+   "voice/annie/block-1.mp3",
+   "voice/annie/block-2.mp3"
+  ],
+  "death": [
+   "voice/annie/death-1.mp3",
+   "voice/annie/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/annie/defeat-1.mp3",
+   "voice/annie/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/annie/play-1.mp3",
+   "voice/annie/play-2.mp3",
+   "voice/annie/play-3.mp3"
+  ],
+  "victory": [
+   "voice/annie/victory-1.mp3",
+   "voice/annie/victory-2.mp3"
+  ]
+ },
+ "aphelios": {
+  "attack": [
+   "voice/aphelios/attack-1.mp3",
+   "voice/aphelios/attack-2.mp3"
+  ],
+  "block": [
+   "voice/aphelios/block-1.mp3",
+   "voice/aphelios/block-2.mp3"
+  ],
+  "death": [
+   "voice/aphelios/death-1.mp3",
+   "voice/aphelios/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/aphelios/defeat-1.mp3",
+   "voice/aphelios/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/aphelios/play-1.mp3",
+   "voice/aphelios/play-2.mp3",
+   "voice/aphelios/play-3.mp3"
+  ],
+  "victory": [
+   "voice/aphelios/victory-1.mp3",
+   "voice/aphelios/victory-2.mp3"
+  ]
+ },
+ "ashe": {
+  "attack": [
+   "voice/ashe/attack-1.mp3",
+   "voice/ashe/attack-2.mp3"
+  ],
+  "block": [
+   "voice/ashe/block-1.mp3",
+   "voice/ashe/block-2.mp3"
+  ],
+  "death": [
+   "voice/ashe/death-1.mp3",
+   "voice/ashe/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/ashe/defeat-1.mp3",
+   "voice/ashe/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/ashe/play-1.mp3",
+   "voice/ashe/play-2.mp3",
+   "voice/ashe/play-3.mp3"
+  ],
+  "victory": [
+   "voice/ashe/victory-1.mp3",
+   "voice/ashe/victory-2.mp3"
+  ]
+ },
+ "azir": {
+  "attack": [
+   "voice/azir/attack-1.mp3",
+   "voice/azir/attack-2.mp3"
+  ],
+  "block": [
+   "voice/azir/block-1.mp3",
+   "voice/azir/block-2.mp3"
+  ],
+  "death": [
+   "voice/azir/death-1.mp3",
+   "voice/azir/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/azir/defeat-1.mp3",
+   "voice/azir/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/azir/play-1.mp3",
+   "voice/azir/play-2.mp3",
+   "voice/azir/play-3.mp3"
+  ],
+  "victory": [
+   "voice/azir/victory-1.mp3",
+   "voice/azir/victory-2.mp3"
+  ]
+ },
+ "caitlyn": {
+  "attack": [
+   "voice/caitlyn/attack-1.mp3",
+   "voice/caitlyn/attack-2.mp3"
+  ],
+  "block": [
+   "voice/caitlyn/block-1.mp3",
+   "voice/caitlyn/block-2.mp3"
+  ],
+  "death": [
+   "voice/caitlyn/death-1.mp3",
+   "voice/caitlyn/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/caitlyn/defeat-1.mp3",
+   "voice/caitlyn/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/caitlyn/play-1.mp3",
+   "voice/caitlyn/play-2.mp3",
+   "voice/caitlyn/play-3.mp3"
+  ],
+  "victory": [
+   "voice/caitlyn/victory-1.mp3",
+   "voice/caitlyn/victory-2.mp3"
+  ]
+ },
+ "darius": {
+  "attack": [
+   "voice/darius/attack-1.mp3",
+   "voice/darius/attack-2.mp3"
+  ],
+  "block": [
+   "voice/darius/block-1.mp3",
+   "voice/darius/block-2.mp3"
+  ],
+  "death": [
+   "voice/darius/death-1.mp3",
+   "voice/darius/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/darius/defeat-1.mp3",
+   "voice/darius/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/darius/play-1.mp3",
+   "voice/darius/play-2.mp3",
+   "voice/darius/play-3.mp3"
+  ],
+  "victory": [
+   "voice/darius/victory-1.mp3",
+   "voice/darius/victory-2.mp3"
+  ]
+ },
+ "diana": {
+  "attack": [
+   "voice/diana/attack-1.mp3",
+   "voice/diana/attack-2.mp3"
+  ],
+  "block": [
+   "voice/diana/block-1.mp3",
+   "voice/diana/block-2.mp3"
+  ],
+  "death": [
+   "voice/diana/death-1.mp3",
+   "voice/diana/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/diana/defeat-1.mp3",
+   "voice/diana/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/diana/play-1.mp3",
+   "voice/diana/play-2.mp3",
+   "voice/diana/play-3.mp3"
+  ],
+  "victory": [
+   "voice/diana/victory-1.mp3",
+   "voice/diana/victory-2.mp3"
+  ]
+ },
+ "draven": {
+  "attack": [
+   "voice/draven/attack-1.mp3",
+   "voice/draven/attack-2.mp3"
+  ],
+  "block": [
+   "voice/draven/block-1.mp3",
+   "voice/draven/block-2.mp3"
+  ],
+  "death": [
+   "voice/draven/death-1.mp3",
+   "voice/draven/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/draven/defeat-1.mp3",
+   "voice/draven/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/draven/play-1.mp3",
+   "voice/draven/play-2.mp3",
+   "voice/draven/play-3.mp3"
+  ],
+  "victory": [
+   "voice/draven/victory-1.mp3",
+   "voice/draven/victory-2.mp3"
+  ]
+ },
+ "ekko": {
+  "attack": [
+   "voice/ekko/attack-1.mp3",
+   "voice/ekko/attack-2.mp3"
+  ],
+  "block": [
+   "voice/ekko/block-1.mp3",
+   "voice/ekko/block-2.mp3"
+  ],
+  "death": [
+   "voice/ekko/death-1.mp3",
+   "voice/ekko/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/ekko/defeat-1.mp3",
+   "voice/ekko/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/ekko/play-1.mp3",
+   "voice/ekko/play-2.mp3",
+   "voice/ekko/play-3.mp3"
+  ],
+  "victory": [
+   "voice/ekko/victory-1.mp3",
+   "voice/ekko/victory-2.mp3"
+  ]
+ },
+ "evelynn": {
+  "attack": [
+   "voice/evelynn/attack-1.mp3",
+   "voice/evelynn/attack-2.mp3"
+  ],
+  "block": [
+   "voice/evelynn/block-1.mp3",
+   "voice/evelynn/block-2.mp3"
+  ],
+  "death": [
+   "voice/evelynn/death-1.mp3",
+   "voice/evelynn/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/evelynn/defeat-1.mp3",
+   "voice/evelynn/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/evelynn/play-1.mp3",
+   "voice/evelynn/play-2.mp3",
+   "voice/evelynn/play-3.mp3"
+  ],
+  "victory": [
+   "voice/evelynn/victory-1.mp3",
+   "voice/evelynn/victory-2.mp3"
+  ]
+ },
+ "ezreal": {
+  "attack": [
+   "voice/ezreal/attack-1.mp3",
+   "voice/ezreal/attack-2.mp3"
+  ],
+  "block": [
+   "voice/ezreal/block-1.mp3",
+   "voice/ezreal/block-2.mp3"
+  ],
+  "death": [
+   "voice/ezreal/death-1.mp3",
+   "voice/ezreal/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/ezreal/defeat-1.mp3",
+   "voice/ezreal/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/ezreal/play-1.mp3",
+   "voice/ezreal/play-2.mp3",
+   "voice/ezreal/play-3.mp3"
+  ],
+  "victory": [
+   "voice/ezreal/victory-1.mp3",
+   "voice/ezreal/victory-2.mp3"
+  ]
+ },
+ "fiora": {
+  "attack": [
+   "voice/fiora/attack-1.mp3",
+   "voice/fiora/attack-2.mp3"
+  ],
+  "block": [
+   "voice/fiora/block-1.mp3",
+   "voice/fiora/block-2.mp3"
+  ],
+  "death": [
+   "voice/fiora/death-1.mp3",
+   "voice/fiora/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/fiora/defeat-1.mp3",
+   "voice/fiora/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/fiora/play-1.mp3",
+   "voice/fiora/play-2.mp3",
+   "voice/fiora/play-3.mp3"
+  ],
+  "victory": [
+   "voice/fiora/victory-1.mp3",
+   "voice/fiora/victory-2.mp3"
+  ]
+ },
+ "fizz": {
+  "attack": [
+   "voice/fizz/attack-1.mp3",
+   "voice/fizz/attack-2.mp3"
+  ],
+  "block": [
+   "voice/fizz/block-1.mp3",
+   "voice/fizz/block-2.mp3"
+  ],
+  "death": [
+   "voice/fizz/death-1.mp3",
+   "voice/fizz/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/fizz/defeat-1.mp3",
+   "voice/fizz/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/fizz/play-1.mp3",
+   "voice/fizz/play-2.mp3",
+   "voice/fizz/play-3.mp3"
+  ],
+  "victory": [
+   "voice/fizz/victory-1.mp3",
+   "voice/fizz/victory-2.mp3"
+  ]
+ },
+ "galio": {
+  "attack": [
+   "voice/galio/attack-1.mp3",
+   "voice/galio/attack-2.mp3"
+  ],
+  "block": [
+   "voice/galio/block-1.mp3",
+   "voice/galio/block-2.mp3"
+  ],
+  "death": [
+   "voice/galio/death-1.mp3",
+   "voice/galio/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/galio/defeat-1.mp3",
+   "voice/galio/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/galio/play-1.mp3",
+   "voice/galio/play-2.mp3",
+   "voice/galio/play-3.mp3"
+  ],
+  "victory": [
+   "voice/galio/victory-1.mp3",
+   "voice/galio/victory-2.mp3"
+  ]
+ },
+ "gangplank": {
+  "attack": [
+   "voice/gangplank/attack-1.mp3",
+   "voice/gangplank/attack-2.mp3"
+  ],
+  "block": [
+   "voice/gangplank/block-1.mp3",
+   "voice/gangplank/block-2.mp3"
+  ],
+  "death": [
+   "voice/gangplank/death-1.mp3",
+   "voice/gangplank/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/gangplank/defeat-1.mp3",
+   "voice/gangplank/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/gangplank/play-1.mp3",
+   "voice/gangplank/play-2.mp3",
+   "voice/gangplank/play-3.mp3"
+  ],
+  "victory": [
+   "voice/gangplank/victory-1.mp3",
+   "voice/gangplank/victory-2.mp3"
+  ]
+ },
+ "garen": {
+  "attack": [
+   "voice/garen/attack-1.mp3",
+   "voice/garen/attack-2.mp3"
+  ],
+  "block": [
+   "voice/garen/block-1.mp3",
+   "voice/garen/block-2.mp3"
+  ],
+  "death": [
+   "voice/garen/death-1.mp3",
+   "voice/garen/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/garen/defeat-1.mp3",
+   "voice/garen/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/garen/play-1.mp3",
+   "voice/garen/play-2.mp3",
+   "voice/garen/play-3.mp3"
+  ],
+  "victory": [
+   "voice/garen/victory-1.mp3",
+   "voice/garen/victory-2.mp3"
+  ]
+ },
+ "heimerdinger": {
+  "attack": [
+   "voice/heimerdinger/attack-1.mp3",
+   "voice/heimerdinger/attack-2.mp3"
+  ],
+  "block": [
+   "voice/heimerdinger/block-1.mp3",
+   "voice/heimerdinger/block-2.mp3"
+  ],
+  "death": [
+   "voice/heimerdinger/death-1.mp3",
+   "voice/heimerdinger/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/heimerdinger/defeat-1.mp3",
+   "voice/heimerdinger/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/heimerdinger/play-1.mp3",
+   "voice/heimerdinger/play-2.mp3",
+   "voice/heimerdinger/play-3.mp3"
+  ],
+  "victory": [
+   "voice/heimerdinger/victory-1.mp3",
+   "voice/heimerdinger/victory-2.mp3"
+  ]
+ },
+ "illaoi": {
+  "attack": [
+   "voice/illaoi/attack-1.mp3",
+   "voice/illaoi/attack-2.mp3"
+  ],
+  "block": [
+   "voice/illaoi/block-1.mp3",
+   "voice/illaoi/block-2.mp3"
+  ],
+  "death": [
+   "voice/illaoi/death-1.mp3",
+   "voice/illaoi/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/illaoi/defeat-1.mp3",
+   "voice/illaoi/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/illaoi/play-1.mp3",
+   "voice/illaoi/play-2.mp3",
+   "voice/illaoi/play-3.mp3"
+  ],
+  "victory": [
+   "voice/illaoi/victory-1.mp3",
+   "voice/illaoi/victory-2.mp3"
+  ]
+ },
+ "irelia": {
+  "attack": [
+   "voice/irelia/attack-1.mp3",
+   "voice/irelia/attack-2.mp3"
+  ],
+  "block": [
+   "voice/irelia/block-1.mp3",
+   "voice/irelia/block-2.mp3"
+  ],
+  "death": [
+   "voice/irelia/death-1.mp3",
+   "voice/irelia/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/irelia/defeat-1.mp3",
+   "voice/irelia/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/irelia/play-1.mp3",
+   "voice/irelia/play-2.mp3",
+   "voice/irelia/play-3.mp3"
+  ],
+  "victory": [
+   "voice/irelia/victory-1.mp3",
+   "voice/irelia/victory-2.mp3"
+  ]
+ },
+ "janna": {
+  "attack": [
+   "voice/janna/attack-1.mp3",
+   "voice/janna/attack-2.mp3"
+  ],
+  "block": [
+   "voice/janna/block-1.mp3",
+   "voice/janna/block-2.mp3"
+  ],
+  "death": [
+   "voice/janna/death-1.mp3",
+   "voice/janna/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/janna/defeat-1.mp3",
+   "voice/janna/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/janna/play-1.mp3",
+   "voice/janna/play-2.mp3",
+   "voice/janna/play-3.mp3"
+  ],
+  "victory": [
+   "voice/janna/victory-1.mp3",
+   "voice/janna/victory-2.mp3"
+  ]
+ },
+ "jarvan iv": {
+  "attack": [
+   "voice/jarvaniv/attack-1.mp3",
+   "voice/jarvaniv/attack-2.mp3"
+  ],
+  "block": [
+   "voice/jarvaniv/block-1.mp3",
+   "voice/jarvaniv/block-2.mp3"
+  ],
+  "death": [
+   "voice/jarvaniv/death-1.mp3",
+   "voice/jarvaniv/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/jarvaniv/defeat-1.mp3",
+   "voice/jarvaniv/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/jarvaniv/play-1.mp3",
+   "voice/jarvaniv/play-2.mp3",
+   "voice/jarvaniv/play-3.mp3"
+  ],
+  "victory": [
+   "voice/jarvaniv/victory-1.mp3",
+   "voice/jarvaniv/victory-2.mp3"
+  ]
+ },
+ "jax": {
+  "attack": [
+   "voice/jax/attack-1.mp3",
+   "voice/jax/attack-2.mp3"
+  ],
+  "block": [
+   "voice/jax/block-1.mp3",
+   "voice/jax/block-2.mp3"
+  ],
+  "death": [
+   "voice/jax/death-1.mp3",
+   "voice/jax/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/jax/defeat-1.mp3",
+   "voice/jax/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/jax/play-1.mp3",
+   "voice/jax/play-2.mp3",
+   "voice/jax/play-3.mp3"
+  ],
+  "victory": [
+   "voice/jax/victory-1.mp3",
+   "voice/jax/victory-2.mp3"
+  ]
+ },
+ "jayce": {
+  "attack": [
+   "voice/jayce/attack-1.mp3",
+   "voice/jayce/attack-2.mp3"
+  ],
+  "block": [
+   "voice/jayce/block-1.mp3",
+   "voice/jayce/block-2.mp3"
+  ],
+  "death": [
+   "voice/jayce/death-1.mp3",
+   "voice/jayce/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/jayce/defeat-1.mp3",
+   "voice/jayce/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/jayce/play-1.mp3",
+   "voice/jayce/play-2.mp3",
+   "voice/jayce/play-3.mp3"
+  ],
+  "victory": [
+   "voice/jayce/victory-1.mp3",
+   "voice/jayce/victory-2.mp3"
+  ]
+ },
+ "jhin": {
+  "attack": [
+   "voice/jhin/attack-1.mp3",
+   "voice/jhin/attack-2.mp3"
+  ],
+  "block": [
+   "voice/jhin/block-1.mp3",
+   "voice/jhin/block-2.mp3"
+  ],
+  "death": [
+   "voice/jhin/death-1.mp3",
+   "voice/jhin/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/jhin/defeat-1.mp3",
+   "voice/jhin/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/jhin/play-1.mp3",
+   "voice/jhin/play-2.mp3",
+   "voice/jhin/play-3.mp3"
+  ],
+  "victory": [
+   "voice/jhin/victory-1.mp3",
+   "voice/jhin/victory-2.mp3"
+  ]
+ },
+ "jinx": {
+  "attack": [
+   "voice/jinx/attack-1.mp3",
+   "voice/jinx/attack-2.mp3"
+  ],
+  "block": [
+   "voice/jinx/block-1.mp3",
+   "voice/jinx/block-2.mp3"
+  ],
+  "death": [
+   "voice/jinx/death-1.mp3",
+   "voice/jinx/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/jinx/defeat-1.mp3",
+   "voice/jinx/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/jinx/play-1.mp3",
+   "voice/jinx/play-2.mp3",
+   "voice/jinx/play-3.mp3"
+  ],
+  "victory": [
+   "voice/jinx/victory-1.mp3",
+   "voice/jinx/victory-2.mp3"
+  ]
+ },
+ "kai'sa": {
+  "attack": [
+   "voice/kaisa/attack-1.mp3",
+   "voice/kaisa/attack-2.mp3"
+  ],
+  "block": [
+   "voice/kaisa/block-1.mp3",
+   "voice/kaisa/block-2.mp3"
+  ],
+  "death": [
+   "voice/kaisa/death-1.mp3",
+   "voice/kaisa/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/kaisa/defeat-1.mp3",
+   "voice/kaisa/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/kaisa/play-1.mp3",
+   "voice/kaisa/play-2.mp3",
+   "voice/kaisa/play-3.mp3"
+  ],
+  "victory": [
+   "voice/kaisa/victory-1.mp3",
+   "voice/kaisa/victory-2.mp3"
+  ]
+ },
+ "karma": {
+  "attack": [
+   "voice/karma/attack-1.mp3",
+   "voice/karma/attack-2.mp3"
+  ],
+  "block": [
+   "voice/karma/block-1.mp3",
+   "voice/karma/block-2.mp3"
+  ],
+  "death": [
+   "voice/karma/death-1.mp3",
+   "voice/karma/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/karma/defeat-1.mp3",
+   "voice/karma/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/karma/play-1.mp3",
+   "voice/karma/play-2.mp3",
+   "voice/karma/play-3.mp3"
+  ],
+  "victory": [
+   "voice/karma/victory-1.mp3",
+   "voice/karma/victory-2.mp3"
+  ]
+ },
+ "katarina": {
+  "attack": [
+   "voice/katarina/attack-1.mp3",
+   "voice/katarina/attack-2.mp3"
+  ],
+  "block": [
+   "voice/katarina/block-1.mp3",
+   "voice/katarina/block-2.mp3"
+  ],
+  "death": [
+   "voice/katarina/death-1.mp3",
+   "voice/katarina/death-2.mp3"
+  ],
+  "play": [
+   "voice/katarina/play-1.mp3",
+   "voice/katarina/play-2.mp3",
+   "voice/katarina/play-3.mp3"
+  ]
+ },
+ "kayle": {
+  "attack": [
+   "voice/kayle/attack-1.mp3",
+   "voice/kayle/attack-2.mp3"
+  ],
+  "block": [
+   "voice/kayle/block-1.mp3",
+   "voice/kayle/block-2.mp3"
+  ],
+  "death": [
+   "voice/kayle/death-1.mp3",
+   "voice/kayle/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/kayle/defeat-1.mp3",
+   "voice/kayle/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/kayle/play-1.mp3",
+   "voice/kayle/play-2.mp3",
+   "voice/kayle/play-3.mp3"
+  ],
+  "victory": [
+   "voice/kayle/victory-1.mp3",
+   "voice/kayle/victory-2.mp3"
+  ]
+ },
+ "kayn": {
+  "attack": [
+   "voice/kayn/attack-1.mp3",
+   "voice/kayn/attack-2.mp3"
+  ],
+  "block": [
+   "voice/kayn/block-1.mp3",
+   "voice/kayn/block-2.mp3"
+  ],
+  "death": [
+   "voice/kayn/death-1.mp3",
+   "voice/kayn/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/kayn/defeat-1.mp3",
+   "voice/kayn/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/kayn/play-1.mp3",
+   "voice/kayn/play-2.mp3",
+   "voice/kayn/play-3.mp3"
+  ],
+  "victory": [
+   "voice/kayn/victory-1.mp3",
+   "voice/kayn/victory-2.mp3"
+  ]
+ },
+ "kennen": {
+  "attack": [
+   "voice/kennen/attack-1.mp3",
+   "voice/kennen/attack-2.mp3"
+  ],
+  "block": [
+   "voice/kennen/block-1.mp3",
+   "voice/kennen/block-2.mp3"
+  ],
+  "death": [
+   "voice/kennen/death-1.mp3",
+   "voice/kennen/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/kennen/defeat-1.mp3",
+   "voice/kennen/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/kennen/play-1.mp3",
+   "voice/kennen/play-2.mp3",
+   "voice/kennen/play-3.mp3"
+  ],
+  "victory": [
+   "voice/kennen/victory-1.mp3",
+   "voice/kennen/victory-2.mp3"
+  ]
+ },
+ "leblanc": {
+  "attack": [
+   "voice/leblanc/attack-1.mp3",
+   "voice/leblanc/attack-2.mp3"
+  ],
+  "block": [
+   "voice/leblanc/block-1.mp3",
+   "voice/leblanc/block-2.mp3"
+  ],
+  "death": [
+   "voice/leblanc/death-1.mp3",
+   "voice/leblanc/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/leblanc/defeat-1.mp3",
+   "voice/leblanc/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/leblanc/play-1.mp3",
+   "voice/leblanc/play-2.mp3",
+   "voice/leblanc/play-3.mp3"
+  ],
+  "victory": [
+   "voice/leblanc/victory-1.mp3",
+   "voice/leblanc/victory-2.mp3"
+  ]
+ },
+ "lee sin": {
+  "attack": [
+   "voice/leesin/attack-1.mp3",
+   "voice/leesin/attack-2.mp3"
+  ],
+  "block": [
+   "voice/leesin/block-1.mp3",
+   "voice/leesin/block-2.mp3"
+  ],
+  "death": [
+   "voice/leesin/death-1.mp3",
+   "voice/leesin/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/leesin/defeat-1.mp3",
+   "voice/leesin/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/leesin/play-1.mp3",
+   "voice/leesin/play-2.mp3",
+   "voice/leesin/play-3.mp3"
+  ],
+  "victory": [
+   "voice/leesin/victory-1.mp3",
+   "voice/leesin/victory-2.mp3"
+  ]
+ },
+ "leona": {
+  "attack": [
+   "voice/leona/attack-1.mp3",
+   "voice/leona/attack-2.mp3"
+  ],
+  "block": [
+   "voice/leona/block-1.mp3",
+   "voice/leona/block-2.mp3"
+  ],
+  "death": [
+   "voice/leona/death-1.mp3",
+   "voice/leona/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/leona/defeat-1.mp3",
+   "voice/leona/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/leona/play-1.mp3",
+   "voice/leona/play-2.mp3",
+   "voice/leona/play-3.mp3"
+  ],
+  "victory": [
+   "voice/leona/victory-1.mp3",
+   "voice/leona/victory-2.mp3"
+  ]
+ },
+ "lillia": {
+  "attack": [
+   "voice/lillia/attack-1.mp3",
+   "voice/lillia/attack-2.mp3"
+  ],
+  "block": [
+   "voice/lillia/block-1.mp3",
+   "voice/lillia/block-2.mp3"
+  ],
+  "death": [
+   "voice/lillia/death-1.mp3",
+   "voice/lillia/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/lillia/defeat-1.mp3",
+   "voice/lillia/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/lillia/play-1.mp3",
+   "voice/lillia/play-2.mp3",
+   "voice/lillia/play-3.mp3"
+  ],
+  "victory": [
+   "voice/lillia/victory-1.mp3",
+   "voice/lillia/victory-2.mp3"
+  ]
+ },
+ "lucian": {
+  "attack": [
+   "voice/lucian/attack-1.mp3",
+   "voice/lucian/attack-2.mp3"
+  ],
+  "block": [
+   "voice/lucian/block-1.mp3",
+   "voice/lucian/block-2.mp3"
+  ],
+  "death": [
+   "voice/lucian/death-1.mp3",
+   "voice/lucian/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/lucian/defeat-1.mp3",
+   "voice/lucian/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/lucian/play-1.mp3",
+   "voice/lucian/play-2.mp3",
+   "voice/lucian/play-3.mp3"
+  ],
+  "victory": [
+   "voice/lucian/victory-1.mp3",
+   "voice/lucian/victory-2.mp3"
+  ]
+ },
+ "lulu": {
+  "attack": [
+   "voice/lulu/attack-1.mp3",
+   "voice/lulu/attack-2.mp3"
+  ],
+  "block": [
+   "voice/lulu/block-1.mp3",
+   "voice/lulu/block-2.mp3"
+  ],
+  "death": [
+   "voice/lulu/death-1.mp3",
+   "voice/lulu/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/lulu/defeat-1.mp3",
+   "voice/lulu/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/lulu/play-1.mp3",
+   "voice/lulu/play-2.mp3",
+   "voice/lulu/play-3.mp3"
+  ],
+  "victory": [
+   "voice/lulu/victory-1.mp3",
+   "voice/lulu/victory-2.mp3"
+  ]
+ },
+ "lux": {
+  "attack": [
+   "voice/lux/attack-1.mp3",
+   "voice/lux/attack-2.mp3"
+  ],
+  "block": [
+   "voice/lux/block-1.mp3",
+   "voice/lux/block-2.mp3"
+  ],
+  "death": [
+   "voice/lux/death-1.mp3",
+   "voice/lux/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/lux/defeat-1.mp3",
+   "voice/lux/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/lux/play-1.mp3",
+   "voice/lux/play-2.mp3",
+   "voice/lux/play-3.mp3"
+  ],
+  "victory": [
+   "voice/lux/victory-1.mp3",
+   "voice/lux/victory-2.mp3"
+  ]
+ },
+ "master yi": {
+  "attack": [
+   "voice/masteryi/attack-1.mp3",
+   "voice/masteryi/attack-2.mp3"
+  ],
+  "block": [
+   "voice/masteryi/block-1.mp3",
+   "voice/masteryi/block-2.mp3"
+  ],
+  "death": [
+   "voice/masteryi/death-1.mp3",
+   "voice/masteryi/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/masteryi/defeat-1.mp3",
+   "voice/masteryi/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/masteryi/play-1.mp3",
+   "voice/masteryi/play-2.mp3",
+   "voice/masteryi/play-3.mp3"
+  ],
+  "victory": [
+   "voice/masteryi/victory-1.mp3",
+   "voice/masteryi/victory-2.mp3"
+  ]
+ },
+ "miss fortune": {
+  "attack": [
+   "voice/missfortune/attack-1.mp3",
+   "voice/missfortune/attack-2.mp3"
+  ],
+  "block": [
+   "voice/missfortune/block-1.mp3",
+   "voice/missfortune/block-2.mp3"
+  ],
+  "death": [
+   "voice/missfortune/death-1.mp3",
+   "voice/missfortune/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/missfortune/defeat-1.mp3",
+   "voice/missfortune/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/missfortune/play-1.mp3",
+   "voice/missfortune/play-2.mp3",
+   "voice/missfortune/play-3.mp3"
+  ],
+  "victory": [
+   "voice/missfortune/victory-1.mp3",
+   "voice/missfortune/victory-2.mp3"
+  ]
+ },
+ "mordekaiser": {
+  "attack": [
+   "voice/mordekaiser/attack-1.mp3",
+   "voice/mordekaiser/attack-2.mp3"
+  ],
+  "block": [
+   "voice/mordekaiser/block-1.mp3",
+   "voice/mordekaiser/block-2.mp3"
+  ],
+  "death": [
+   "voice/mordekaiser/death-1.mp3",
+   "voice/mordekaiser/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/mordekaiser/defeat-1.mp3",
+   "voice/mordekaiser/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/mordekaiser/play-1.mp3",
+   "voice/mordekaiser/play-2.mp3",
+   "voice/mordekaiser/play-3.mp3"
+  ],
+  "victory": [
+   "voice/mordekaiser/victory-1.mp3",
+   "voice/mordekaiser/victory-2.mp3"
+  ]
+ },
+ "morgana": {
+  "attack": [
+   "voice/morgana/attack-1.mp3",
+   "voice/morgana/attack-2.mp3"
+  ],
+  "block": [
+   "voice/morgana/block-1.mp3",
+   "voice/morgana/block-2.mp3"
+  ],
+  "death": [
+   "voice/morgana/death-1.mp3",
+   "voice/morgana/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/morgana/defeat-1.mp3",
+   "voice/morgana/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/morgana/play-1.mp3",
+   "voice/morgana/play-2.mp3",
+   "voice/morgana/play-3.mp3"
+  ],
+  "victory": [
+   "voice/morgana/victory-1.mp3",
+   "voice/morgana/victory-2.mp3"
+  ]
+ },
+ "nami": {
+  "attack": [
+   "voice/nami/attack-1.mp3",
+   "voice/nami/attack-2.mp3"
+  ],
+  "block": [
+   "voice/nami/block-1.mp3",
+   "voice/nami/block-2.mp3"
+  ],
+  "death": [
+   "voice/nami/death-1.mp3",
+   "voice/nami/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/nami/defeat-1.mp3",
+   "voice/nami/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/nami/play-1.mp3",
+   "voice/nami/play-2.mp3",
+   "voice/nami/play-3.mp3"
+  ],
+  "victory": [
+   "voice/nami/victory-1.mp3",
+   "voice/nami/victory-2.mp3"
+  ]
+ },
+ "nasus": {
+  "attack": [
+   "voice/nasus/attack-1.mp3",
+   "voice/nasus/attack-2.mp3"
+  ],
+  "block": [
+   "voice/nasus/block-1.mp3",
+   "voice/nasus/block-2.mp3"
+  ],
+  "death": [
+   "voice/nasus/death-1.mp3",
+   "voice/nasus/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/nasus/defeat-1.mp3",
+   "voice/nasus/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/nasus/play-1.mp3",
+   "voice/nasus/play-2.mp3",
+   "voice/nasus/play-3.mp3"
+  ],
+  "victory": [
+   "voice/nasus/victory-1.mp3",
+   "voice/nasus/victory-2.mp3"
+  ]
+ },
+ "neeko": {
+  "attack": [
+   "voice/neeko/attack-1.mp3",
+   "voice/neeko/attack-2.mp3"
+  ],
+  "block": [
+   "voice/neeko/block-1.mp3",
+   "voice/neeko/block-2.mp3"
+  ],
+  "death": [
+   "voice/neeko/death-1.mp3",
+   "voice/neeko/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/neeko/defeat-1.mp3",
+   "voice/neeko/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/neeko/play-1.mp3",
+   "voice/neeko/play-2.mp3",
+   "voice/neeko/play-3.mp3"
+  ],
+  "victory": [
+   "voice/neeko/victory-1.mp3",
+   "voice/neeko/victory-2.mp3"
+  ]
+ },
+ "nidalee": {
+  "attack": [
+   "voice/nidalee/attack-1.mp3",
+   "voice/nidalee/attack-2.mp3"
+  ],
+  "block": [
+   "voice/nidalee/block-1.mp3",
+   "voice/nidalee/block-2.mp3"
+  ],
+  "death": [
+   "voice/nidalee/death-1.mp3",
+   "voice/nidalee/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/nidalee/defeat-1.mp3",
+   "voice/nidalee/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/nidalee/play-1.mp3",
+   "voice/nidalee/play-2.mp3",
+   "voice/nidalee/play-3.mp3"
+  ],
+  "victory": [
+   "voice/nidalee/victory-1.mp3",
+   "voice/nidalee/victory-2.mp3"
+  ]
+ },
+ "nilah": {
+  "attack": [
+   "voice/nilah/attack-1.mp3",
+   "voice/nilah/attack-2.mp3"
+  ],
+  "block": [
+   "voice/nilah/block-1.mp3",
+   "voice/nilah/block-2.mp3"
+  ],
+  "death": [
+   "voice/nilah/death-1.mp3",
+   "voice/nilah/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/nilah/defeat-1.mp3",
+   "voice/nilah/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/nilah/play-1.mp3",
+   "voice/nilah/play-2.mp3",
+   "voice/nilah/play-3.mp3"
+  ],
+  "victory": [
+   "voice/nilah/victory-1.mp3",
+   "voice/nilah/victory-2.mp3"
+  ]
+ },
+ "nocturne": {
+  "attack": [
+   "voice/nocturne/attack-1.mp3",
+   "voice/nocturne/attack-2.mp3"
+  ],
+  "block": [
+   "voice/nocturne/block-1.mp3",
+   "voice/nocturne/block-2.mp3"
+  ],
+  "death": [
+   "voice/nocturne/death-1.mp3",
+   "voice/nocturne/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/nocturne/defeat-1.mp3"
+  ],
+  "play": [
+   "voice/nocturne/play-1.mp3",
+   "voice/nocturne/play-2.mp3",
+   "voice/nocturne/play-3.mp3"
+  ],
+  "victory": [
+   "voice/nocturne/victory-1.mp3",
+   "voice/nocturne/victory-2.mp3"
+  ]
+ },
+ "ornn": {
+  "attack": [
+   "voice/ornn/attack-1.mp3",
+   "voice/ornn/attack-2.mp3"
+  ],
+  "block": [
+   "voice/ornn/block-1.mp3",
+   "voice/ornn/block-2.mp3"
+  ],
+  "death": [
+   "voice/ornn/death-1.mp3",
+   "voice/ornn/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/ornn/defeat-1.mp3",
+   "voice/ornn/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/ornn/play-1.mp3",
+   "voice/ornn/play-2.mp3",
+   "voice/ornn/play-3.mp3"
+  ],
+  "victory": [
+   "voice/ornn/victory-1.mp3",
+   "voice/ornn/victory-2.mp3"
+  ]
+ },
+ "poppy": {
+  "attack": [
+   "voice/poppy/attack-1.mp3",
+   "voice/poppy/attack-2.mp3"
+  ],
+  "block": [
+   "voice/poppy/block-1.mp3",
+   "voice/poppy/block-2.mp3"
+  ],
+  "death": [
+   "voice/poppy/death-1.mp3",
+   "voice/poppy/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/poppy/defeat-1.mp3",
+   "voice/poppy/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/poppy/play-1.mp3",
+   "voice/poppy/play-2.mp3",
+   "voice/poppy/play-3.mp3"
+  ],
+  "victory": [
+   "voice/poppy/victory-1.mp3",
+   "voice/poppy/victory-2.mp3"
+  ]
+ },
+ "pyke": {
+  "attack": [
+   "voice/pyke/attack-1.mp3",
+   "voice/pyke/attack-2.mp3"
+  ],
+  "block": [
+   "voice/pyke/block-1.mp3",
+   "voice/pyke/block-2.mp3"
+  ],
+  "death": [
+   "voice/pyke/death-1.mp3",
+   "voice/pyke/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/pyke/defeat-1.mp3",
+   "voice/pyke/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/pyke/play-1.mp3",
+   "voice/pyke/play-2.mp3",
+   "voice/pyke/play-3.mp3"
+  ],
+  "victory": [
+   "voice/pyke/victory-1.mp3",
+   "voice/pyke/victory-2.mp3"
+  ]
+ },
+ "renekton": {
+  "attack": [
+   "voice/renekton/attack-1.mp3",
+   "voice/renekton/attack-2.mp3"
+  ],
+  "block": [
+   "voice/renekton/block-1.mp3",
+   "voice/renekton/block-2.mp3"
+  ],
+  "death": [
+   "voice/renekton/death-1.mp3",
+   "voice/renekton/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/renekton/defeat-1.mp3",
+   "voice/renekton/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/renekton/play-1.mp3",
+   "voice/renekton/play-2.mp3",
+   "voice/renekton/play-3.mp3"
+  ],
+  "victory": [
+   "voice/renekton/victory-1.mp3",
+   "voice/renekton/victory-2.mp3"
+  ]
+ },
+ "riven": {
+  "attack": [
+   "voice/riven/attack-1.mp3",
+   "voice/riven/attack-2.mp3"
+  ],
+  "block": [
+   "voice/riven/block-1.mp3",
+   "voice/riven/block-2.mp3"
+  ],
+  "death": [
+   "voice/riven/death-1.mp3",
+   "voice/riven/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/riven/defeat-1.mp3",
+   "voice/riven/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/riven/play-1.mp3",
+   "voice/riven/play-2.mp3",
+   "voice/riven/play-3.mp3"
+  ],
+  "victory": [
+   "voice/riven/victory-1.mp3",
+   "voice/riven/victory-2.mp3"
+  ]
+ },
+ "rumble": {
+  "attack": [
+   "voice/rumble/attack-1.mp3",
+   "voice/rumble/attack-2.mp3"
+  ],
+  "block": [
+   "voice/rumble/block-1.mp3",
+   "voice/rumble/block-2.mp3"
+  ],
+  "death": [
+   "voice/rumble/death-1.mp3",
+   "voice/rumble/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/rumble/defeat-1.mp3",
+   "voice/rumble/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/rumble/play-1.mp3",
+   "voice/rumble/play-2.mp3",
+   "voice/rumble/play-3.mp3"
+  ],
+  "victory": [
+   "voice/rumble/victory-1.mp3",
+   "voice/rumble/victory-2.mp3"
+  ]
+ },
+ "seraphine": {
+  "attack": [
+   "voice/seraphine/attack-1.mp3",
+   "voice/seraphine/attack-2.mp3"
+  ],
+  "block": [
+   "voice/seraphine/block-1.mp3",
+   "voice/seraphine/block-2.mp3"
+  ],
+  "death": [
+   "voice/seraphine/death-1.mp3",
+   "voice/seraphine/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/seraphine/defeat-1.mp3",
+   "voice/seraphine/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/seraphine/play-1.mp3",
+   "voice/seraphine/play-2.mp3",
+   "voice/seraphine/play-3.mp3"
+  ],
+  "victory": [
+   "voice/seraphine/victory-1.mp3",
+   "voice/seraphine/victory-2.mp3"
+  ]
+ },
+ "sett": {
+  "attack": [
+   "voice/sett/attack-1.mp3",
+   "voice/sett/attack-2.mp3"
+  ],
+  "block": [
+   "voice/sett/block-1.mp3",
+   "voice/sett/block-2.mp3"
+  ],
+  "death": [
+   "voice/sett/death-1.mp3",
+   "voice/sett/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/sett/defeat-1.mp3",
+   "voice/sett/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/sett/play-1.mp3",
+   "voice/sett/play-2.mp3",
+   "voice/sett/play-3.mp3"
+  ],
+  "victory": [
+   "voice/sett/victory-1.mp3",
+   "voice/sett/victory-2.mp3"
+  ]
+ },
+ "shen": {
+  "attack": [
+   "voice/shen/attack-1.mp3",
+   "voice/shen/attack-2.mp3"
+  ],
+  "block": [
+   "voice/shen/block-1.mp3",
+   "voice/shen/block-2.mp3"
+  ],
+  "death": [
+   "voice/shen/death-1.mp3",
+   "voice/shen/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/shen/defeat-1.mp3",
+   "voice/shen/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/shen/play-1.mp3",
+   "voice/shen/play-2.mp3",
+   "voice/shen/play-3.mp3"
+  ],
+  "victory": [
+   "voice/shen/victory-1.mp3",
+   "voice/shen/victory-2.mp3"
+  ]
+ },
+ "sivir": {
+  "attack": [
+   "voice/sivir/attack-1.mp3",
+   "voice/sivir/attack-2.mp3"
+  ],
+  "block": [
+   "voice/sivir/block-1.mp3",
+   "voice/sivir/block-2.mp3"
+  ],
+  "death": [
+   "voice/sivir/death-1.mp3",
+   "voice/sivir/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/sivir/defeat-1.mp3",
+   "voice/sivir/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/sivir/play-1.mp3",
+   "voice/sivir/play-2.mp3",
+   "voice/sivir/play-3.mp3"
+  ],
+  "victory": [
+   "voice/sivir/victory-1.mp3",
+   "voice/sivir/victory-2.mp3"
+  ]
+ },
+ "soraka": {
+  "attack": [
+   "voice/soraka/attack-1.mp3",
+   "voice/soraka/attack-2.mp3"
+  ],
+  "block": [
+   "voice/soraka/block-1.mp3",
+   "voice/soraka/block-2.mp3"
+  ],
+  "death": [
+   "voice/soraka/death-1.mp3",
+   "voice/soraka/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/soraka/defeat-1.mp3",
+   "voice/soraka/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/soraka/play-1.mp3",
+   "voice/soraka/play-2.mp3",
+   "voice/soraka/play-3.mp3"
+  ],
+  "victory": [
+   "voice/soraka/victory-1.mp3",
+   "voice/soraka/victory-2.mp3"
+  ]
+ },
+ "swain": {
+  "attack": [
+   "voice/swain/attack-1.mp3",
+   "voice/swain/attack-2.mp3"
+  ],
+  "block": [
+   "voice/swain/block-1.mp3",
+   "voice/swain/block-2.mp3"
+  ],
+  "death": [
+   "voice/swain/death-1.mp3",
+   "voice/swain/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/swain/defeat-1.mp3",
+   "voice/swain/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/swain/play-1.mp3",
+   "voice/swain/play-2.mp3",
+   "voice/swain/play-3.mp3"
+  ],
+  "victory": [
+   "voice/swain/victory-1.mp3",
+   "voice/swain/victory-2.mp3"
+  ]
+ },
+ "taric": {
+  "attack": [
+   "voice/taric/attack-1.mp3",
+   "voice/taric/attack-2.mp3"
+  ],
+  "block": [
+   "voice/taric/block-1.mp3",
+   "voice/taric/block-2.mp3"
+  ],
+  "death": [
+   "voice/taric/death-1.mp3",
+   "voice/taric/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/taric/defeat-1.mp3",
+   "voice/taric/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/taric/play-1.mp3",
+   "voice/taric/play-2.mp3",
+   "voice/taric/play-3.mp3"
+  ],
+  "victory": [
+   "voice/taric/victory-1.mp3",
+   "voice/taric/victory-2.mp3"
+  ]
+ },
+ "teemo": {
+  "attack": [
+   "voice/teemo/attack-1.mp3",
+   "voice/teemo/attack-2.mp3"
+  ],
+  "block": [
+   "voice/teemo/block-1.mp3",
+   "voice/teemo/block-2.mp3"
+  ],
+  "death": [
+   "voice/teemo/death-1.mp3",
+   "voice/teemo/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/teemo/defeat-1.mp3",
+   "voice/teemo/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/teemo/play-1.mp3",
+   "voice/teemo/play-2.mp3",
+   "voice/teemo/play-3.mp3"
+  ],
+  "victory": [
+   "voice/teemo/victory-1.mp3",
+   "voice/teemo/victory-2.mp3"
+  ]
+ },
+ "tryndamere": {
+  "attack": [
+   "voice/tryndamere/attack-1.mp3",
+   "voice/tryndamere/attack-2.mp3"
+  ],
+  "block": [
+   "voice/tryndamere/block-1.mp3",
+   "voice/tryndamere/block-2.mp3"
+  ],
+  "death": [
+   "voice/tryndamere/death-1.mp3",
+   "voice/tryndamere/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/tryndamere/defeat-1.mp3",
+   "voice/tryndamere/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/tryndamere/play-1.mp3",
+   "voice/tryndamere/play-2.mp3",
+   "voice/tryndamere/play-3.mp3"
+  ],
+  "victory": [
+   "voice/tryndamere/victory-1.mp3",
+   "voice/tryndamere/victory-2.mp3"
+  ]
+ },
+ "twisted fate": {
+  "attack": [
+   "voice/twistedfate/attack-1.mp3",
+   "voice/twistedfate/attack-2.mp3"
+  ],
+  "block": [
+   "voice/twistedfate/block-1.mp3",
+   "voice/twistedfate/block-2.mp3"
+  ],
+  "death": [
+   "voice/twistedfate/death-1.mp3",
+   "voice/twistedfate/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/twistedfate/defeat-1.mp3",
+   "voice/twistedfate/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/twistedfate/play-1.mp3",
+   "voice/twistedfate/play-2.mp3",
+   "voice/twistedfate/play-3.mp3"
+  ],
+  "victory": [
+   "voice/twistedfate/victory-1.mp3",
+   "voice/twistedfate/victory-2.mp3"
+  ]
+ },
+ "udyr": {
+  "attack": [
+   "voice/udyr/attack-1.mp3",
+   "voice/udyr/attack-2.mp3"
+  ],
+  "block": [
+   "voice/udyr/block-1.mp3",
+   "voice/udyr/block-2.mp3"
+  ],
+  "death": [
+   "voice/udyr/death-1.mp3",
+   "voice/udyr/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/udyr/defeat-1.mp3",
+   "voice/udyr/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/udyr/play-1.mp3",
+   "voice/udyr/play-2.mp3",
+   "voice/udyr/play-3.mp3"
+  ],
+  "victory": [
+   "voice/udyr/victory-1.mp3",
+   "voice/udyr/victory-2.mp3"
+  ]
+ },
+ "vayne": {
+  "attack": [
+   "voice/vayne/attack-1.mp3",
+   "voice/vayne/attack-2.mp3"
+  ],
+  "block": [
+   "voice/vayne/block-1.mp3",
+   "voice/vayne/block-2.mp3"
+  ],
+  "death": [
+   "voice/vayne/death-1.mp3",
+   "voice/vayne/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/vayne/defeat-1.mp3",
+   "voice/vayne/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/vayne/play-1.mp3",
+   "voice/vayne/play-2.mp3",
+   "voice/vayne/play-3.mp3"
+  ],
+  "victory": [
+   "voice/vayne/victory-1.mp3",
+   "voice/vayne/victory-2.mp3"
+  ]
+ },
+ "vex": {
+  "attack": [
+   "voice/vex/attack-1.mp3",
+   "voice/vex/attack-2.mp3"
+  ],
+  "block": [
+   "voice/vex/block-1.mp3",
+   "voice/vex/block-2.mp3"
+  ],
+  "death": [
+   "voice/vex/death-1.mp3",
+   "voice/vex/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/vex/defeat-1.mp3",
+   "voice/vex/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/vex/play-1.mp3",
+   "voice/vex/play-2.mp3",
+   "voice/vex/play-3.mp3"
+  ],
+  "victory": [
+   "voice/vex/victory-1.mp3",
+   "voice/vex/victory-2.mp3"
+  ]
+ },
+ "vi": {
+  "attack": [
+   "voice/vi/attack-1.mp3",
+   "voice/vi/attack-2.mp3"
+  ],
+  "block": [
+   "voice/vi/block-1.mp3",
+   "voice/vi/block-2.mp3"
+  ],
+  "death": [
+   "voice/vi/death-1.mp3",
+   "voice/vi/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/vi/defeat-1.mp3",
+   "voice/vi/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/vi/play-1.mp3",
+   "voice/vi/play-2.mp3",
+   "voice/vi/play-3.mp3"
+  ],
+  "victory": [
+   "voice/vi/victory-1.mp3",
+   "voice/vi/victory-2.mp3"
+  ]
+ },
+ "viktor": {
+  "attack": [
+   "voice/viktor/attack-1.mp3",
+   "voice/viktor/attack-2.mp3"
+  ],
+  "block": [
+   "voice/viktor/block-1.mp3",
+   "voice/viktor/block-2.mp3"
+  ],
+  "death": [
+   "voice/viktor/death-1.mp3",
+   "voice/viktor/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/viktor/defeat-1.mp3",
+   "voice/viktor/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/viktor/play-1.mp3",
+   "voice/viktor/play-2.mp3",
+   "voice/viktor/play-3.mp3"
+  ],
+  "victory": [
+   "voice/viktor/victory-1.mp3",
+   "voice/viktor/victory-2.mp3"
+  ]
+ },
+ "volibear": {
+  "attack": [
+   "voice/volibear/attack-1.mp3",
+   "voice/volibear/attack-2.mp3"
+  ],
+  "block": [
+   "voice/volibear/block-1.mp3",
+   "voice/volibear/block-2.mp3"
+  ],
+  "death": [
+   "voice/volibear/death-1.mp3",
+   "voice/volibear/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/volibear/defeat-1.mp3",
+   "voice/volibear/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/volibear/play-1.mp3",
+   "voice/volibear/play-2.mp3",
+   "voice/volibear/play-3.mp3"
+  ],
+  "victory": [
+   "voice/volibear/victory-1.mp3",
+   "voice/volibear/victory-2.mp3"
+  ]
+ },
+ "warwick": {
+  "play": [
+   "voice/warwick/play-1.mp3"
+  ]
+ },
+ "xerath": {
+  "attack": [
+   "voice/xerath/attack-1.mp3",
+   "voice/xerath/attack-2.mp3"
+  ],
+  "block": [
+   "voice/xerath/block-1.mp3",
+   "voice/xerath/block-2.mp3"
+  ],
+  "death": [
+   "voice/xerath/death-1.mp3",
+   "voice/xerath/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/xerath/defeat-1.mp3"
+  ],
+  "play": [
+   "voice/xerath/play-1.mp3",
+   "voice/xerath/play-2.mp3",
+   "voice/xerath/play-3.mp3"
+  ],
+  "victory": [
+   "voice/xerath/victory-1.mp3",
+   "voice/xerath/victory-2.mp3"
+  ]
+ },
+ "yasuo": {
+  "attack": [
+   "voice/yasuo/attack-1.mp3",
+   "voice/yasuo/attack-2.mp3"
+  ],
+  "block": [
+   "voice/yasuo/block-1.mp3",
+   "voice/yasuo/block-2.mp3"
+  ],
+  "death": [
+   "voice/yasuo/death-1.mp3",
+   "voice/yasuo/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/yasuo/defeat-1.mp3",
+   "voice/yasuo/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/yasuo/play-1.mp3",
+   "voice/yasuo/play-2.mp3",
+   "voice/yasuo/play-3.mp3"
+  ],
+  "victory": [
+   "voice/yasuo/victory-1.mp3",
+   "voice/yasuo/victory-2.mp3"
+  ]
+ },
+ "yone": {
+  "attack": [
+   "voice/yone/attack-1.mp3",
+   "voice/yone/attack-2.mp3"
+  ],
+  "block": [
+   "voice/yone/block-1.mp3",
+   "voice/yone/block-2.mp3"
+  ],
+  "death": [
+   "voice/yone/death-1.mp3",
+   "voice/yone/death-2.mp3"
+  ],
+  "play": [
+   "voice/yone/play-1.mp3",
+   "voice/yone/play-2.mp3",
+   "voice/yone/play-3.mp3"
+  ]
+ },
+ "yuumi": {
+  "attack": [
+   "voice/yuumi/attack-1.mp3",
+   "voice/yuumi/attack-2.mp3"
+  ],
+  "block": [
+   "voice/yuumi/block-1.mp3",
+   "voice/yuumi/block-2.mp3"
+  ],
+  "death": [
+   "voice/yuumi/death-1.mp3",
+   "voice/yuumi/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/yuumi/defeat-1.mp3",
+   "voice/yuumi/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/yuumi/play-1.mp3",
+   "voice/yuumi/play-2.mp3",
+   "voice/yuumi/play-3.mp3"
+  ],
+  "victory": [
+   "voice/yuumi/victory-1.mp3",
+   "voice/yuumi/victory-2.mp3"
+  ]
+ },
+ "zed": {
+  "attack": [
+   "voice/zed/attack-1.mp3",
+   "voice/zed/attack-2.mp3"
+  ],
+  "block": [
+   "voice/zed/block-1.mp3",
+   "voice/zed/block-2.mp3"
+  ],
+  "death": [
+   "voice/zed/death-1.mp3",
+   "voice/zed/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/zed/defeat-1.mp3",
+   "voice/zed/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/zed/play-1.mp3",
+   "voice/zed/play-2.mp3",
+   "voice/zed/play-3.mp3"
+  ],
+  "victory": [
+   "voice/zed/victory-1.mp3",
+   "voice/zed/victory-2.mp3"
+  ]
+ },
+ "ziggs": {
+  "attack": [
+   "voice/ziggs/attack-1.mp3",
+   "voice/ziggs/attack-2.mp3"
+  ],
+  "block": [
+   "voice/ziggs/block-1.mp3",
+   "voice/ziggs/block-2.mp3"
+  ],
+  "death": [
+   "voice/ziggs/death-1.mp3",
+   "voice/ziggs/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/ziggs/defeat-1.mp3",
+   "voice/ziggs/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/ziggs/play-1.mp3",
+   "voice/ziggs/play-2.mp3",
+   "voice/ziggs/play-3.mp3"
+  ],
+  "victory": [
+   "voice/ziggs/victory-1.mp3",
+   "voice/ziggs/victory-2.mp3"
+  ]
+ },
+ "zilean": {
+  "attack": [
+   "voice/zilean/attack-1.mp3",
+   "voice/zilean/attack-2.mp3"
+  ],
+  "block": [
+   "voice/zilean/block-1.mp3",
+   "voice/zilean/block-2.mp3"
+  ],
+  "death": [
+   "voice/zilean/death-1.mp3",
+   "voice/zilean/death-2.mp3"
+  ],
+  "defeat": [
+   "voice/zilean/defeat-1.mp3",
+   "voice/zilean/defeat-2.mp3"
+  ],
+  "play": [
+   "voice/zilean/play-1.mp3",
+   "voice/zilean/play-2.mp3",
+   "voice/zilean/play-3.mp3"
+  ],
+  "victory": [
+   "voice/zilean/victory-1.mp3",
+   "voice/zilean/victory-2.mp3"
+  ]
+ }
+}
